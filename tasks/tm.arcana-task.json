@@ -1,0 +1,737 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-06-29T14:33:17.738Z",
+  "graph": {
+    "schemaVersion": 1,
+    "metadata": {
+      "id": "tm",
+      "name": "TM",
+      "description": "Ticketmaster account generator: signup -> email verification -> SMS verification, then re-reads the saved email in account settings to confirm the account exists before saving it.",
+      "tags": [
+        "ticketmaster",
+        "account-generator",
+        "signup"
+      ],
+      "inputs": [],
+      "class": "account-generator"
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "imap",
+      "sms"
+    ],
+    "version": "0.1.0",
+    "variables": [],
+    "nodes": [
+      {
+        "id": "n_1",
+        "kind": "noop",
+        "position": {
+          "x": 232,
+          "y": 321
+        },
+        "config": {}
+      },
+      {
+        "id": "n_2",
+        "kind": "goto",
+        "position": {
+          "x": 422.5739894523029,
+          "y": 316.75934388103053
+        },
+        "config": {
+          "url": "https://www.ticketmaster.com/"
+        }
+      },
+      {
+        "id": "n_3",
+        "kind": "click",
+        "position": {
+          "x": 609.323608654332,
+          "y": 316.75934388103053
+        },
+        "config": {
+          "selector": "[data-testid=\"accountLink\"]"
+        }
+      },
+      {
+        "id": "n_4ztsjjj0",
+        "kind": "fill",
+        "position": {
+          "x": 774.161804327166,
+          "y": 317.37967194051527
+        },
+        "config": {
+          "timeoutMs": 30000,
+          "selector": "input#email-input",
+          "value": "{{identity.email}}",
+          "cadenceMs": 90
+        }
+      },
+      {
+        "id": "n_tzhd7i6s",
+        "kind": "click",
+        "position": {
+          "x": 230.4376845199788,
+          "y": 411.2055525367681
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#scrollContent > div.sc-bbxCTN.sc-jPQLIs:nth-of-type(3) > div.sc-eMklSO.fplsqP > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+        }
+      },
+      {
+        "id": "n_ufo7cetl",
+        "kind": "fill",
+        "position": {
+          "x": 428.10435118664543,
+          "y": 409.20555253676815
+        },
+        "config": {
+          "timeoutMs": 30000,
+          "selector": "input#password-input",
+          "value": "{{identity.password}}",
+          "cadenceMs": 90
+        }
+      },
+      {
+        "id": "n_lfumyf4r",
+        "kind": "fill",
+        "position": {
+          "x": 607.1043511866454,
+          "y": 406.5388858701014
+        },
+        "config": {
+          "timeoutMs": 30000,
+          "selector": "input#firstName-input",
+          "value": "{{identity.firstname}}",
+          "cadenceMs": 90
+        }
+      },
+      {
+        "id": "n_ciziyjbf",
+        "kind": "fill",
+        "position": {
+          "x": 776.7120744974944,
+          "y": 404.72863158592696
+        },
+        "config": {
+          "timeoutMs": 30000,
+          "selector": "input#lastName-input",
+          "value": "{{identity.lastname}}",
+          "cadenceMs": 90
+        }
+      },
+      {
+        "id": "n_tgnrdtny",
+        "kind": "fill",
+        "position": {
+          "x": 951.0454078308277,
+          "y": 406.0619649192602
+        },
+        "config": {
+          "timeoutMs": 30000,
+          "selector": "input#postalCode-input",
+          "value": "{{addresses.0.postalCode}}",
+          "cadenceMs": 90
+        }
+      },
+      {
+        "id": "n_v4hxs2nq",
+        "kind": "click",
+        "position": {
+          "x": 1131.4145276357262,
+          "y": 406.80245554690663
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#privacyPolicyCheckbox-checkbox > label.indexstyles__Label-sc-ruvmzp-1.dsUHDY > div.Checkbox__CheckboxWrapper-sc-14qdpwd-2.gNjCSj > span.indexstyles__CustomCheckbox-sc-ruvmzp-8.iOwkUf"
+        }
+      },
+      {
+        "id": "n_c0qokk55",
+        "kind": "click",
+        "position": {
+          "x": 1306.6382505365148,
+          "y": 405.3952982525936
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#scrollContent > div.sc-bbxCTN.sc-jPQLIs:nth-of-type(3) > div.sc-eMklSO.fplsqP:nth-of-type(2) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+        }
+      },
+      {
+        "id": "n_2xvujiga",
+        "kind": "click",
+        "position": {
+          "x": 227.40002743184039,
+          "y": 500.1027762683841
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#Main > div.Stack-sc-br1alc-0.jevrdE > div.sc-fnfFzz.kJvBiO:nth-of-type(1) > div.sc-jIYCmC.gpuWKb:nth-of-type(2) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+        }
+      },
+      {
+        "id": "n_hsne8h0q",
+        "kind": "imap.waitForMessage",
+        "position": {
+          "x": 420.51913898417763,
+          "y": 505.55138813419205
+        },
+        "config": {
+          "codeOnly": true,
+          "lookbackMs": 300000,
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "emailCode",
+          "subjectMatch": "ticketmaster|verif|confirm|code|one[- ]?time|otp",
+          "mailboxLabel": "Primary"
+        }
+      },
+      {
+        "id": "n_hf5v63vt",
+        "kind": "fill",
+        "position": {
+          "x": 608.5191389841776,
+          "y": 502.55138813419205
+        },
+        "config": {
+          "speed": "slow",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "input#otp-input-input",
+          "value": "{{emailCode}}"
+        }
+      },
+      {
+        "id": "n_o5xqn2dg",
+        "kind": "click",
+        "position": {
+          "x": 782.5191389841776,
+          "y": 497.55138813419205
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#ppc_widget_container > main.styles__ContentWrapper-bMNGNz.eySxOb > div.styles__FormContainer-lnocHA.dBhWys > form.styles__StyledForm-gAvZMs.cnpKiS > div:nth-of-type(3) > button.indexstyles__StyledButton-sc-83qv1q-0.bsvANV:nth-of-type(1)"
+        }
+      },
+      {
+        "id": "n_vo4g77gx",
+        "kind": "comment",
+        "position": {
+          "x": 36.965745743731105,
+          "y": 505.42193869748814
+        },
+        "config": {
+          "text": "Mail verify"
+        }
+      },
+      {
+        "id": "n_be8vmenw",
+        "kind": "comment",
+        "position": {
+          "x": 42.05959968680398,
+          "y": 417.06918588100757
+        },
+        "config": {
+          "text": "First registration step"
+        }
+      },
+      {
+        "id": "n_37rpa973",
+        "kind": "comment",
+        "position": {
+          "x": 42.894554756469006,
+          "y": 332.2924892607843
+        },
+        "config": {
+          "text": "Navigate to TM and set mail"
+        }
+      },
+      {
+        "id": "n_guv55j5x",
+        "kind": "comment",
+        "position": {
+          "x": 38.18904912350776,
+          "y": 601.6452420772649
+        },
+        "config": {
+          "text": "SMS Verify"
+        }
+      },
+      {
+        "id": "n_1m6xjm70",
+        "kind": "click",
+        "position": {
+          "x": 226.51913898417763,
+          "y": 592.551388134192
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#Main > div.Stack-sc-br1alc-0.jevrdE > div.sc-fnfFzz.kJvBiO:nth-of-type(1) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+        }
+      },
+      {
+        "id": "n_t44xz7he",
+        "kind": "sms.rent",
+        "position": {
+          "x": 419.5191389841775,
+          "y": 592.551388134192
+        },
+        "config": {
+          "service": "gp",
+          "country": "187",
+          "into": "phoneRent",
+          "operator": ""
+        }
+      },
+      {
+        "id": "n_npssvess",
+        "kind": "sms.waitForCode",
+        "position": {
+          "x": 952.9929453016225,
+          "y": 597.3272866649902
+        },
+        "config": {
+          "rental": "{{phoneRent}}",
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "smsCode"
+        }
+      },
+      {
+        "id": "n_skh785gq",
+        "kind": "fill",
+        "position": {
+          "x": 606.7335285377105,
+          "y": 593.6173930652494
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "[aria-label=\"Phone number\"]",
+          "value": "{{phoneRent.phone}}"
+        }
+      },
+      {
+        "id": "n_clec4rid",
+        "kind": "click",
+        "position": {
+          "x": 782.3898864218961,
+          "y": 593.9763443391807
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#ppc_widget_container > main.styles__ContentWrapper-bMNGNz.eySxOb > div.styles__FormContainer-lnocHA.dBhWys > form.styles__StyledForm-gAvZMs.cnpKiS > div.styles__ButtonContainer-jJEBlI.dGrpYH:nth-of-type(3) > button.indexstyles__StyledButton-sc-83qv1q-0.bsvANV:nth-of-type(1)"
+        }
+      },
+      {
+        "id": "n_as796xbk",
+        "kind": "click",
+        "position": {
+          "x": 1331.7359932090658,
+          "y": 596.5794350424146
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#ppc_widget_container > main.styles__ContentWrapper-bMNGNz.eySxOb > div.styles__FormContainer-lnocHA.dBhWys > form.styles__StyledForm-gAvZMs.cnpKiS > div:nth-of-type(3) > button.indexstyles__StyledButton-sc-83qv1q-0.bsvANV:nth-of-type(1)"
+        }
+      },
+      {
+        "id": "n_7gln5co0",
+        "kind": "fill",
+        "position": {
+          "x": 1142.801998140123,
+          "y": 597.1693894617226
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "input#otp-input-input",
+          "value": "{{smsCode}}"
+        }
+      },
+      {
+        "id": "n_p39zycof",
+        "kind": "click",
+        "position": {
+          "x": 221.80199814012292,
+          "y": 697.1693894617226
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#scrollContent > div.sc-bbxCTN.sc-jPQLIs:nth-of-type(4) > div:nth-of-type(1) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE"
+        }
+      },
+      {
+        "id": "n_n5bxd4po",
+        "kind": "click",
+        "position": {
+          "x": 414.8019981401229,
+          "y": 696.1693894617226
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#scrollContent > div.sc-dlDPdS.gFzWUB:nth-of-type(5) > button.indexstyles__StyledButton-sc-83qv1q-0.dvQlLD:nth-of-type(2)"
+        }
+      },
+      {
+        "id": "n_glvj5zbl",
+        "kind": "goto",
+        "position": {
+          "x": 778.3508694763984,
+          "y": 697.4643666713766
+        },
+        "config": {
+          "url": "https://my.ticketmaster.com/settings",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_oxam0g94",
+        "kind": "waitFor",
+        "position": {
+          "x": 599.3508694763984,
+          "y": 696.4643666713766
+        },
+        "config": {
+          "selector": "input#email-address-input",
+          "state": "visible",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_xqa6szaz",
+        "kind": "extract",
+        "position": {
+          "x": 946.3508694763984,
+          "y": 696.4643666713766
+        },
+        "config": {
+          "into": "emailGet",
+          "selector": "input#email-address-input"
+        }
+      },
+      {
+        "id": "n_3p7ytqzv",
+        "kind": "branch",
+        "position": {
+          "x": 1136.3508694763984,
+          "y": 687.4643666713766
+        },
+        "config": {
+          "op": "==",
+          "left": "{{emailGet}}",
+          "right": "{{identity.email}}"
+        }
+      },
+      {
+        "id": "n_gpectape",
+        "kind": "accounts.save",
+        "position": {
+          "x": 1325.7955208014423,
+          "y": 689.4825665587598
+        },
+        "config": {
+          "email": "{{identity.email}}",
+          "password": "{{identity.password}}",
+          "status": "active",
+          "site": "ticketmaster.com"
+        }
+      },
+      {
+        "id": "n_dw22rs3k",
+        "kind": "fail",
+        "position": {
+          "x": 1325.3308720218215,
+          "y": 783.829619256399
+        },
+        "config": {
+          "message": "Failed to create account"
+        }
+      },
+      {
+        "id": "n_smswrap",
+        "kind": "tryCatch",
+        "position": {
+          "x": -11.5,
+          "y": 989
+        },
+        "config": {}
+      },
+      {
+        "id": "n_smsfinish",
+        "kind": "sms.finish",
+        "position": {
+          "x": 1140,
+          "y": 500
+        },
+        "config": {
+          "rental": "{{phoneRent}}"
+        }
+      },
+      {
+        "id": "n_smscancel",
+        "kind": "sms.cancel",
+        "position": {
+          "x": 420,
+          "y": 790
+        },
+        "config": {
+          "rental": "{{phoneRent}}"
+        }
+      },
+      {
+        "id": "n_smsfailcatch",
+        "kind": "fail",
+        "position": {
+          "x": 620,
+          "y": 790
+        },
+        "config": {
+          "message": "SMS verification failed - rented number cancelled"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_1",
+        "from": "n_1",
+        "fromPort": "next",
+        "to": "n_2"
+      },
+      {
+        "id": "e_2",
+        "from": "n_2",
+        "fromPort": "next",
+        "to": "n_3"
+      },
+      {
+        "id": "e_ddgvdthk",
+        "from": "n_3",
+        "fromPort": "next",
+        "to": "n_4ztsjjj0"
+      },
+      {
+        "id": "e_u0vd0jts",
+        "from": "n_4ztsjjj0",
+        "fromPort": "next",
+        "to": "n_tzhd7i6s"
+      },
+      {
+        "id": "e_8ljtkry1",
+        "from": "n_ufo7cetl",
+        "fromPort": "next",
+        "to": "n_lfumyf4r"
+      },
+      {
+        "id": "e_578evdys",
+        "from": "n_tzhd7i6s",
+        "fromPort": "next",
+        "to": "n_ufo7cetl"
+      },
+      {
+        "id": "e_ei1gi38w",
+        "from": "n_lfumyf4r",
+        "fromPort": "next",
+        "to": "n_ciziyjbf"
+      },
+      {
+        "id": "e_lhuadr3j",
+        "from": "n_ciziyjbf",
+        "fromPort": "next",
+        "to": "n_tgnrdtny"
+      },
+      {
+        "id": "e_kn1ri579",
+        "from": "n_tgnrdtny",
+        "fromPort": "next",
+        "to": "n_v4hxs2nq"
+      },
+      {
+        "id": "e_cgjbd2d7",
+        "from": "n_v4hxs2nq",
+        "fromPort": "next",
+        "to": "n_c0qokk55"
+      },
+      {
+        "id": "e_ufbcjohn",
+        "from": "n_c0qokk55",
+        "fromPort": "next",
+        "to": "n_2xvujiga"
+      },
+      {
+        "id": "e_5hf4yscv",
+        "from": "n_2xvujiga",
+        "fromPort": "next",
+        "to": "n_hsne8h0q"
+      },
+      {
+        "id": "e_yfq32n6w",
+        "from": "n_hsne8h0q",
+        "fromPort": "next",
+        "to": "n_hf5v63vt"
+      },
+      {
+        "id": "e_gbfgw9t9",
+        "from": "n_hf5v63vt",
+        "fromPort": "next",
+        "to": "n_o5xqn2dg"
+      },
+      {
+        "id": "e_4n4qrvms",
+        "from": "n_o5xqn2dg",
+        "fromPort": "next",
+        "to": "n_1m6xjm70"
+      },
+      {
+        "id": "e_cmiykjxg",
+        "from": "n_1m6xjm70",
+        "fromPort": "next",
+        "to": "n_t44xz7he"
+      },
+      {
+        "id": "e_4mr95niz",
+        "from": "n_skh785gq",
+        "fromPort": "next",
+        "to": "n_clec4rid"
+      },
+      {
+        "id": "e_9ygs8c4w",
+        "from": "n_t44xz7he",
+        "fromPort": "next",
+        "to": "n_smswrap"
+      },
+      {
+        "id": "e_a5muczvy",
+        "from": "n_clec4rid",
+        "fromPort": "next",
+        "to": "n_npssvess"
+      },
+      {
+        "id": "e_ukk5nagt",
+        "from": "n_npssvess",
+        "fromPort": "next",
+        "to": "n_7gln5co0"
+      },
+      {
+        "id": "e_dv1tzl7o",
+        "from": "n_7gln5co0",
+        "fromPort": "next",
+        "to": "n_as796xbk"
+      },
+      {
+        "id": "e_cu7ucgjz",
+        "from": "n_as796xbk",
+        "fromPort": "next",
+        "to": "n_smswrap"
+      },
+      {
+        "id": "e_p45ohrla",
+        "from": "n_p39zycof",
+        "fromPort": "next",
+        "to": "n_n5bxd4po"
+      },
+      {
+        "id": "e_6ypth15e",
+        "from": "n_n5bxd4po",
+        "fromPort": "next",
+        "to": "n_oxam0g94"
+      },
+      {
+        "id": "e_c7zwxa3q",
+        "from": "n_oxam0g94",
+        "fromPort": "next",
+        "to": "n_glvj5zbl"
+      },
+      {
+        "id": "e_ico8yo8z",
+        "from": "n_glvj5zbl",
+        "fromPort": "next",
+        "to": "n_xqa6szaz"
+      },
+      {
+        "id": "e_08kjuj5k",
+        "from": "n_xqa6szaz",
+        "fromPort": "next",
+        "to": "n_3p7ytqzv"
+      },
+      {
+        "id": "e_1d19hnxo",
+        "from": "n_3p7ytqzv",
+        "fromPort": "true",
+        "to": "n_gpectape"
+      },
+      {
+        "id": "e_cbjne2xh",
+        "from": "n_3p7ytqzv",
+        "fromPort": "false",
+        "to": "n_dw22rs3k"
+      },
+      {
+        "id": "e_smswrap_loop",
+        "from": "n_smswrap",
+        "fromPort": "loop",
+        "to": "n_skh785gq"
+      },
+      {
+        "id": "e_smswrap_exit",
+        "from": "n_smswrap",
+        "fromPort": "exit",
+        "to": "n_smsfinish"
+      },
+      {
+        "id": "e_smsfinish_next",
+        "from": "n_smsfinish",
+        "fromPort": "next",
+        "to": "n_p39zycof"
+      },
+      {
+        "id": "e_smswrap_catch",
+        "from": "n_smswrap",
+        "fromPort": "catch",
+        "to": "n_smscancel"
+      },
+      {
+        "id": "e_smscancel_next",
+        "from": "n_smscancel",
+        "fromPort": "next",
+        "to": "n_smsfailcatch"
+      }
+    ],
+    "start": "n_1",
+    "author": {
+      "name": "Sete_",
+      "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0=",
+      "signature": "BsC8Prs7K4wXPRASU7rrMa50+TsmZP1tDwsh3fKuiPr5xLMWaxQzanQucTn+Gobj9OeFh+kc9hdPX2a1GjOHBg=="
+    }
+  }
+}
