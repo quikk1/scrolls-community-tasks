@@ -1,0 +1,412 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-06-30T16:25:52.020Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "0.1.0",
+    "metadata": {
+      "id": "la28",
+      "name": "LA28",
+      "description": "",
+      "tags": [],
+      "inputs": []
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "imap"
+    ],
+    "variables": [],
+    "start": "n_9081ea46",
+    "nodes": [
+      {
+        "id": "n_9081ea46",
+        "kind": "noop",
+        "position": {
+          "x": 92.00000000000001,
+          "y": -182.66666666666666
+        },
+        "config": {}
+      },
+      {
+        "id": "n_inxo4k74",
+        "kind": "goto",
+        "position": {
+          "x": 85.23531702965028,
+          "y": -77.795075513218
+        },
+        "config": {
+          "url": "https://tickets.la28.org/",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_6iphto3c",
+        "kind": "fill",
+        "position": {
+          "x": 227.11765851482517,
+          "y": 79.7691289100577
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "div#register-site-login > div.gigya-layout-row:nth-of-type(1) > div.gigya-layout-row:nth-of-type(2) > div.gigya-composite-control.gigya-composite-control-textbox > input.gigya-input-text",
+          "value": "{{identity.email}}"
+        }
+      },
+      {
+        "id": "n_vy52esez",
+        "kind": "fill",
+        "position": {
+          "x": 752.8547382535438,
+          "y": 75.21851611977041
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "input[name=\"password\"]:visible",
+          "value": "{{identity.password}}"
+        }
+      },
+      {
+        "id": "n_fzsied39",
+        "kind": "fill",
+        "position": {
+          "x": 588.420534647918,
+          "y": 77.69001311508235
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "div#register-site-login > div.gigya-layout-row.with-two-inputs:nth-of-type(2) > div.gigya-layout-cell:nth-of-type(2) > div.gigya-composite-control.gigya-composite-control-textbox > input.gigya-input-text",
+          "value": "{{identity.lastName}}"
+        }
+      },
+      {
+        "id": "n_f4w1h4rc",
+        "kind": "fill",
+        "position": {
+          "x": 416.547333104848,
+          "y": 75.82853208534317
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "div#register-site-login > div.gigya-layout-row.with-two-inputs:nth-of-type(2) > div.gigya-layout-cell:nth-of-type(1) > div.gigya-composite-control.gigya-composite-control-textbox > input.gigya-input-text",
+          "value": "{{identity.firstName}}"
+        }
+      },
+      {
+        "id": "n_2u0zle9u",
+        "kind": "click",
+        "position": {
+          "x": 751.779974010241,
+          "y": 166.2833111721473
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "input#gigya-checkbox-subscribe"
+        }
+      },
+      {
+        "id": "n_tpcxtlhb",
+        "kind": "click",
+        "position": {
+          "x": 585.3525553057477,
+          "y": 173.30934407220656
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "input#gigya-checkbox-terms"
+        }
+      },
+      {
+        "id": "n_0nqkunz4",
+        "kind": "click",
+        "position": {
+          "x": 416.6277398912609,
+          "y": 174.5918851972807
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "input#gigya-checkbox-145180641846438850"
+        }
+      },
+      {
+        "id": "n_rrs4vtxn",
+        "kind": "click",
+        "position": {
+          "x": 57.326807417283746,
+          "y": 277.38553238459536
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "div#register-site-login > div.gigya-composite-control.gigya-composite-control-submit:nth-of-type(12) > input.gigya-input-submit"
+        }
+      },
+      {
+        "id": "n_uxg4kkb4",
+        "kind": "select",
+        "position": {
+          "x": 65.09077283541387,
+          "y": 174.8594328589644
+        },
+        "config": {
+          "timeoutMs": 30000,
+          "selector": "select#gigya-dropdown-102412737448402420",
+          "value": "{{addresses.0.country}}"
+        }
+      },
+      {
+        "id": "n_16i88ehs",
+        "kind": "fill",
+        "position": {
+          "x": 244.09077283541387,
+          "y": 174.8594328589644
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "input[name=\"profile.zip\"]:visible",
+          "value": "{{addresses.0.postalCode}}"
+        }
+      },
+      {
+        "id": "n_1z4bw39i",
+        "kind": "imap.waitForMessage",
+        "position": {
+          "x": 236.09077283541382,
+          "y": 274.8594328589644
+        },
+        "config": {
+          "codeOnly": true,
+          "lookbackMs": 300000,
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "emailCode",
+          "mailboxLabel": "Primary",
+          "subjectMatch": "Your LA28 ID Verification Code"
+        }
+      },
+      {
+        "id": "n_g53rvr7u",
+        "kind": "fill",
+        "position": {
+          "x": 421.0907728354139,
+          "y": 277.8594328589644
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000,
+          "selector": "input#gigya-textbox-code",
+          "value": "{{emailCode}}"
+        }
+      },
+      {
+        "id": "n_lpifzi1d",
+        "kind": "click",
+        "position": {
+          "x": 602.6702183569018,
+          "y": 278.15134999485724
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "form#gigya-otp-update-form > div.gigya-layout-row:nth-of-type(3) > div.gigya-composite-control.gigya-composite-control-submit:nth-of-type(1) > input.gigya-input-submit"
+        }
+      },
+      {
+        "id": "n_chlvu159",
+        "kind": "accounts.save",
+        "position": {
+          "x": 775.1134147774546,
+          "y": 279.8896886684515
+        },
+        "config": {
+          "email": "{{identity.email}}",
+          "password": "{{identity.password}}",
+          "status": "active"
+        }
+      },
+      {
+        "id": "n_9kyhana0",
+        "kind": "click",
+        "position": {
+          "x": 260.2201110973692,
+          "y": -76.88848899910755
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "a[href=\"https://tickets.la28.org/mycustomerdata/\"]:visible"
+        }
+      },
+      {
+        "id": "n_f6nqspvm",
+        "kind": "click",
+        "position": {
+          "x": 443.2201110973692,
+          "y": -78.88848899910755
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000,
+          "selector": "button.botdetect-button"
+        }
+      },
+      {
+        "id": "n_4snf2wqx",
+        "kind": "click",
+        "position": {
+          "x": 55.22011109736923,
+          "y": 14.111511000892449
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 300000,
+          "selector": "xpath=/html/body/div[2]/div[2]/div[3]/a/div"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_cqihakun",
+        "from": "n_9081ea46",
+        "fromPort": "next",
+        "to": "n_inxo4k74"
+      },
+      {
+        "id": "e_aq65m6z3",
+        "from": "n_6iphto3c",
+        "fromPort": "next",
+        "to": "n_f4w1h4rc"
+      },
+      {
+        "id": "e_coeu94uz",
+        "from": "n_f4w1h4rc",
+        "fromPort": "next",
+        "to": "n_fzsied39"
+      },
+      {
+        "id": "e_fgaxglse",
+        "from": "n_fzsied39",
+        "fromPort": "next",
+        "to": "n_vy52esez"
+      },
+      {
+        "id": "e_op6c5vz2",
+        "from": "n_0nqkunz4",
+        "fromPort": "next",
+        "to": "n_tpcxtlhb"
+      },
+      {
+        "id": "e_1jglawk9",
+        "from": "n_tpcxtlhb",
+        "fromPort": "next",
+        "to": "n_2u0zle9u"
+      },
+      {
+        "id": "e_pkorah34",
+        "from": "n_2u0zle9u",
+        "fromPort": "next",
+        "to": "n_rrs4vtxn"
+      },
+      {
+        "id": "e_phmx54ki",
+        "from": "n_vy52esez",
+        "fromPort": "next",
+        "to": "n_uxg4kkb4"
+      },
+      {
+        "id": "e_sl44a95x",
+        "from": "n_uxg4kkb4",
+        "fromPort": "next",
+        "to": "n_16i88ehs"
+      },
+      {
+        "id": "e_mst6vmdf",
+        "from": "n_16i88ehs",
+        "fromPort": "next",
+        "to": "n_0nqkunz4"
+      },
+      {
+        "id": "e_6h0vfset",
+        "from": "n_rrs4vtxn",
+        "fromPort": "next",
+        "to": "n_1z4bw39i"
+      },
+      {
+        "id": "e_7za77igi",
+        "from": "n_1z4bw39i",
+        "fromPort": "next",
+        "to": "n_g53rvr7u"
+      },
+      {
+        "id": "e_wj0chfwn",
+        "from": "n_g53rvr7u",
+        "fromPort": "next",
+        "to": "n_lpifzi1d"
+      },
+      {
+        "id": "e_7oi62y4h",
+        "from": "n_lpifzi1d",
+        "fromPort": "next",
+        "to": "n_chlvu159"
+      },
+      {
+        "id": "e_jcagxtlj",
+        "from": "n_inxo4k74",
+        "fromPort": "next",
+        "to": "n_9kyhana0"
+      },
+      {
+        "id": "e_tkkhqyfb",
+        "from": "n_9kyhana0",
+        "fromPort": "next",
+        "to": "n_f6nqspvm"
+      },
+      {
+        "id": "e_kih1t9xb",
+        "from": "n_f6nqspvm",
+        "fromPort": "next",
+        "to": "n_4snf2wqx"
+      },
+      {
+        "id": "e_4pd7vsxs",
+        "from": "n_4snf2wqx",
+        "fromPort": "next",
+        "to": "n_6iphto3c"
+      }
+    ],
+    "author": {
+      "name": "Sete_",
+      "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0=",
+      "signature": "8bmbZuugeC3SgipnLWr38xWT9sP7UiFh/jK9cVaTPOE03u6j+YRhiGDqHoTdzdpetW2ezCv4JeMBzc/lTF9pDQ=="
+    }
+  }
+}
