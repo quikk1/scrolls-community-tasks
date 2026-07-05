@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-05T17:52:08.258Z",
+  "exportedAt": "2026-07-05T23:36:05.361Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.1",
+    "version": "0.1.2",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -14,7 +14,8 @@
     "permissions": [
       "accounts",
       "browser",
-      "imap"
+      "imap",
+      "evaluate"
     ],
     "variables": [],
     "start": "n_9081ea46",
@@ -291,6 +292,29 @@
           "timeoutMs": 300000,
           "selector": "xpath=/html/body/div[2]/div[2]/div[3]/a/div"
         }
+      },
+      {
+        "id": "n_la28wait",
+        "kind": "dwell",
+        "position": {
+          "x": 130,
+          "y": 40
+        },
+        "config": {
+          "ms": 2500
+        }
+      },
+      {
+        "id": "n_la28guard",
+        "kind": "evaluate",
+        "position": {
+          "x": 185,
+          "y": 48
+        },
+        "config": {
+          "script": "if (/Restricted access/i.test(document.title)) {\n  throw new Error('LA28 restricted access: this proxy IP/region is blocked - use a different proxy.');\n}\ntry { const b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn document.title;",
+          "into": "la28Title"
+        }
       }
     ],
     "edges": [
@@ -400,13 +424,25 @@
         "id": "e_4pd7vsxs",
         "from": "n_4snf2wqx",
         "fromPort": "next",
+        "to": "n_la28wait"
+      },
+      {
+        "id": "e_la28g1",
+        "from": "n_la28wait",
+        "fromPort": "next",
+        "to": "n_la28guard"
+      },
+      {
+        "id": "e_la28g2",
+        "from": "n_la28guard",
+        "fromPort": "next",
         "to": "n_6iphto3c"
       }
     ],
     "author": {
       "name": "Sete_",
       "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0=",
-      "signature": "3ROCIQnSl0azGGQbuVWEEANuzSkMs1mGJjcMat23YZLHhNM2mvO+UNqTbbuspE1Uuy6V9tICv3zyqV2JuStnDQ=="
+      "signature": "cccnWM1op63Mlpo06cenwYxjJLWCPQrljMIdlue5u8mYFReE0y0dOpkBMKfQwGE8z0nYrJ06HSI4eyOXkX6LBg=="
     }
   }
 }

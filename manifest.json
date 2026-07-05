@@ -1,13 +1,13 @@
 {
   "format": "arcana-marketplace/v1",
   "repository": "quikk1/scrolls-community-tasks",
-  "updatedAt": "2026-07-05",
+  "updatedAt": "2026-07-06",
   "tasks": [
     {
       "id": "la28",
       "name": "LA28 Account Generator",
-      "description": "LA28 ticket account generator: passes the waiting room, switches to the sign-up form, fills the profile details (name, email, password, country, zip), confirms the email verification code, and saves the account. Runs with or without a Profile Group - on None it uses a generated identity and address, so all it needs is an email source (Key Vault mailboxes or an AYCD list).",
-      "version": "0.1.1",
+      "description": "LA28 ticket account generator: passes the waiting room, switches to the sign-up form, fills the profile details (name, email, password, country, zip), confirms the email verification code, and saves the account. After the waiting room it fails fast on a Restricted-access page (blocked IP/region) and best-effort accepts the legal-terms popup. Runs with or without a Profile Group - on None it uses a generated identity and address, so all it needs is an email source (Key Vault mailboxes or an AYCD list).",
+      "version": "0.1.2",
       "author": {
         "name": "Sete_",
         "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0="
@@ -23,11 +23,12 @@
       "permissions": [
         "accounts",
         "browser",
-        "imap"
+        "imap",
+        "evaluate"
       ],
       "category": "account-generator",
       "status": "ready",
-      "publishedAt": "2026-07-05"
+      "publishedAt": "2026-07-06"
     },
     {
       "id": "tm",
