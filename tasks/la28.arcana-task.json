@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-06-30T16:25:52.020Z",
+  "exportedAt": "2026-07-05T17:52:08.258Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.0",
+    "version": "0.1.1",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -406,7 +406,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0=",
-      "signature": "8bmbZuugeC3SgipnLWr38xWT9sP7UiFh/jK9cVaTPOE03u6j+YRhiGDqHoTdzdpetW2ezCv4JeMBzc/lTF9pDQ=="
+      "signature": "3ROCIQnSl0azGGQbuVWEEANuzSkMs1mGJjcMat23YZLHhNM2mvO+UNqTbbuspE1Uuy6V9tICv3zyqV2JuStnDQ=="
     }
   }
 }
