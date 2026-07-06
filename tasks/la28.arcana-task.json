@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-05T23:36:05.361Z",
+  "exportedAt": "2026-07-06T00:38:49.820Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.2",
+    "version": "0.1.3",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -418,13 +418,13 @@
         "id": "e_kih1t9xb",
         "from": "n_f6nqspvm",
         "fromPort": "next",
-        "to": "n_4snf2wqx"
+        "to": "n_la28wait"
       },
       {
         "id": "e_4pd7vsxs",
         "from": "n_4snf2wqx",
         "fromPort": "next",
-        "to": "n_la28wait"
+        "to": "n_6iphto3c"
       },
       {
         "id": "e_la28g1",
@@ -436,13 +436,13 @@
         "id": "e_la28g2",
         "from": "n_la28guard",
         "fromPort": "next",
-        "to": "n_6iphto3c"
+        "to": "n_4snf2wqx"
       }
     ],
     "author": {
       "name": "Sete_",
       "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0=",
-      "signature": "cccnWM1op63Mlpo06cenwYxjJLWCPQrljMIdlue5u8mYFReE0y0dOpkBMKfQwGE8z0nYrJ06HSI4eyOXkX6LBg=="
+      "signature": "yViGUQ6MNnTydF8CHD4y+gcfDrBnLclXOgQxiQRCELdfTK/rGbQie6WyuoaY83ijxzP1Ro5ipgOixXioDeliAw=="
     }
   }
 }
