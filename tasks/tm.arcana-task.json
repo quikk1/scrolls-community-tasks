@@ -1,6 +1,6 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-06-29T14:33:17.738Z",
+  "exportedAt": "2026-07-06T01:26:22.766Z",
   "graph": {
     "schemaVersion": 1,
     "metadata": {
@@ -21,7 +21,7 @@
       "imap",
       "sms"
     ],
-    "version": "0.1.0",
+    "version": "0.1.1",
     "variables": [],
     "nodes": [
       {
@@ -107,7 +107,7 @@
         "config": {
           "timeoutMs": 30000,
           "selector": "input#firstName-input",
-          "value": "{{identity.firstname}}",
+          "value": "{{identity.firstName}}",
           "cadenceMs": 90
         }
       },
@@ -121,7 +121,7 @@
         "config": {
           "timeoutMs": 30000,
           "selector": "input#lastName-input",
-          "value": "{{identity.lastname}}",
+          "value": "{{identity.lastName}}",
           "cadenceMs": 90
         }
       },
@@ -731,7 +731,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "i0Cq3Odz3wUYoXgtbZ7fXREKZuJmFjeo8hIg2FWItJ0=",
-      "signature": "BsC8Prs7K4wXPRASU7rrMa50+TsmZP1tDwsh3fKuiPr5xLMWaxQzanQucTn+Gobj9OeFh+kc9hdPX2a1GjOHBg=="
+      "signature": "B080cnzK9AqaRvqyUDi8t+Cd6yZdPFV2+KiDXUDbdf4yHkUkT7i0H0N9oe2pSiUHHOBorcLWpisTTvyQ8VK/Cw=="
     }
   }
 }
