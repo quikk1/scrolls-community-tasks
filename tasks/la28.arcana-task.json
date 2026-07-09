@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-09T19:33:04.503Z",
+  "exportedAt": "2026-07-09T20:04:08.551Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.5",
+    "version": "1.0.6",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -37,7 +37,7 @@
           "y": -77.795075513218
         },
         "config": {
-          "url": "https://tickets.la28.org/",
+          "url": "https://t.co/0rfWaqCIEi",
           "waitUntil": "domcontentloaded",
           "timeoutMs": 60000
         }
@@ -520,7 +520,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "eVq43kP5WbP9nz++ZypD4qv7bO9PXsDwe6Feu1H6JIeNL9mKHzt638GYbGadWK1M5FbcKDTu0CIwVcpLngD2Dw=="
+      "signature": "olQYKUb2OLtGBHOaOZpfhwimPOyPU0PLQaDp6msXIv8XJd6JLZfyKT5ypW4cpUt348dUigGsdZecMYFSisL+DA=="
     }
   }
 }
