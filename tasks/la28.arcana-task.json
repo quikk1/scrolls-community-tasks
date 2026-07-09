@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-09T19:18:29.635Z",
+  "exportedAt": "2026-07-09T19:33:04.503Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.4",
+    "version": "0.1.5",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -40,6 +40,18 @@
           "url": "https://tickets.la28.org/",
           "waitUntil": "domcontentloaded",
           "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_la28access",
+        "kind": "evaluate",
+        "position": {
+          "x": 85,
+          "y": -25
+        },
+        "config": {
+          "script": "if (/Access Denied/i.test(document.title)) {\n  throw new Error('LA28 Access Denied: this proxy IP is blocked - use a different proxy.');\n}\nreturn document.title;",
+          "into": "la28AccessTitle"
         }
       },
       {
@@ -442,6 +454,12 @@
         "id": "e_jcagxtlj",
         "from": "n_inxo4k74",
         "fromPort": "next",
+        "to": "n_la28access"
+      },
+      {
+        "id": "e_la28acc",
+        "from": "n_la28access",
+        "fromPort": "next",
         "to": "n_9kyhana0"
       },
       {
@@ -502,7 +520,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "1th03R2B/BN7Ld71X2lZNMyCJXyzpoEDK3d2q6WR1sLpTdOerCsRXk7Nh7meHVXfY78Xmy5hhlWRKNMA+4fYCQ=="
+      "signature": "eVq43kP5WbP9nz++ZypD4qv7bO9PXsDwe6Feu1H6JIeNL9mKHzt638GYbGadWK1M5FbcKDTu0CIwVcpLngD2Dw=="
     }
   }
 }
