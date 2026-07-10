@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-09T20:04:08.551Z",
+  "exportedAt": "2026-07-10T08:51:32.866Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.6",
+    "version": "1.0.7",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -66,7 +66,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 60000,
-          "selector": "div#register-site-login > div.gigya-layout-row:nth-of-type(1) > div.gigya-layout-row:nth-of-type(2) > div.gigya-composite-control.gigya-composite-control-textbox > input.gigya-input-text",
+          "selector": "#register-site-login input[name=\"email\"]",
           "value": "{{identity.email}}"
         }
       },
@@ -82,7 +82,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 60000,
-          "selector": "input[name=\"password\"]:visible",
+          "selector": "#register-site-login input[name=\"password\"]",
           "value": "{{identity.password}}"
         }
       },
@@ -98,7 +98,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 60000,
-          "selector": "div#register-site-login > div.gigya-layout-row.with-two-inputs:nth-of-type(2) > div.gigya-layout-cell:nth-of-type(2) > div.gigya-composite-control.gigya-composite-control-textbox > input.gigya-input-text",
+          "selector": "#register-site-login input[name=\"profile.lastName\"]",
           "value": "{{identity.lastName}}"
         }
       },
@@ -114,7 +114,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 60000,
-          "selector": "div#register-site-login > div.gigya-layout-row.with-two-inputs:nth-of-type(2) > div.gigya-layout-cell:nth-of-type(1) > div.gigya-composite-control.gigya-composite-control-textbox > input.gigya-input-text",
+          "selector": "#register-site-login input[name=\"profile.firstName\"]",
           "value": "{{identity.firstName}}"
         }
       },
@@ -157,7 +157,7 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 60000,
-          "selector": "input#gigya-checkbox-145180641846438850"
+          "selector": "#register-site-login input[type=\"checkbox\"]:not(#gigya-checkbox-terms):not(#gigya-checkbox-subscribe)"
         }
       },
       {
@@ -171,7 +171,7 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 60000,
-          "selector": "div#register-site-login > div.gigya-composite-control.gigya-composite-control-submit:nth-of-type(12) > input.gigya-input-submit"
+          "selector": "#register-site-login input.gigya-input-submit"
         }
       },
       {
@@ -183,7 +183,7 @@
         },
         "config": {
           "timeoutMs": 60000,
-          "selector": "select#gigya-dropdown-102412737448402420",
+          "selector": "#register-site-login select[name=\"profile.country\"]",
           "value": "{{addresses.0.country}}"
         }
       },
@@ -199,7 +199,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 60000,
-          "selector": "input[name=\"profile.zip\"]:visible",
+          "selector": "#register-site-login input[name=\"profile.zip\"]",
           "value": "{{addresses.0.postalCode}}"
         }
       },
@@ -288,7 +288,7 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 60000,
-          "selector": "button.botdetect-button"
+          "selector": "button.botdetect-button, [class*=\"botdetect\"] button, button:has-text(\"Join\"), a:has-text(\"Join\"), div[role=\"button\"]:has-text(\"Join\")"
         }
       },
       {
@@ -313,7 +313,7 @@
           "y": 40
         },
         "config": {
-          "ms": 2500
+          "ms": 4000
         }
       },
       {
@@ -324,7 +324,7 @@
           "y": 48
         },
         "config": {
-          "script": "if (/Restricted access/i.test(document.title)) {\n  throw new Error('LA28 restricted access: this proxy IP/region is blocked - use a different proxy.');\n}\ntry { const b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn document.title;",
+          "script": "if (/Access Denied|Restricted access/i.test(document.title) || /error403|queue-it\\.net/i.test(location.href)) {\n  throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\n}\ntry { const b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn document.title;",
           "into": "la28Title"
         }
       },
@@ -336,7 +336,7 @@
           "y": -249.57309882893378
         },
         "config": {
-          "ms": 2500
+          "ms": 7000
         }
       },
       {
@@ -362,6 +362,18 @@
           "left": "{{la28XpathReady}}",
           "op": "==",
           "right": "1"
+        }
+      },
+      {
+        "id": "n_la28consent",
+        "kind": "evaluate",
+        "position": {
+          "x": 125,
+          "y": 95
+        },
+        "config": {
+          "script": "// First page load: wait for full load, then try the CMP legal/privacy consent\n// (span#cmpbntyestxt) for up to 60s. Optional — continue if it never appears.\nconst start = Date.now();\nwhile (document.readyState !== 'complete' && Date.now() - start < 15000) {\n  await new Promise(function (r) { setTimeout(r, 200); });\n}\nconst deadline = Date.now() + 60000;\nwhile (Date.now() < deadline) {\n  const el = document.querySelector('span#cmpbntyestxt');\n  if (el) {\n    try { (el.closest('button, a, [role=button]') || el).click(); } catch (e) {}\n    try { el.click(); } catch (e) {}\n    return 'consent-clicked';\n  }\n  await new Promise(function (r) { setTimeout(r, 500); });\n}\nreturn 'consent-not-found';",
+          "into": "la28Consent"
         }
       }
     ],
@@ -460,7 +472,7 @@
         "id": "e_la28acc",
         "from": "n_la28access",
         "fromPort": "next",
-        "to": "n_9kyhana0"
+        "to": "n_la28consent"
       },
       {
         "id": "e_tkkhqyfb",
@@ -515,12 +527,18 @@
         "from": "n_la28guard",
         "fromPort": "next",
         "to": "n_4snf2wqx"
+      },
+      {
+        "id": "e_la28consent",
+        "from": "n_la28consent",
+        "fromPort": "next",
+        "to": "n_9kyhana0"
       }
     ],
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "olQYKUb2OLtGBHOaOZpfhwimPOyPU0PLQaDp6msXIv8XJd6JLZfyKT5ypW4cpUt348dUigGsdZecMYFSisL+DA=="
+      "signature": "zE641lICkffWkYJmsuAnTyGPaUihpVk1xsGnnHnZYlUNMqxAW/h/RPr2vggHDoEvBcFr36G+Yq/hY34vfhsdCg=="
     }
   }
 }
