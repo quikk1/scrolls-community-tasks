@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T08:51:32.866Z",
+  "exportedAt": "2026-07-10T09:58:24.130Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.7",
+    "version": "1.0.8",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -372,7 +372,7 @@
           "y": 95
         },
         "config": {
-          "script": "// First page load: wait for full load, then try the CMP legal/privacy consent\n// (span#cmpbntyestxt) for up to 60s. Optional — continue if it never appears.\nconst start = Date.now();\nwhile (document.readyState !== 'complete' && Date.now() - start < 15000) {\n  await new Promise(function (r) { setTimeout(r, 200); });\n}\nconst deadline = Date.now() + 60000;\nwhile (Date.now() < deadline) {\n  const el = document.querySelector('span#cmpbntyestxt');\n  if (el) {\n    try { (el.closest('button, a, [role=button]') || el).click(); } catch (e) {}\n    try { el.click(); } catch (e) {}\n    return 'consent-clicked';\n  }\n  await new Promise(function (r) { setTimeout(r, 500); });\n}\nreturn 'consent-not-found';",
+          "script": "// Dismiss LA28's first-load consent gate: the \"Legal Terms and Privacy\" modal\n// (a \"CONTINUE\" button, main DOM) and/or a cookie CMP (span#cmpbntyestxt).\n// Waits for full load, then clicks the consent button by id OR by its exact\n// visible text, preferring one inside a modal/overlay, and confirms it closed.\n// Polls up to 60s; if nothing appears it returns and the run continues.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<2||r.height<2)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  var W=window.innerWidth||9999,H=window.innerHeight||9999;\n  if(r.bottom<0||r.top>H||r.right<0||r.left>W)return false;\n  return true;\n}\nfunction inOverlay(el){\n  for(var n=el;n&&n!==document.body;n=n.parentElement){\n    if(n.getAttribute&&(n.getAttribute('role')==='dialog'||n.getAttribute('aria-modal')==='true'))return true;\n    var s=getComputedStyle(n);\n    if((s.position==='fixed'||s.position==='sticky')&&parseInt(s.zIndex||'0',10)>=5)return true;\n  }\n  return false;\n}\nfunction clickIt(el){\n  var t=el.closest('button, a, [role=button], input[type=submit], input[type=button], [onclick]')||el;\n  try{t.scrollIntoView({block:'center'});}catch(e){}\n  try{t.click();}catch(e){}\n  if(t!==el){try{el.click();}catch(e){}}\n}\nfunction pickIn(doc){\n  try{\n    var byId=doc.querySelector('#cmpbntyestxt');\n    if(byId&&vis(byId))return byId;\n  }catch(e){}\n  var exact=/^(continue|i agree|agree|accept all|accept cookies|accept|allow all|got it|ok)$/i;\n  var nodes=doc.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button], span, div, p');\n  var best=null;\n  for(var i=0;i<nodes.length;i++){\n    var el=nodes[i];\n    if(!vis(el))continue;\n    var txt=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();\n    if(!exact.test(txt))continue;\n    var r=el.getBoundingClientRect();\n    if(r.height>140||r.width>800)continue;\n    if(inOverlay(el))return el;\n    if(!best)best=el;\n  }\n  return best;\n}\nfunction pick(){\n  var el=pickIn(document);\n  if(el)return el;\n  var ifr=document.querySelectorAll('iframe');\n  for(var i=0;i<ifr.length;i++){\n    var d=null;try{d=ifr[i].contentDocument;}catch(e){}\n    if(d){var e2=pickIn(d);if(e2)return e2;}\n  }\n  return null;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<15000){await sleep(200);}\nvar deadline=Date.now()+60000;\nwhile(Date.now()<deadline){\n  var el=pick();\n  if(el){\n    clickIt(el);\n    await sleep(700);\n    if(!vis(el))return 'consent-clicked';\n  }\n  await sleep(400);\n}\nreturn 'consent-not-found';",
           "into": "la28Consent"
         }
       }
@@ -538,7 +538,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "zE641lICkffWkYJmsuAnTyGPaUihpVk1xsGnnHnZYlUNMqxAW/h/RPr2vggHDoEvBcFr36G+Yq/hY34vfhsdCg=="
+      "signature": "wPdOoxUzoOAiY3DHggaf+PNQgc2LSs5TTzUwNjabyh3uax87vbHKpcB6ML8ENt1zLgfhEMq+u2kVpUG9OG2JDQ=="
     }
   }
 }
