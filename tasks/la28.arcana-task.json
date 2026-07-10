@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T12:13:19.318Z",
+  "exportedAt": "2026-07-10T12:53:15.551Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.9",
+    "version": "1.1.0",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -375,6 +375,18 @@
           "script": "// Dismiss LA28's first-load consent gate (\"Legal Terms and Privacy\" CONTINUE,\n// and/or a cookie CMP). Searches the main DOM, OPEN shadow roots, and\n// same-origin iframes for the consent button (by id or exact visible text),\n// prefers one inside a modal/overlay, clicks it, and confirms it closed.\n// If nothing reachable is found it throws a DIAG string listing iframes +\n// shadow hosts so the exact structure (e.g. a cross-origin CMP iframe) is known.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<2||r.height<2)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  var W=window.innerWidth||9999,H=window.innerHeight||9999;\n  if(r.bottom<0||r.top>H||r.right<0||r.left>W)return false;\n  return true;\n}\nfunction parentOf(n){\n  var p=n.parentElement;\n  if(!p){var rt=n.getRootNode&&n.getRootNode();p=(rt&&rt.host)||null;}\n  return p;\n}\nfunction inOverlay(el){\n  var n=el;\n  while(n&&n.nodeType===1){\n    if(n.getAttribute&&(n.getAttribute('role')==='dialog'||n.getAttribute('aria-modal')==='true'))return true;\n    try{var s=getComputedStyle(n);if((s.position==='fixed'||s.position==='sticky')&&parseInt(s.zIndex||'0',10)>=5)return true;}catch(e){}\n    if(n===document.body)break;\n    n=parentOf(n);\n  }\n  return false;\n}\nfunction clickIt(el){\n  var t=(el.closest&&el.closest('button, a, [role=button], input[type=submit], input[type=button], [onclick]'))||el;\n  try{t.scrollIntoView({block:'center'});}catch(e){}\n  try{t.click();}catch(e){}\n  if(t!==el){try{el.click();}catch(e){}}\n}\nfunction allRoots(){\n  var roots=[document],stack=[document];\n  while(stack.length){\n    var root=stack.pop(),els;\n    try{els=root.querySelectorAll('*');}catch(e){continue;}\n    for(var i=0;i<els.length;i++){var sh=els[i].shadowRoot;if(sh){roots.push(sh);stack.push(sh);}}\n  }\n  var ifr=document.querySelectorAll('iframe');\n  for(var j=0;j<ifr.length;j++){var dd=null;try{dd=ifr[j].contentDocument;}catch(e){}if(dd)roots.push(dd);}\n  return roots;\n}\nfunction findIn(root){\n  try{var byId=root.querySelector('#cmpbntyestxt');if(byId&&vis(byId))return byId;}catch(e){}\n  var exact=/^(continue|i agree|agree|accept all|accept cookies|accept|allow all|got it|ok)$/i;\n  var nodes;\n  try{nodes=root.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button], span, div, p');}catch(e){return null;}\n  var best=null;\n  for(var i=0;i<nodes.length;i++){\n    var el=nodes[i];\n    if(!vis(el))continue;\n    var txt=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();\n    if(!exact.test(txt))continue;\n    var r=el.getBoundingClientRect();\n    if(r.height>140||r.width>900)continue;\n    if(inOverlay(el))return el;\n    if(!best)best=el;\n  }\n  return best;\n}\nfunction pick(){var roots=allRoots();for(var i=0;i<roots.length;i++){var el=findIn(roots[i]);if(el)return el;}return null;}\nfunction diag(){\n  var out={rs:document.readyState,iframes:[],shadowHosts:[],btns:[]};\n  var ifr=document.querySelectorAll('iframe');\n  for(var i=0;i<ifr.length;i++){var co;try{co=ifr[i].contentDocument?'same':'cross';}catch(e){co='cross';}out.iframes.push(((ifr[i].src||'no-src').slice(0,90))+' ['+co+']');}\n  var all=document.querySelectorAll('*');\n  for(var j=0;j<all.length;j++){if(all[j].shadowRoot)out.shadowHosts.push(all[j].tagName.toLowerCase()+(all[j].id?('#'+all[j].id):''));}\n  var cl=document.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button]');\n  for(var k=0;k<cl.length&&out.btns.length<20;k++){if(vis(cl[k])){var t=(cl[k].innerText||cl[k].value||'').replace(/\\s+/g,' ').trim().slice(0,28);if(t)out.btns.push(t);}}\n  return out;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<15000){await sleep(200);}\nvar deadline=Date.now()+45000;\nwhile(Date.now()<deadline){\n  var el=pick();\n  if(el){clickIt(el);await sleep(700);if(!vis(el))return 'consent-clicked';}\n  await sleep(400);\n}\nthrow new Error('LA28 consent button not reachable from page JS. DIAG='+JSON.stringify(diag()));",
           "into": "la28Consent"
         }
+      },
+      {
+        "id": "n_la28emailcheck",
+        "kind": "evaluate",
+        "position": {
+          "x": 227,
+          "y": 150
+        },
+        "config": {
+          "script": "// After the email is entered, give Gigya time to run its server-side check and\n// flag an already-registered address (error 400003: \"An account from a prior\n// Olympic & Paralympic Games exists for this email address. Click here to log\n// in.\"). That case - and only that case - puts a login <a> inside the email\n// error span. If it shows, fail fast so this email counts as used.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<1&&r.height<1)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  return true;\n}\n// Blur the email field so Gigya fires its on-blur server validation.\ntry{\n  var em=document.querySelector('#register-site-login input[name=\"email\"]')||document.querySelector('input[name=\"email\"]');\n  if(em){em.blur();em.dispatchEvent(new Event('blur',{bubbles:true}));em.dispatchEvent(new Event('change',{bubbles:true}));}\n}catch(e){}\n// Human wait 6-10s for the async check to come back.\nawait sleep(6000+Math.floor(Math.random()*4001));\nvar link=document.querySelector('#gigya-error-msg-gigya-register-form-email > a');\nif(link&&vis(link)){\n  throw new Error('email already used');\n}\nreturn 'email-ok';",
+          "into": "la28EmailCheck"
+        }
       }
     ],
     "edges": [
@@ -388,7 +400,7 @@
         "id": "e_aq65m6z3",
         "from": "n_6iphto3c",
         "fromPort": "next",
-        "to": "n_f4w1h4rc"
+        "to": "n_la28emailcheck"
       },
       {
         "id": "e_coeu94uz",
@@ -533,12 +545,18 @@
         "from": "n_la28consent",
         "fromPort": "next",
         "to": "n_9kyhana0"
+      },
+      {
+        "id": "e_la28emailcheck",
+        "from": "n_la28emailcheck",
+        "fromPort": "next",
+        "to": "n_f4w1h4rc"
       }
     ],
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "zLMmGL9rsOatpHVzts0tv1i++ixRzWIWIaE4sJAuHLHNa8v/XBBqKyHOcUVl0sTfbG5eBaIl8fHgf7T6xxASDQ=="
+      "signature": "Vc/bQV2k3p8ijJerBPRf7SGcrxgv65x14Ki0XvwLPCKkrnTPhHaHbNGdBAmEziOk667L2skvzwY4MAD7F+diBA=="
     }
   }
 }
