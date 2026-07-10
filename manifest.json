@@ -35,7 +35,7 @@
       "id": "tm",
       "name": "Ticketmaster Account Generator",
       "description": "Ticketmaster account generator: signup -> email verification -> SMS verification, then re-reads the saved email in account settings to confirm the account exists before saving it.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="

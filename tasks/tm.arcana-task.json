@@ -1,6 +1,6 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T22:57:40.913Z",
+  "exportedAt": "2026-07-10T23:44:42.922Z",
   "graph": {
     "schemaVersion": 1,
     "metadata": {
@@ -21,7 +21,7 @@
       "imap",
       "sms"
     ],
-    "version": "0.1.2",
+    "version": "0.1.3",
     "variables": [],
     "nodes": [
       {
@@ -519,15 +519,156 @@
         "config": {
           "message": "SMS verification failed - rented number cancelled"
         }
+      },
+      {
+        "id": "n_pre_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 232,
+          "y": 170
+        },
+        "config": {}
+      },
+      {
+        "id": "n_pre_pick",
+        "kind": "accounts.pick",
+        "position": {
+          "x": 432,
+          "y": 170
+        },
+        "config": {
+          "site": "ticketmaster.com",
+          "emailLike": "{{identity.email}}",
+          "into": "dbHit"
+        }
+      },
+      {
+        "id": "n_pre_branch",
+        "kind": "branch",
+        "position": {
+          "x": 632,
+          "y": 170
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{WAS_ERROR}}"
+        }
+      },
+      {
+        "id": "n_pre_fail",
+        "kind": "fail",
+        "position": {
+          "x": 632,
+          "y": 60
+        },
+        "config": {
+          "message": "Already registered - email already used (skipped: found in database)"
+        }
+      },
+      {
+        "id": "n_ar_check",
+        "kind": "elementExists",
+        "position": {
+          "x": 330,
+          "y": 520
+        },
+        "config": {
+          "selector": "input#firstName-input",
+          "timeoutMs": 25000,
+          "into": "hasFirstName"
+        }
+      },
+      {
+        "id": "n_ar_branch",
+        "kind": "branch",
+        "position": {
+          "x": 520,
+          "y": 520
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{hasFirstName}}"
+        }
+      },
+      {
+        "id": "n_ar_pwcheck",
+        "kind": "elementExists",
+        "position": {
+          "x": 520,
+          "y": 620
+        },
+        "config": {
+          "selector": "input#password-input, input[type=\"password\"]",
+          "timeoutMs": 5000,
+          "into": "hasPassword"
+        }
+      },
+      {
+        "id": "n_ar_pwbranch",
+        "kind": "branch",
+        "position": {
+          "x": 710,
+          "y": 620
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{hasPassword}}"
+        }
+      },
+      {
+        "id": "n_ar_errcheck",
+        "kind": "elementExists",
+        "position": {
+          "x": 710,
+          "y": 720
+        },
+        "config": {
+          "selector": "div[data-bdd=\"error-banner\"]:visible",
+          "timeoutMs": 3000,
+          "into": "hasErrorBanner"
+        }
+      },
+      {
+        "id": "n_ar_errbranch",
+        "kind": "branch",
+        "position": {
+          "x": 900,
+          "y": 720
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{hasErrorBanner}}"
+        }
+      },
+      {
+        "id": "n_ar_save",
+        "kind": "accounts.save",
+        "position": {
+          "x": 520,
+          "y": 820
+        },
+        "config": {
+          "email": "{{identity.email}}",
+          "password": "",
+          "site": "ticketmaster.com",
+          "status": "active",
+          "label": "Ticketmaster.com",
+          "notes": "Already registered (detected at signup)"
+        }
+      },
+      {
+        "id": "n_ar_fail",
+        "kind": "fail",
+        "position": {
+          "x": 900,
+          "y": 820
+        },
+        "config": {
+          "message": "Already registered - email already used"
+        }
       }
     ],
     "edges": [
-      {
-        "id": "e_1",
-        "from": "n_1",
-        "fromPort": "next",
-        "to": "n_2"
-      },
       {
         "id": "e_2",
         "from": "n_2",
@@ -551,12 +692,6 @@
         "from": "n_ufo7cetl",
         "fromPort": "next",
         "to": "n_lfumyf4r"
-      },
-      {
-        "id": "e_578evdys",
-        "from": "n_tzhd7i6s",
-        "fromPort": "next",
-        "to": "n_ufo7cetl"
       },
       {
         "id": "e_ei1gi38w",
@@ -725,13 +860,115 @@
         "from": "n_smscancel",
         "fromPort": "next",
         "to": "n_smsfailcatch"
+      },
+      {
+        "id": "e_up1",
+        "from": "n_1",
+        "fromPort": "next",
+        "to": "n_pre_tc"
+      },
+      {
+        "id": "e_up2",
+        "from": "n_pre_tc",
+        "fromPort": "loop",
+        "to": "n_pre_pick"
+      },
+      {
+        "id": "e_up3",
+        "from": "n_pre_pick",
+        "fromPort": "next",
+        "to": "n_pre_tc"
+      },
+      {
+        "id": "e_up4",
+        "from": "n_pre_tc",
+        "fromPort": "exit",
+        "to": "n_pre_branch"
+      },
+      {
+        "id": "e_up5",
+        "from": "n_pre_branch",
+        "fromPort": "true",
+        "to": "n_2"
+      },
+      {
+        "id": "e_up6",
+        "from": "n_pre_branch",
+        "fromPort": "false",
+        "to": "n_pre_fail"
+      },
+      {
+        "id": "e_up7",
+        "from": "n_tzhd7i6s",
+        "fromPort": "next",
+        "to": "n_ar_check"
+      },
+      {
+        "id": "e_up8",
+        "from": "n_ar_check",
+        "fromPort": "next",
+        "to": "n_ar_branch"
+      },
+      {
+        "id": "e_up9",
+        "from": "n_ar_branch",
+        "fromPort": "true",
+        "to": "n_ufo7cetl"
+      },
+      {
+        "id": "e_up10",
+        "from": "n_ar_branch",
+        "fromPort": "false",
+        "to": "n_ar_pwcheck"
+      },
+      {
+        "id": "e_up11",
+        "from": "n_ar_pwcheck",
+        "fromPort": "next",
+        "to": "n_ar_pwbranch"
+      },
+      {
+        "id": "e_up12",
+        "from": "n_ar_pwbranch",
+        "fromPort": "true",
+        "to": "n_ar_save"
+      },
+      {
+        "id": "e_up13",
+        "from": "n_ar_pwbranch",
+        "fromPort": "false",
+        "to": "n_ar_errcheck"
+      },
+      {
+        "id": "e_up14",
+        "from": "n_ar_errcheck",
+        "fromPort": "next",
+        "to": "n_ar_errbranch"
+      },
+      {
+        "id": "e_up15",
+        "from": "n_ar_errbranch",
+        "fromPort": "true",
+        "to": "n_ar_save"
+      },
+      {
+        "id": "e_up16",
+        "from": "n_ar_errbranch",
+        "fromPort": "false",
+        "to": "n_ufo7cetl"
+      },
+      {
+        "id": "e_up17",
+        "from": "n_ar_save",
+        "fromPort": "next",
+        "to": "n_ar_fail"
       }
     ],
     "start": "n_1",
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "Guu3eueZ5L072NV6q/x4dGba7zU10dgUtpSd/JCK1mIAjrfoga3GFuGBkmvuHJUeD08/LxTd/TOvqOtsnUZ/DQ=="
+      "signature": "92GfjcYYCPlWPm4eTPneLfprxBKxAkgWuwsirfIaWjz6qxlZApkbMQT4upn5JrxrusmF5bC+REQWwwnN566QBw=="
     }
   }
 }
