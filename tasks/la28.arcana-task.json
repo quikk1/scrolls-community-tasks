@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T13:44:29.570Z",
+  "exportedAt": "2026-07-10T13:55:10.029Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.1.2",
+    "version": "1.1.3",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -50,7 +50,7 @@
           "y": -25
         },
         "config": {
-          "script": "// The t.co link redirects to tickets.la28.org. Wait for the FULL load (the whole\n// redirect chain settled) before judging the page - checking too early reads an\n// empty title and misses the block. Akamai's edge block serves an \"Access\n// Denied\" page (tab title \"Access Denied\"; body: \"You don't have permission to\n// access ... Reference # ... errors.edgesuite.net\"). If we see it, the proxy IP\n// is blocked - error out so the run rotates to a fresh proxy.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nawait sleep(1500); // let any last redirect / Akamai page swap settle\nvar title=(document.title||'').trim();\nvar body=(document.body?document.body.innerText:'')||'';\nif(/access denied/i.test(title)||(/access denied/i.test(body)&&/(don't have permission|reference #|edgesuite\\.net)/i.test(body))){\n  throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\n}\nreturn title;",
+          "script": "// t.co -> tickets.la28.org can redirect CLIENT-SIDE (after domcontentloaded), so\n// a single check - even after a fixed settle - races the redirect on a slow\n// proxy and reads t.co / an intermediate, missing the block. POLL instead: keep\n// looking until we either see Akamai's \"Access Denied\" (throw, so the run\n// rotates proxy) or the real LA28 page (continue). Navigations during the poll\n// destroy this isolated world; the engine retries the whole node on the settled\n// page, so the poll always ends up on the final document.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction denied(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  return /access denied/i.test(title)\n    || (/access denied/i.test(body) && /(don't have permission|reference #|edgesuite\\.net)/i.test(body));\n}\nfunction la28Ready(){\n  // Positive proof we reached the real LA28 site (not t.co / an intermediate) so\n  // we can stop early on a clean run instead of polling the full window.\n  var title=(document.title||'').trim();\n  if(/official la28|la28.*(ticket|olympic|paralympic)/i.test(title)) return true;\n  var host=(location.host||'');\n  var body=(document.body?document.body.innerText:'')||'';\n  return /la28\\.org/i.test(host)\n    && /register for the la28|get tickets|waiting room|create an account|legal terms and privacy|mark your calendar/i.test(body);\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(denied()) throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\n  if(la28Ready()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(denied()) throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\nreturn (document.title||'').trim();",
           "into": "la28AccessTitle"
         }
       },
@@ -556,7 +556,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "FUuRc2VStQD5vdaQjbdymDZcn1e/XFdVxj4hG9MsBTXrS/aXbaCzQodChBSKfm06FrjrxzsAhCLLGtngWpK6AA=="
+      "signature": "DlsqscHw9JCa49mKR0bdNN8YBZS+HdkVgwd4MzdPQG14rkNfxnHyw8hZ0z9q1/Ls60TzkfukVuhaR2nB1+xhBw=="
     }
   }
 }
