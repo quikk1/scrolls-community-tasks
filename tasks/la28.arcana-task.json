@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T12:53:15.551Z",
+  "exportedAt": "2026-07-10T13:04:53.282Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.1.0",
+    "version": "1.1.1",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -50,7 +50,7 @@
           "y": -25
         },
         "config": {
-          "script": "if (/Access Denied/i.test(document.title)) {\n  throw new Error('LA28 Access Denied: this proxy IP is blocked - use a different proxy.');\n}\nreturn document.title;",
+          "script": "// The t.co link redirects to tickets.la28.org. Wait for the FULL load (the whole\n// redirect chain settled) before judging the page - checking too early reads an\n// empty title and misses the block. Akamai's edge block serves an \"Access\n// Denied\" page (tab title \"Access Denied\"; body: \"You don't have permission to\n// access ... Reference # ... errors.edgesuite.net\"). If we see it, the proxy IP\n// is blocked - error out so the run rotates to a fresh proxy.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nawait sleep(1500); // let any last redirect / Akamai page swap settle\nvar title=(document.title||'').trim();\nvar body=(document.body?document.body.innerText:'')||'';\nif(/access denied/i.test(title)||(/access denied/i.test(body)&&/(don't have permission|reference #|edgesuite\\.net)/i.test(body))){\n  throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\n}\nreturn title;",
           "into": "la28AccessTitle"
         }
       },
@@ -556,7 +556,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "Vc/bQV2k3p8ijJerBPRf7SGcrxgv65x14Ki0XvwLPCKkrnTPhHaHbNGdBAmEziOk667L2skvzwY4MAD7F+diBA=="
+      "signature": "ACfnds8TY3M6Pw2LNWDbgNi9qA1FLYExGNgbTQyIfNnwUpsbzwsqbUkiQ8Gjka/nmP0B9pBjIayvXzOLN4XGAA=="
     }
   }
 }

@@ -7,7 +7,7 @@
       "id": "la28",
       "name": "LA28 Account Generator",
       "description": "LA28 ticket account generator: passes the waiting room, switches to the sign-up form, fills the profile details (name, email, password, country, zip), confirms the email verification code, and saves the account. After the waiting room it fails fast on a Restricted-access page (blocked IP/region) and best-effort accepts the legal-terms popup. Runs with or without a Profile Group - on None it uses a generated identity and address, so all it needs is an email source (Key Vault mailboxes or an AYCD list). Fails fast with \"email already used\" if the address is already registered from a prior Olympic & Paralympic Games.",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
