@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T13:04:53.282Z",
+  "exportedAt": "2026-07-10T13:44:29.570Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.1.1",
+    "version": "1.1.2",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -324,7 +324,7 @@
           "y": 48
         },
         "config": {
-          "script": "if (/Access Denied|Restricted access/i.test(document.title) || /error403|queue-it\\.net/i.test(location.href)) {\n  throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\n}\ntry { const b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn document.title;",
+          "script": "// After the queue-join / botdetect click, Queue-it either sends us into the\n// waiting room or - if the IP is flagged - to /queue/error403 (\"We are sorry,\n// your access has been restricted\"). It takes a moment to decide, so check ONCE\n// too early (the old bug) races the redirect and misses the block - then the\n// next step hangs 300s on a dead page. Wait for load, then POLL until we either\n// see the block (throw, so the run rotates proxy) or the waiting-room proceed\n// element appears (continue).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction blocked(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  var href=location.href||'';\n  return /access denied|restricted access/i.test(title)\n    || /error403|queue-it\\.net/i.test(href)\n    || /your access has been restricted|access has been restricted/i.test(body);\n}\nfunction proceedReady(){\n  try{\n    var el=document.evaluate('/html/body/div[2]/div[2]/div[3]/a/div',document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;\n    if(el){var r=el.getBoundingClientRect();return r.width>0&&r.height>0;}\n  }catch(e){}\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+12000;\nwhile(Date.now()<deadline){\n  if(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\n  if(proceedReady()) break;\n  await sleep(500);\n}\nif(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\ntry { var b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn (document.title||'').trim();",
           "into": "la28Title"
         }
       },
@@ -556,7 +556,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "ACfnds8TY3M6Pw2LNWDbgNi9qA1FLYExGNgbTQyIfNnwUpsbzwsqbUkiQ8Gjka/nmP0B9pBjIayvXzOLN4XGAA=="
+      "signature": "FUuRc2VStQD5vdaQjbdymDZcn1e/XFdVxj4hG9MsBTXrS/aXbaCzQodChBSKfm06FrjrxzsAhCLLGtngWpK6AA=="
     }
   }
 }
