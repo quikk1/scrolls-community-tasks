@@ -1,0 +1,398 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-07-11T17:17:44.632Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "metadata": {
+      "id": "wm",
+      "name": "Walmart",
+      "description": "",
+      "tags": [],
+      "inputs": []
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "evaluate",
+      "imap"
+    ],
+    "variables": [],
+    "start": "n_start",
+    "nodes": [
+      {
+        "id": "n_start",
+        "kind": "noop",
+        "position": {
+          "x": 100,
+          "y": -180
+        },
+        "config": {}
+      },
+      {
+        "id": "n_goto",
+        "kind": "goto",
+        "position": {
+          "x": 340,
+          "y": -110
+        },
+        "config": {
+          "url": "https://identity.walmart.com/account/login?client_id=eca75c97-bc67-4b5a-a3d8-b2416697daca&redirect_uri=https%3A%2F%2Fwww.walmart.com%2Faccount%2FverifyToken&scope=openid+email+offline_access&tenant_id=elh9ie&state=%2Fnonprofits",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_wmaccess",
+        "kind": "evaluate",
+        "position": {
+          "x": 100,
+          "y": -40
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction pageText(){var t=(document.title||'').toLowerCase();var b=(document.body?document.body.innerText:'')||'';return t+' '+b.toLowerCase();}\nfunction networkErr(){var s=pageText();return s.includes(\"this site can't be reached\")||s.includes(\"this site can’t be reached\")||s.includes('err_connection')||s.includes('err_tunnel')||s.includes('err_proxy')||s.includes('dns_probe_finished')||s.includes('check if there is a typo');}\nfunction challenge(){var b=((document.body?document.body.innerText:'')||'').toLowerCase();return b.includes('robot or human?')||b.includes(\"activate and hold the button to confirm that you're human\")||b.includes('activate and hold the button to confirm that you’re human');}\nfunction emailReady(){var sels=['form#sign-in-form input[aria-label=\"Phone number or email\"]','input[name=\"emailAddress\"]','input[type=\"email\"]','input[autocomplete=\"username\"]'];for(var i=0;i<sels.length;i++){var el=document.querySelector(sels[i]);if(el){var r=el.getBoundingClientRect();var st=getComputedStyle(el);if(r.width>0&&r.height>0&&st.visibility!=='hidden'&&st.display!=='none')return true;}}return false;}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(networkErr()) throw new Error('Walmart unreachable (proxy/network) - rotate proxy.');\n  if(challenge()) throw new Error('Walmart anti-bot challenge (Robot or human?) - proxy IP flagged, rotate proxy.');\n  if(emailReady()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(challenge()) throw new Error('Walmart anti-bot challenge (Robot or human?) - proxy IP flagged, rotate proxy.');\nreturn (document.title||'').trim();",
+          "into": "wmAccessTitle"
+        }
+      },
+      {
+        "id": "n_email",
+        "kind": "fill",
+        "position": {
+          "x": 340,
+          "y": 30
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "form#sign-in-form input[aria-label=\"Phone number or email\"], input[name=\"emailAddress\"], input[type=\"email\"]",
+          "value": "{{identity.email}}"
+        }
+      },
+      {
+        "id": "n_continue",
+        "kind": "click",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "#login-continue-button, form#sign-in-form button[type=\"submit\"], form#sign-up-form button[type=\"submit\"]"
+        }
+      },
+      {
+        "id": "n_wmemailcheck",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 170
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction state(){\n  var fn=['input[name=\"firstName\"]','input[autocomplete=\"given-name\"]','input[aria-label=\"First name\"]'];\n  for(var i=0;i<fn.length;i++){if(vis(document.querySelector(fn[i])))return 'signup';}\n  var body=String(document.body?document.body.innerText:'').toLowerCase();\n  var choiceRoot=document.querySelector('[data-testid=\"identity-generic-choice-options\"]');\n  if(choiceRoot&&vis(choiceRoot)&&body.includes('choose a sign in method'))return 'existing';\n  var pw=Array.from(document.querySelectorAll('#sign-in-password-no-otp, input[name=\"password\"], form#sign-in-form input[type=\"password\"]')).find(function(el){return vis(el)&&el.getAttribute('name')!=='newPassword';});\n  if(pw&&(body.includes('enter your password')||body.includes('welcome back')||body.includes('sign in')))return 'existing';\n  return '';\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<20000){await sleep(200);}\nvar deadline=Date.now()+30000;\nvar s='';\nwhile(Date.now()<deadline){s=state();if(s)break;await sleep(250);}\nif(s==='existing') throw new Error('Walmart account already exists for this email - marking email as used.');\nif(s!=='signup') throw new Error('Email step did not resolve to signup details.');\nreturn 'signup';",
+          "into": "wmEmailStep"
+        }
+      },
+      {
+        "id": "n_firstname",
+        "kind": "fill",
+        "position": {
+          "x": 100,
+          "y": 240
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[name=\"firstName\"]",
+          "value": "{{identity.firstName}}"
+        }
+      },
+      {
+        "id": "n_lastname",
+        "kind": "fill",
+        "position": {
+          "x": 340,
+          "y": 310
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[name=\"lastName\"]",
+          "value": "{{identity.lastName}}"
+        }
+      },
+      {
+        "id": "n_countryopen",
+        "kind": "click",
+        "position": {
+          "x": 100,
+          "y": 380
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "form#sign-up-form [data-testid=\"dropdown\"] [role=\"combobox\"], [data-testid=\"dropdown\"] [role=\"combobox\"], [role=\"combobox\"][aria-haspopup=\"listbox\"]"
+        }
+      },
+      {
+        "id": "n_wmcountrypick",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 450
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline=Date.now()+20000;\nvar opts=[];\nwhile(Date.now()<deadline){\n  opts=Array.from(document.querySelectorAll('[role=\"dialog\"] li[data-index]')).filter(function(el){return vis(el)&&String(el.textContent||'').trim();});\n  if(opts.length)break;\n  await sleep(250);\n}\nif(!opts.length) throw new Error('Country / region options not found.');\nvar pool=opts.slice(0,2);\nvar choice=pool[Math.floor(Math.random()*pool.length)];\nchoice.scrollIntoView({block:'center'});\nvar target=choice.querySelector('label[data-testid$=\"-radio-btn\"]')||choice.querySelector('input[type=\"radio\"]')||choice;\ntarget.click();\nawait sleep(500);\nvar dialog=document.querySelector('[role=\"dialog\"]');\nvar confirm=dialog?Array.from(dialog.querySelectorAll('button')).find(function(b){return /select country/i.test(String(b.textContent||''));}):null;\nif(confirm)confirm.click();\nawait sleep(500);\nreturn String(choice.textContent||'').trim();",
+          "into": "wmCountry"
+        }
+      },
+      {
+        "id": "n_password",
+        "kind": "fill",
+        "position": {
+          "x": 100,
+          "y": 520
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[name=\"newPassword\"]",
+          "value": "{{identity.password}}"
+        }
+      },
+      {
+        "id": "n_wmmarketing",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 590
+        },
+        "config": {
+          "script": "try{\n  var cb=Array.from(document.querySelectorAll('input[type=\"checkbox\"]')).find(function(el){\n    var lbl=el.labels?Array.from(el.labels).map(function(l){return l.innerText||'';}).join(' '):'';\n    return (String(el.id||'')+' '+String(el.name||'')+' '+lbl).toLowerCase().includes('marketing');\n  });\n  if(cb&&cb.checked)cb.click();\n  return cb?'marketing-unchecked':'no-marketing-checkbox';\n}catch(e){return 'marketing-skip';}",
+          "into": "wmMarketing"
+        }
+      },
+      {
+        "id": "n_submit",
+        "kind": "click",
+        "position": {
+          "x": 100,
+          "y": 660
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "button:has-text(\"Create account\"), button:has-text(\"Sign up\"), form#sign-up-form button[type=\"submit\"]"
+        }
+      },
+      {
+        "id": "n_wmpostsignup",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 730
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction snap(){var t=(document.title||'').toLowerCase();var b=String(document.body?document.body.innerText:'').toLowerCase();return {b:b,all:t+' '+b};}\nfunction classify(){\n  var s=snap();\n  if(s.all.includes(\"this site can't be reached\")||s.all.includes(\"this site can’t be reached\")||s.all.includes('err_connection')||s.all.includes('err_tunnel')||s.all.includes('err_proxy')||s.all.includes('dns_probe_finished')||s.all.includes('check if there is a typo'))return 'network';\n  if(s.b.includes('robot or human?')||s.b.includes(\"activate and hold the button to confirm that you're human\")||s.b.includes('activate and hold the button to confirm that you’re human'))return 'challenge';\n  if(s.b.includes(\"unfortunately, we can't create your account.\"))return 'creationFailed';\n  var choiceRoot=document.querySelector('[data-testid=\"identity-generic-choice-options\"]');\n  if(choiceRoot&&vis(choiceRoot)&&s.b.includes('choose a sign in method'))return 'existing';\n  var pw=Array.from(document.querySelectorAll('#sign-in-password-no-otp, input[name=\"password\"], form#sign-in-form input[type=\"password\"]')).find(function(el){return vis(el)&&el.getAttribute('name')!=='newPassword';});\n  if(pw&&(s.b.includes('enter your password')||s.b.includes('welcome back')||s.b.includes('sign in')))return 'existing';\n  if(/verify|six.?digit|code|one-time/i.test(s.b))return 'otp';\n  var otp=Array.from(document.querySelectorAll('input')).filter(function(el){if(!vis(el))return false;var m=((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.autocomplete||'')).toLowerCase();return /otp|code/.test(m);});\n  if(otp.length)return 'otp';\n  return '';\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+45000;\nvar st='';\nwhile(Date.now()<deadline){st=classify();if(st)break;await sleep(300);}\nif(st==='network') throw new Error('Walmart verification step unreachable - rotate proxy.');\nif(st==='challenge') throw new Error('Walmart anti-bot challenge after submit - rotate proxy.');\nif(st==='creationFailed') throw new Error(\"Walmart reported it can't create this account - rotate proxy and retry.\");\nif(st==='existing') throw new Error('Walmart account already exists for this email - marking email as used.');\nif(st!=='otp') throw new Error('Timed out waiting for the verification (OTP) screen.');\nreturn 'otp';",
+          "into": "wmPostSignup"
+        }
+      },
+      {
+        "id": "n_otpwait",
+        "kind": "imap.waitForMessage",
+        "position": {
+          "x": 100,
+          "y": 800
+        },
+        "config": {
+          "codeOnly": true,
+          "lookbackMs": 300000,
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "emailCode",
+          "mailboxLabel": "Primary",
+          "subjectMatch": "Walmart verification code"
+        }
+      },
+      {
+        "id": "n_otpfill",
+        "kind": "fill",
+        "position": {
+          "x": 340,
+          "y": 870
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[id^=\"input-verificationCode\"], #input-verificationCode, input[autocomplete=\"one-time-code\"]",
+          "value": "{{emailCode}}"
+        }
+      },
+      {
+        "id": "n_verifysubmit",
+        "kind": "click",
+        "position": {
+          "x": 100,
+          "y": 940
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "button:has-text(\"Verify\"), button:has-text(\"Submit\"), button:has-text(\"Continue\"), button[type=\"submit\"]"
+        }
+      },
+      {
+        "id": "n_wmverifyoutcome",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 1010
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction snap(){var t=(document.title||'').toLowerCase();var b=String(document.body?document.body.innerText:'').toLowerCase();return {b:b,all:t+' '+b};}\nfunction classify(){\n  var s=snap();\n  if(s.all.includes(\"this site can't be reached\")||s.all.includes(\"this site can’t be reached\")||s.all.includes('err_connection')||s.all.includes('err_tunnel')||s.all.includes('err_proxy')||s.all.includes('dns_probe_finished')||s.all.includes('check if there is a typo'))return 'network';\n  if(s.b.includes('robot or human?')||s.b.includes(\"activate and hold the button to confirm that you're human\")||s.b.includes('activate and hold the button to confirm that you’re human'))return 'challenge';\n  if(s.b.includes('something went wrong. please try again.'))return 'done';\n  var otp=Array.from(document.querySelectorAll('input')).filter(function(el){if(!vis(el))return false;var m=((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.autocomplete||'')).toLowerCase();return /otp|code|one-time/.test(m)||el.maxLength===1;});\n  if(/verify|six.?digit|enter code/i.test(s.b)||otp.length>0)return '';\n  return 'done';\n}\nvar deadline=Date.now()+20000;\nvar st='';\nwhile(Date.now()<deadline){st=classify();if(st)break;await sleep(300);}\nif(st==='network') throw new Error('Submitting verification failed: browser reached error page - rotate proxy.');\nif(st==='challenge') throw new Error('Submitting verification failed: anti-bot challenge - rotate proxy.');\nif(st!=='done') throw new Error('Verification did not complete (code may be wrong or expired).');\nreturn 'done';",
+          "into": "wmVerifyOutcome"
+        }
+      },
+      {
+        "id": "n_save",
+        "kind": "accounts.save",
+        "position": {
+          "x": 100,
+          "y": 1080
+        },
+        "config": {
+          "email": "{{identity.email}}",
+          "password": "{{identity.password}}",
+          "status": "active"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_n_start_n_goto",
+        "from": "n_start",
+        "fromPort": "next",
+        "to": "n_goto"
+      },
+      {
+        "id": "e_n_goto_n_wmaccess",
+        "from": "n_goto",
+        "fromPort": "next",
+        "to": "n_wmaccess"
+      },
+      {
+        "id": "e_n_wmaccess_n_email",
+        "from": "n_wmaccess",
+        "fromPort": "next",
+        "to": "n_email"
+      },
+      {
+        "id": "e_n_email_n_continue",
+        "from": "n_email",
+        "fromPort": "next",
+        "to": "n_continue"
+      },
+      {
+        "id": "e_n_continue_n_wmemailcheck",
+        "from": "n_continue",
+        "fromPort": "next",
+        "to": "n_wmemailcheck"
+      },
+      {
+        "id": "e_n_wmemailcheck_n_firstname",
+        "from": "n_wmemailcheck",
+        "fromPort": "next",
+        "to": "n_firstname"
+      },
+      {
+        "id": "e_n_firstname_n_lastname",
+        "from": "n_firstname",
+        "fromPort": "next",
+        "to": "n_lastname"
+      },
+      {
+        "id": "e_n_lastname_n_countryopen",
+        "from": "n_lastname",
+        "fromPort": "next",
+        "to": "n_countryopen"
+      },
+      {
+        "id": "e_n_countryopen_n_wmcountrypick",
+        "from": "n_countryopen",
+        "fromPort": "next",
+        "to": "n_wmcountrypick"
+      },
+      {
+        "id": "e_n_wmcountrypick_n_password",
+        "from": "n_wmcountrypick",
+        "fromPort": "next",
+        "to": "n_password"
+      },
+      {
+        "id": "e_n_password_n_wmmarketing",
+        "from": "n_password",
+        "fromPort": "next",
+        "to": "n_wmmarketing"
+      },
+      {
+        "id": "e_n_wmmarketing_n_submit",
+        "from": "n_wmmarketing",
+        "fromPort": "next",
+        "to": "n_submit"
+      },
+      {
+        "id": "e_n_submit_n_wmpostsignup",
+        "from": "n_submit",
+        "fromPort": "next",
+        "to": "n_wmpostsignup"
+      },
+      {
+        "id": "e_n_wmpostsignup_n_otpwait",
+        "from": "n_wmpostsignup",
+        "fromPort": "next",
+        "to": "n_otpwait"
+      },
+      {
+        "id": "e_n_otpwait_n_otpfill",
+        "from": "n_otpwait",
+        "fromPort": "next",
+        "to": "n_otpfill"
+      },
+      {
+        "id": "e_n_otpfill_n_verifysubmit",
+        "from": "n_otpfill",
+        "fromPort": "next",
+        "to": "n_verifysubmit"
+      },
+      {
+        "id": "e_n_verifysubmit_n_wmverifyoutcome",
+        "from": "n_verifysubmit",
+        "fromPort": "next",
+        "to": "n_wmverifyoutcome"
+      },
+      {
+        "id": "e_n_wmverifyoutcome_n_save",
+        "from": "n_wmverifyoutcome",
+        "fromPort": "next",
+        "to": "n_save"
+      }
+    ],
+    "author": {
+      "name": "Sete_"
+    }
+  }
+}
