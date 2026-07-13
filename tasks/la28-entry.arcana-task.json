@@ -1,0 +1,788 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-07-13T19:19:55.368Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "1.0.1",
+    "metadata": {
+      "id": "la28-ENTRY",
+      "name": "LA28-ENTRY",
+      "description": "",
+      "tags": [],
+      "inputs": []
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "captcha",
+      "evaluate",
+      "imap"
+    ],
+    "variables": [],
+    "start": "n_9081ea46",
+    "nodes": [
+      {
+        "id": "n_9081ea46",
+        "kind": "noop",
+        "position": {
+          "x": 4.000000000000014,
+          "y": -481.66666666666663
+        },
+        "config": {}
+      },
+      {
+        "id": "n_inxo4k74",
+        "kind": "goto",
+        "position": {
+          "x": 204.23531702965028,
+          "y": -469.79507551321797
+        },
+        "config": {
+          "url": "https://t.co/0rfWaqCIEi",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_la28access",
+        "kind": "evaluate",
+        "position": {
+          "x": 412,
+          "y": -471
+        },
+        "config": {
+          "script": "// t.co -> tickets.la28.org can redirect CLIENT-SIDE (after domcontentloaded), so\n// a single check - even after a fixed settle - races the redirect on a slow\n// proxy and reads t.co / an intermediate, missing the block. POLL instead: keep\n// looking until we either see Akamai's \"Access Denied\" (throw, so the run\n// rotates proxy) or the real LA28 page (continue). Navigations during the poll\n// destroy this isolated world; the engine retries the whole node on the settled\n// page, so the poll always ends up on the final document.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction denied(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  return /access denied/i.test(title)\n    || (/access denied/i.test(body) && /(don't have permission|reference #|edgesuite\\.net)/i.test(body));\n}\nfunction la28Ready(){\n  // Positive proof we reached the real LA28 site (not t.co / an intermediate) so\n  // we can stop early on a clean run instead of polling the full window.\n  var title=(document.title||'').trim();\n  if(/official la28|la28.*(ticket|olympic|paralympic)/i.test(title)) return true;\n  var host=(location.host||'');\n  var body=(document.body?document.body.innerText:'')||'';\n  return /la28\\.org/i.test(host)\n    && /register for the la28|get tickets|waiting room|create an account|legal terms and privacy|mark your calendar/i.test(body);\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(denied()) throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\n  if(la28Ready()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(denied()) throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\nreturn (document.title||'').trim();",
+          "into": "la28AccessTitle"
+        }
+      },
+      {
+        "id": "n_6iphto3c",
+        "kind": "fill",
+        "position": {
+          "x": 45.117658514825166,
+          "y": 64.7691289100577
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[name=\"username\"]:visible",
+          "value": "{{identity.email}}"
+        }
+      },
+      {
+        "id": "n_vy52esez",
+        "kind": "fill",
+        "position": {
+          "x": 232.85473825354381,
+          "y": 63.21851611977041
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[type=\"password\"][name=\"password\"].gigya-input-password:visible",
+          "value": "{{identity.password}}"
+        }
+      },
+      {
+        "id": "n_1z4bw39i",
+        "kind": "imap.waitForMessage",
+        "position": {
+          "x": 43.090772835413816,
+          "y": 174.3594328589644
+        },
+        "config": {
+          "codeOnly": true,
+          "lookbackMs": 300000,
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "emailCode",
+          "mailboxLabel": "Primary",
+          "subjectMatch": "Your LA28 ID Verification Code"
+        }
+      },
+      {
+        "id": "n_g53rvr7u",
+        "kind": "fill",
+        "position": {
+          "x": 236.09077283541393,
+          "y": 174.8594328589644
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input#gigya-textbox-code",
+          "value": "{{emailCode}}"
+        }
+      },
+      {
+        "id": "n_lpifzi1d",
+        "kind": "click",
+        "position": {
+          "x": 408.6702183569019,
+          "y": 169.15134999485724
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "form#gigya-otp-update-form > div.gigya-layout-row:nth-of-type(3) > div.gigya-composite-control.gigya-composite-control-submit:nth-of-type(1) > input.gigya-input-submit"
+        }
+      },
+      {
+        "id": "n_9kyhana0",
+        "kind": "click",
+        "position": {
+          "x": 179.22011109736923,
+          "y": -382.88848899910755
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 200000,
+          "selector": "a[href=\"https://tickets.la28.org/mycustomerdata/\"]:visible"
+        }
+      },
+      {
+        "id": "n_f6nqspvm",
+        "kind": "click",
+        "position": {
+          "x": 408.2201110973692,
+          "y": -277.88848899910755
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "button.botdetect-button, [class*=\"botdetect\"] button, button:has-text(\"Join\"), a:has-text(\"Join\"), div[role=\"button\"]:has-text(\"Join\")"
+        }
+      },
+      {
+        "id": "n_la28wait",
+        "kind": "dwell",
+        "position": {
+          "x": 328,
+          "y": -179
+        },
+        "config": {
+          "ms": 4000
+        }
+      },
+      {
+        "id": "n_la28guard",
+        "kind": "evaluate",
+        "position": {
+          "x": 551,
+          "y": -174
+        },
+        "config": {
+          "script": "// After the queue-join / botdetect click, Queue-it either sends us into the\n// waiting room or - if the IP is flagged - to /queue/error403 (\"We are sorry,\n// your access has been restricted\"). It takes a moment to decide, so check ONCE\n// too early (the old bug) races the redirect and misses the block - then the\n// next step hangs 300s on a dead page. Wait for load, then POLL until we either\n// see the block (throw, so the run rotates proxy) or the waiting-room proceed\n// element appears (continue).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction blocked(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  var href=location.href||'';\n  return /access denied|restricted access/i.test(title)\n    || /error403|queue-it\\.net/i.test(href)\n    || /your access has been restricted|access has been restricted/i.test(body);\n}\nfunction proceedReady(){\n  try{\n    var el=document.evaluate('/html/body/div[2]/div[2]/div[3]/a/div',document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;\n    if(el){var r=el.getBoundingClientRect();return r.width>0&&r.height>0;}\n  }catch(e){}\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+12000;\nwhile(Date.now()<deadline){\n  if(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\n  if(proceedReady()) break;\n  await sleep(500);\n}\nif(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\ntry { var b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn (document.title||'').trim();",
+          "into": "la28Title"
+        }
+      },
+      {
+        "id": "n_la28precheck",
+        "kind": "dwell",
+        "position": {
+          "x": 411.9587967821484,
+          "y": -370.5730988289338
+        },
+        "config": {
+          "ms": 7000
+        }
+      },
+      {
+        "id": "n_la28xcheck",
+        "kind": "evaluate",
+        "position": {
+          "x": -19.575822879377824,
+          "y": -292.4879683427864
+        },
+        "config": {
+          "script": "const el = document.evaluate('/html/body/div[2]/div[2]/div[3]/a/div', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;\nif (!el) return '';\nconst r = el.getBoundingClientRect();\nreturn (r.width > 0 && r.height > 0) ? '1' : '';",
+          "into": "la28XpathReady"
+        }
+      },
+      {
+        "id": "n_la28xbranch",
+        "kind": "branch",
+        "position": {
+          "x": 195.4360954929433,
+          "y": -287.12360965355487
+        },
+        "config": {
+          "left": "{{la28XpathReady}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
+        "id": "n_la28consent",
+        "kind": "evaluate",
+        "position": {
+          "x": -8,
+          "y": -391
+        },
+        "config": {
+          "script": "// Dismiss LA28's first-load consent gate (\"Legal Terms and Privacy\" CONTINUE,\n// and/or a cookie CMP). Searches the main DOM, OPEN shadow roots, and\n// same-origin iframes for the consent button (by id or exact visible text),\n// prefers one inside a modal/overlay, clicks it, and confirms it closed.\n// If nothing reachable is found it throws a DIAG string listing iframes +\n// shadow hosts so the exact structure (e.g. a cross-origin CMP iframe) is known.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<2||r.height<2)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  var W=window.innerWidth||9999,H=window.innerHeight||9999;\n  if(r.bottom<0||r.top>H||r.right<0||r.left>W)return false;\n  return true;\n}\nfunction parentOf(n){\n  var p=n.parentElement;\n  if(!p){var rt=n.getRootNode&&n.getRootNode();p=(rt&&rt.host)||null;}\n  return p;\n}\nfunction inOverlay(el){\n  var n=el;\n  while(n&&n.nodeType===1){\n    if(n.getAttribute&&(n.getAttribute('role')==='dialog'||n.getAttribute('aria-modal')==='true'))return true;\n    try{var s=getComputedStyle(n);if((s.position==='fixed'||s.position==='sticky')&&parseInt(s.zIndex||'0',10)>=5)return true;}catch(e){}\n    if(n===document.body)break;\n    n=parentOf(n);\n  }\n  return false;\n}\nfunction clickIt(el){\n  var t=(el.closest&&el.closest('button, a, [role=button], input[type=submit], input[type=button], [onclick]'))||el;\n  try{t.scrollIntoView({block:'center'});}catch(e){}\n  try{t.click();}catch(e){}\n  if(t!==el){try{el.click();}catch(e){}}\n}\nfunction allRoots(){\n  var roots=[document],stack=[document];\n  while(stack.length){\n    var root=stack.pop(),els;\n    try{els=root.querySelectorAll('*');}catch(e){continue;}\n    for(var i=0;i<els.length;i++){var sh=els[i].shadowRoot;if(sh){roots.push(sh);stack.push(sh);}}\n  }\n  var ifr=document.querySelectorAll('iframe');\n  for(var j=0;j<ifr.length;j++){var dd=null;try{dd=ifr[j].contentDocument;}catch(e){}if(dd)roots.push(dd);}\n  return roots;\n}\nfunction findIn(root){\n  try{var byId=root.querySelector('#cmpbntyestxt');if(byId&&vis(byId))return byId;}catch(e){}\n  var exact=/^(continue|i agree|agree|accept all|accept cookies|accept|allow all|got it|ok)$/i;\n  var nodes;\n  try{nodes=root.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button], span, div, p');}catch(e){return null;}\n  var best=null;\n  for(var i=0;i<nodes.length;i++){\n    var el=nodes[i];\n    if(!vis(el))continue;\n    var txt=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();\n    if(!exact.test(txt))continue;\n    var r=el.getBoundingClientRect();\n    if(r.height>140||r.width>900)continue;\n    if(inOverlay(el))return el;\n    if(!best)best=el;\n  }\n  return best;\n}\nfunction pick(){var roots=allRoots();for(var i=0;i<roots.length;i++){var el=findIn(roots[i]);if(el)return el;}return null;}\nfunction diag(){\n  var out={rs:document.readyState,iframes:[],shadowHosts:[],btns:[]};\n  var ifr=document.querySelectorAll('iframe');\n  for(var i=0;i<ifr.length;i++){var co;try{co=ifr[i].contentDocument?'same':'cross';}catch(e){co='cross';}out.iframes.push(((ifr[i].src||'no-src').slice(0,90))+' ['+co+']');}\n  var all=document.querySelectorAll('*');\n  for(var j=0;j<all.length;j++){if(all[j].shadowRoot)out.shadowHosts.push(all[j].tagName.toLowerCase()+(all[j].id?('#'+all[j].id):''));}\n  var cl=document.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button]');\n  for(var k=0;k<cl.length&&out.btns.length<20;k++){if(vis(cl[k])){var t=(cl[k].innerText||cl[k].value||'').replace(/\\s+/g,' ').trim().slice(0,28);if(t)out.btns.push(t);}}\n  return out;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<15000){await sleep(200);}\nvar deadline=Date.now()+45000;\nwhile(Date.now()<deadline){\n  var el=pick();\n  if(el){clickIt(el);await sleep(700);if(!vis(el))return 'consent-clicked';}\n  await sleep(400);\n}\nreturn 'consent-not-found';",
+          "into": "la28Consent"
+        }
+      },
+      {
+        "id": "n_aiitnmxf",
+        "kind": "click",
+        "position": {
+          "x": 421.76879594903846,
+          "y": 59.611511000892506
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 100000,
+          "selector": "input[type=\"submit\"]:visible"
+        }
+      },
+      {
+        "id": "n_la28profcheck",
+        "kind": "evaluate",
+        "position": {
+          "x": 610,
+          "y": 59
+        },
+        "config": {
+          "script": "// After the login submit, LA28 either drops an ALREADY-verified account\n// straight onto the profile page (\"Profile - Official LA28 Tickets\"), or it\n// asks for an email OTP first. Poll briefly: if the profile page appears,\n// return '1' so the run SKIPS the email-code steps and goes straight to the\n// checkbox; otherwise return '' and take the email-verification branch.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction onProfile(){\n  var title=(document.title||'').trim();\n  if(/profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title)) return true;\n  var host=(location.host||'').toLowerCase();\n  var path=(location.pathname||'').toLowerCase();\n  return /la28/.test(host) && /(\\/profile|\\/mycustomerdata|\\/myprofile)/.test(path);\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<10000){await sleep(200);}\nvar deadline=Date.now()+8000;\nwhile(Date.now()<deadline){\n  if(onProfile()) return '1';\n  await sleep(400);\n}\nreturn onProfile() ? '1' : '';",
+          "into": "la28OnProfile"
+        }
+      },
+      {
+        "id": "n_la28profbranch",
+        "kind": "branch",
+        "position": {
+          "x": 800,
+          "y": 59
+        },
+        "config": {
+          "left": "{{la28OnProfile}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
+        "id": "n_la28checkbox",
+        "kind": "evaluate",
+        "position": {
+          "x": 800,
+          "y": 210
+        },
+        "config": {
+          "script": "// The real checkbox <input> is hidden; the visible box is the label's ::before\n// (~24px) at the label's LEFT edge. The fullwidth label's <p> carries a\n// target=_blank \"Terms\" link on line 2, so we click the LEFT box, never the\n// label center. POLL for the label (the lotteries section renders async), then\n// compute the box center in viewport coords for a real mouse click.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction findLabel(){\n  return document.querySelector('label[for=\"lottery-55\"]')\n      || document.querySelector('.styled-checkbox[data-qa=\"lottery-55\"] label')\n      || document.querySelector('.styled-checkbox[data-qa^=\"lottery-\"] label[data-qa=\"label\"]')\n      || document.querySelector('.styled-checkbox[data-qa^=\"lottery-\"] label')\n      || document.querySelector('app-sports-profile-lotteries .styled-checkbox label');\n}\nvar lbl=null, deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  lbl=findLabel();\n  if(lbl){var rr=lbl.getBoundingClientRect(); if(rr.width>2&&rr.height>2) break;}\n  lbl=null;\n  await sleep(400);\n}\nif(!lbl){\n  var found=[];\n  document.querySelectorAll('.styled-checkbox').forEach(function(d){found.push(d.getAttribute('data-qa'));});\n  throw new Error('presale checkbox label not found; styled-checkboxes on page: '+(found.join(', ')||'none'));\n}\nlbl.scrollIntoView({block:'center', inline:'nearest'});\nawait sleep(150);\nvar r=lbl.getBoundingClientRect();\nvar cs=getComputedStyle(lbl);\nvar cb=getComputedStyle(lbl,'::before');\nvar padL=parseFloat(cs.paddingLeft)||0;\nvar padT=parseFloat(cs.paddingTop)||0;\nvar bw=parseFloat(cb.width)||24;\nvar bh=parseFloat(cb.height)||24;\nvar x=r.left+padL+bw/2;\nvar y=r.top+Math.min(padT+bh/2, r.height*0.4);\nreturn { x: Math.round(x), y: Math.round(y) };",
+          "into": "cbXY"
+        }
+      },
+      {
+        "id": "n_la28attrpick",
+        "kind": "evaluate",
+        "position": {
+          "x": 800,
+          "y": 360
+        },
+        "config": {
+          "script": "// Pick a RANDOM real option from the additionalCustomerAttributes select so\n// each run doesn't submit the same value. This ONLY reads the <option>s and\n// returns the chosen value - it sets nothing. The next `select` node commits\n// the pick with real mouse movement + native input/change events. Skip the\n// placeholder (empty value, disabled, or a \"Please select...\"-style prompt).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar sel=\"select[data-qa=\\\"select-additionalCustomerAttributes-1\\\"]\";\nvar el=null, start=Date.now();\nwhile(Date.now()-start<15000){\n  el=document.querySelector(sel);\n  if(el && el.options && el.options.length>0) break;\n  await sleep(300);\n}\nif(!el||!el.options) throw new Error('additionalCustomerAttributes select not found: '+sel);\nvar opts=Array.from(el.options).filter(function(o){\n  if(o.disabled) return false;\n  var v=(o.value==null?'':String(o.value)).trim();\n  var t=(o.textContent||'').trim();\n  if(v==='') return false;\n  if(/^(please\\s+select|select\\b|choose|--)/i.test(t)) return false;\n  return true;\n});\nif(opts.length===0) throw new Error('additionalCustomerAttributes: no selectable options');\nvar pick=opts[Math.floor(Math.random()*opts.length)];\nvar val=(pick.value==null?'':String(pick.value)).trim();\nreturn val!=='' ? val : (pick.textContent||'').trim();",
+          "into": "attrRandom"
+        }
+      },
+      {
+        "id": "n_la28attr",
+        "kind": "select",
+        "position": {
+          "x": 800,
+          "y": 500
+        },
+        "config": {
+          "selector": "select[data-qa=\"select-additionalCustomerAttributes-1\"]",
+          "value": "{{attrRandom}}",
+          "timeoutMs": 100000,
+          "instant": false
+        }
+      },
+      {
+        "id": "n_la28cat288pick",
+        "kind": "evaluate",
+        "position": {
+          "x": 1000,
+          "y": 60
+        },
+        "config": {
+          "script": "// Pick a RANDOM real option from select[data-qa=\"select-categoryFavorites288-1\"] so each run varies. This ONLY\n// reads the <option>s and returns the chosen value - it sets nothing. The\n// next `select` node commits the pick with real mouse movement + native\n// input/change events. Skip placeholder (empty/disabled/'Please select').\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar sel=\"select[data-qa=\\\"select-categoryFavorites288-1\\\"]\";\nvar el=null, start=Date.now();\nwhile(Date.now()-start<15000){\n  el=document.querySelector(sel);\n  if(el && el.options && el.options.length>0) break;\n  await sleep(300);\n}\nif(!el||!el.options) throw new Error('select not found: '+sel);\nvar opts=Array.from(el.options).filter(function(o){\n  if(o.disabled) return false;\n  var v=(o.value==null?'':String(o.value)).trim();\n  var t=(o.textContent||'').trim();\n  if(v==='') return false;\n  if(/^(please\\s+select|select\\b|choose|--)/i.test(t)) return false;\n  return true;\n});\nif(opts.length===0) throw new Error('no selectable options in '+sel);\nvar pick=opts[Math.floor(Math.random()*opts.length)];\nvar val=(pick.value==null?'':String(pick.value)).trim();\nreturn val!=='' ? val : (pick.textContent||'').trim();",
+          "into": "randCat288"
+        }
+      },
+      {
+        "id": "n_la28cat288",
+        "kind": "select",
+        "position": {
+          "x": 1000,
+          "y": 200
+        },
+        "config": {
+          "selector": "select[data-qa=\"select-categoryFavorites288-1\"]",
+          "value": "{{randCat288}}",
+          "timeoutMs": 100000,
+          "instant": false
+        }
+      },
+      {
+        "id": "n_la28cat289pick",
+        "kind": "evaluate",
+        "position": {
+          "x": 1000,
+          "y": 360
+        },
+        "config": {
+          "script": "// Pick a RANDOM real option from select[data-qa=\"select-categoryFavorites289-1\"] so each run varies. This ONLY\n// reads the <option>s and returns the chosen value - it sets nothing. The\n// next `select` node commits the pick with real mouse movement + native\n// input/change events. Skip placeholder (empty/disabled/'Please select').\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar sel=\"select[data-qa=\\\"select-categoryFavorites289-1\\\"]\";\nvar el=null, start=Date.now();\nwhile(Date.now()-start<15000){\n  el=document.querySelector(sel);\n  if(el && el.options && el.options.length>0) break;\n  await sleep(300);\n}\nif(!el||!el.options) throw new Error('select not found: '+sel);\nvar opts=Array.from(el.options).filter(function(o){\n  if(o.disabled) return false;\n  var v=(o.value==null?'':String(o.value)).trim();\n  var t=(o.textContent||'').trim();\n  if(v==='') return false;\n  if(/^(please\\s+select|select\\b|choose|--)/i.test(t)) return false;\n  return true;\n});\nif(opts.length===0) throw new Error('no selectable options in '+sel);\nvar pick=opts[Math.floor(Math.random()*opts.length)];\nvar val=(pick.value==null?'':String(pick.value)).trim();\nreturn val!=='' ? val : (pick.textContent||'').trim();",
+          "into": "randCat289"
+        }
+      },
+      {
+        "id": "n_la28cat289",
+        "kind": "select",
+        "position": {
+          "x": 1000,
+          "y": 500
+        },
+        "config": {
+          "selector": "select[data-qa=\"select-categoryFavorites289-1\"]",
+          "value": "{{randCat289}}",
+          "timeoutMs": 100000,
+          "instant": false
+        }
+      },
+      {
+        "id": "n_la28artistpick",
+        "kind": "evaluate",
+        "position": {
+          "x": 1000,
+          "y": 660
+        },
+        "config": {
+          "script": "// Pick a RANDOM real option from select[data-qa=\"select-artistFavorites-1\"] so each run varies. This ONLY\n// reads the <option>s and returns the chosen value - it sets nothing. The\n// next `select` node commits the pick with real mouse movement + native\n// input/change events. Skip placeholder (empty/disabled/'Please select').\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar sel=\"select[data-qa=\\\"select-artistFavorites-1\\\"]\";\nvar el=null, start=Date.now();\nwhile(Date.now()-start<15000){\n  el=document.querySelector(sel);\n  if(el && el.options && el.options.length>0) break;\n  await sleep(300);\n}\nif(!el||!el.options) throw new Error('select not found: '+sel);\nvar opts=Array.from(el.options).filter(function(o){\n  if(o.disabled) return false;\n  var v=(o.value==null?'':String(o.value)).trim();\n  var t=(o.textContent||'').trim();\n  if(v==='') return false;\n  if(/^(please\\s+select|select\\b|choose|--)/i.test(t)) return false;\n  return true;\n});\nif(opts.length===0) throw new Error('no selectable options in '+sel);\nvar pick=opts[Math.floor(Math.random()*opts.length)];\nvar val=(pick.value==null?'':String(pick.value)).trim();\nreturn val!=='' ? val : (pick.textContent||'').trim();",
+          "into": "randArtist"
+        }
+      },
+      {
+        "id": "n_la28artist",
+        "kind": "select",
+        "position": {
+          "x": 1000,
+          "y": 800
+        },
+        "config": {
+          "selector": "select[data-qa=\"select-artistFavorites-1\"]",
+          "value": "{{randArtist}}",
+          "timeoutMs": 100000,
+          "instant": false
+        }
+      },
+      {
+        "id": "n_la28save",
+        "kind": "click",
+        "position": {
+          "x": 1000,
+          "y": 960
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "button[data-qa=\"save-data-button\"]"
+        }
+      },
+      {
+        "id": "n_la28caperr",
+        "kind": "evaluate",
+        "position": {
+          "x": 610,
+          "y": -120
+        },
+        "config": {
+          "script": "// After clicking Log In, Gigya rejects with a captcha error until the reCAPTCHA\n// is satisfied - code 401020 OR 401023 (\"confirm you are not a robot\"). Each\n// failed submit can raise a FRESH captcha, so this node runs after EVERY\n// (re-)login: return flag '1' to solve+retry (bounded to 3 attempts via\n// capState.tries), or '' to stop and continue to the profile/email path.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el) return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<1||r.height<1) return false;\n  var s=getComputedStyle(el);\n  return s.display!=='none'&&s.visibility!=='hidden'&&parseFloat(s.opacity||'1')>0.05;\n}\nfunction capErr(){\n  var all=document.querySelectorAll('.gigya-error-msg-active, [class*=\"gigya-error-code-\"]');\n  for(var i=0;i<all.length;i++){\n    var el=all[i], cls=el.className||'';\n    if(!(el.classList.contains('gigya-error-msg-active')||vis(el))) continue;\n    if(/gigya-error-code-401020|gigya-error-code-401023/.test(cls)) return true;\n    if(/not a robot|captcha|recaptcha/i.test(el.textContent||'')) return true;\n  }\n  return false;\n}\nvar tries = Number(\"{{capState.tries}}\") || 0;\nvar deadline=Date.now()+8000, hit=false;\nwhile(Date.now()<deadline){ if(capErr()){hit=true;break;} await sleep(400); }\nif(!hit) hit=capErr();\nvar go = hit && tries < 3;\nreturn { flag: go ? '1' : '', tries: tries + (go ? 1 : 0) };",
+          "into": "capState"
+        }
+      },
+      {
+        "id": "n_la28capbranch",
+        "kind": "branch",
+        "position": {
+          "x": 800,
+          "y": -120
+        },
+        "config": {
+          "left": "{{capState.flag}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
+        "id": "n_la28capsolve",
+        "kind": "captcha.waitForSolved",
+        "position": {
+          "x": 800,
+          "y": -260
+        },
+        "config": {
+          "captchaType": "recaptcha-v2",
+          "timeoutMs": 180000,
+          "intervalMs": 1500,
+          "into": "captchaToken"
+        }
+      },
+      {
+        "id": "n_la28relogin",
+        "kind": "click",
+        "position": {
+          "x": 610,
+          "y": -260
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "input[type=\"submit\"]:visible"
+        }
+      },
+      {
+        "id": "n_la28verify",
+        "kind": "evaluate",
+        "position": {
+          "x": 1000,
+          "y": 1100
+        },
+        "config": {
+          "script": "// After clicking Save, wait for the page to settle, then count the success\n// checkmarks (<i class=\"icon icon-checkmark\">). Success is EXACTLY 4. Wait for\n// the count to stabilize (same across 2 reads) so the exact check compares the\n// final value, not a mid-render count. Return the settled count for the branch.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction count(){ return document.querySelectorAll('i.icon-checkmark').length; }\nawait sleep(1500);                         // let the Save submit begin navigating/updating\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<30000){await sleep(200);}\nvar deadline=Date.now()+20000, prev=-1, stable=0, n=0;\nwhile(Date.now()<deadline){\n  n=count();\n  if(n===prev){ if(n>0 && ++stable>=2) break; } else { stable=0; }\n  prev=n;\n  await sleep(500);\n}\nreturn n;",
+          "into": "checkmarkCount"
+        }
+      },
+      {
+        "id": "n_la28verifybranch",
+        "kind": "branch",
+        "position": {
+          "x": 1000,
+          "y": 1240
+        },
+        "config": {
+          "left": "{{checkmarkCount}}",
+          "op": "==",
+          "right": "4"
+        }
+      },
+      {
+        "id": "n_la28saveacct",
+        "kind": "accounts.save",
+        "position": {
+          "x": 800,
+          "y": 1380
+        },
+        "config": {
+          "email": "{{identity.email}}",
+          "password": "JOSEJAVIERjj10!_!!!",
+          "site": "tickets.la28.org",
+          "status": "active"
+        }
+      },
+      {
+        "id": "n_la28fail",
+        "kind": "fail",
+        "position": {
+          "x": 1220,
+          "y": 1380
+        },
+        "config": {
+          "message": "Please retry again"
+        }
+      },
+      {
+        "id": "n_la28presubmit",
+        "kind": "evaluate",
+        "position": {
+          "x": 326,
+          "y": 130
+        },
+        "config": {
+          "script": "// Human pause before submitting the login form: a uniform-random 20-30s wait.\n// Also gives the background captcha-solver extension time to fill the reCAPTCHA\n// token before we click, cutting down the 401020 'confirm you are not a robot'\n// retries.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar ms=20000+Math.floor(Math.random()*10001);   // 20000..30000\nawait sleep(ms);\nreturn ms;",
+          "into": "presubmitWaitMs"
+        }
+      },
+      {
+        "id": "n_8llgs07h",
+        "kind": "check",
+        "position": {
+          "x": 625.3857991224063,
+          "y": 293.9360159321672
+        },
+        "config": {
+          "checked": true,
+          "timeoutMs": 100000,
+          "selector": "section.profile-section.c-inner > div.container > div.row > div.col-xs-12.col-md-offset-2 > app-sports-profile-lotteries > section.ng-star-inserted.profile-field-section > div.styled-checkbox.no-padding-right > label.label.fullwidth"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_cqihakun",
+        "from": "n_9081ea46",
+        "fromPort": "next",
+        "to": "n_inxo4k74"
+      },
+      {
+        "id": "e_7za77igi",
+        "from": "n_1z4bw39i",
+        "fromPort": "next",
+        "to": "n_g53rvr7u"
+      },
+      {
+        "id": "e_wj0chfwn",
+        "from": "n_g53rvr7u",
+        "fromPort": "next",
+        "to": "n_lpifzi1d"
+      },
+      {
+        "id": "e_jcagxtlj",
+        "from": "n_inxo4k74",
+        "fromPort": "next",
+        "to": "n_la28access"
+      },
+      {
+        "id": "e_la28acc",
+        "from": "n_la28access",
+        "fromPort": "next",
+        "to": "n_la28consent"
+      },
+      {
+        "id": "e_tkkhqyfb",
+        "from": "n_9kyhana0",
+        "fromPort": "next",
+        "to": "n_la28precheck"
+      },
+      {
+        "id": "e_la28p1",
+        "from": "n_la28precheck",
+        "fromPort": "next",
+        "to": "n_la28xcheck"
+      },
+      {
+        "id": "e_la28p2",
+        "from": "n_la28xcheck",
+        "fromPort": "next",
+        "to": "n_la28xbranch"
+      },
+      {
+        "id": "e_la28btrue",
+        "from": "n_la28xbranch",
+        "fromPort": "true",
+        "to": "n_la28wait"
+      },
+      {
+        "id": "e_la28bfalse",
+        "from": "n_la28xbranch",
+        "fromPort": "false",
+        "to": "n_f6nqspvm"
+      },
+      {
+        "id": "e_kih1t9xb",
+        "from": "n_f6nqspvm",
+        "fromPort": "next",
+        "to": "n_la28wait"
+      },
+      {
+        "id": "e_la28g1",
+        "from": "n_la28wait",
+        "fromPort": "next",
+        "to": "n_la28guard"
+      },
+      {
+        "id": "e_la28consent",
+        "from": "n_la28consent",
+        "fromPort": "next",
+        "to": "n_9kyhana0"
+      },
+      {
+        "id": "e_zdw7p2ee",
+        "from": "n_la28guard",
+        "fromPort": "next",
+        "to": "n_6iphto3c"
+      },
+      {
+        "id": "e_6y7k18ee",
+        "from": "n_6iphto3c",
+        "fromPort": "next",
+        "to": "n_vy52esez"
+      },
+      {
+        "id": "e_eg90353z",
+        "from": "n_vy52esez",
+        "fromPort": "next",
+        "to": "n_la28presubmit"
+      },
+      {
+        "id": "e_wnupbwt1",
+        "from": "n_aiitnmxf",
+        "fromPort": "next",
+        "to": "n_la28caperr"
+      },
+      {
+        "id": "e_la28profcheck",
+        "from": "n_la28profcheck",
+        "fromPort": "next",
+        "to": "n_la28profbranch"
+      },
+      {
+        "id": "e_la28proftrue",
+        "from": "n_la28profbranch",
+        "fromPort": "true",
+        "to": "n_la28checkbox"
+      },
+      {
+        "id": "e_la28proffalse",
+        "from": "n_la28profbranch",
+        "fromPort": "false",
+        "to": "n_1z4bw39i"
+      },
+      {
+        "id": "e_la28otpdone",
+        "from": "n_lpifzi1d",
+        "fromPort": "next",
+        "to": "n_la28checkbox"
+      },
+      {
+        "id": "e_la28attrpick",
+        "from": "n_la28attrpick",
+        "fromPort": "next",
+        "to": "n_la28attr"
+      },
+      {
+        "id": "e_n_la28cat288pick",
+        "from": "n_la28attr",
+        "fromPort": "next",
+        "to": "n_la28cat288pick"
+      },
+      {
+        "id": "e_n_la28cat288",
+        "from": "n_la28cat288pick",
+        "fromPort": "next",
+        "to": "n_la28cat288"
+      },
+      {
+        "id": "e_n_la28cat289pick",
+        "from": "n_la28cat288",
+        "fromPort": "next",
+        "to": "n_la28cat289pick"
+      },
+      {
+        "id": "e_n_la28cat289",
+        "from": "n_la28cat289pick",
+        "fromPort": "next",
+        "to": "n_la28cat289"
+      },
+      {
+        "id": "e_n_la28artistpick",
+        "from": "n_la28cat289",
+        "fromPort": "next",
+        "to": "n_la28artistpick"
+      },
+      {
+        "id": "e_n_la28artist",
+        "from": "n_la28artistpick",
+        "fromPort": "next",
+        "to": "n_la28artist"
+      },
+      {
+        "id": "e_la28save",
+        "from": "n_la28artist",
+        "fromPort": "next",
+        "to": "n_la28save"
+      },
+      {
+        "id": "e_la28caperr",
+        "from": "n_la28caperr",
+        "fromPort": "next",
+        "to": "n_la28capbranch"
+      },
+      {
+        "id": "e_la28captrue",
+        "from": "n_la28capbranch",
+        "fromPort": "true",
+        "to": "n_la28capsolve"
+      },
+      {
+        "id": "e_la28capfalse",
+        "from": "n_la28capbranch",
+        "fromPort": "false",
+        "to": "n_la28profcheck"
+      },
+      {
+        "id": "e_la28capsolve",
+        "from": "n_la28capsolve",
+        "fromPort": "next",
+        "to": "n_la28relogin"
+      },
+      {
+        "id": "e_la28relogin",
+        "from": "n_la28relogin",
+        "fromPort": "next",
+        "to": "n_la28caperr"
+      },
+      {
+        "id": "e_la28verify",
+        "from": "n_la28save",
+        "fromPort": "next",
+        "to": "n_la28verify"
+      },
+      {
+        "id": "e_la28verifyb",
+        "from": "n_la28verify",
+        "fromPort": "next",
+        "to": "n_la28verifybranch"
+      },
+      {
+        "id": "e_la28vtrue",
+        "from": "n_la28verifybranch",
+        "fromPort": "true",
+        "to": "n_la28saveacct"
+      },
+      {
+        "id": "e_la28vfalse",
+        "from": "n_la28verifybranch",
+        "fromPort": "false",
+        "to": "n_la28fail"
+      },
+      {
+        "id": "e_la28presubmit",
+        "from": "n_la28presubmit",
+        "fromPort": "next",
+        "to": "n_aiitnmxf"
+      },
+      {
+        "id": "e_by705alu",
+        "from": "n_la28checkbox",
+        "fromPort": "next",
+        "to": "n_8llgs07h"
+      },
+      {
+        "id": "e_7mwqbf4x",
+        "from": "n_8llgs07h",
+        "fromPort": "next",
+        "to": "n_la28attrpick"
+      }
+    ],
+    "author": {
+      "name": "Sete_",
+      "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
+      "signature": "LYzVUu0YvM1EbBq6ox0PVl4Z6RJPaBFUg5dNGSQWKyIIszSfRaKHMKel6OJbHztCw94Z4nlsNa7P/sO9RUHoCg=="
+    }
+  }
+}
