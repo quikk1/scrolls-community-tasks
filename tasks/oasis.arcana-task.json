@@ -1,0 +1,411 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-07-13T19:20:17.119Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "metadata": {
+      "id": "oasis",
+      "name": "OASIS",
+      "description": "",
+      "tags": [],
+      "inputs": []
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "evaluate"
+    ],
+    "variables": [],
+    "start": "n_start",
+    "nodes": [
+      {
+        "id": "n_start",
+        "kind": "noop",
+        "position": {
+          "x": 100,
+          "y": -180
+        },
+        "config": {}
+      },
+      {
+        "id": "n_goto",
+        "kind": "goto",
+        "position": {
+          "x": 340,
+          "y": -110
+        },
+        "config": {
+          "url": "https://oasis.os.fan/signupwb",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_access",
+        "kind": "evaluate",
+        "position": {
+          "x": 100,
+          "y": -40
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction pageText(){var t=(document.title||'').toLowerCase();var b=(document.body?document.body.innerText:'')||'';return t+' '+b.toLowerCase();}\nfunction networkErr(){var s=pageText();return s.includes(\"this site can't be reached\")||s.includes(\"this site can’t be reached\")||s.includes('err_connection')||s.includes('err_tunnel')||s.includes('err_proxy')||s.includes('err_timed_out')||s.includes('dns_probe_finished')||s.includes('check if there is a typo');}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction emailReady(){var sels=['input[name=\"Email\"]','#input-54','input[type=\"email\"]','form input'];for(var i=0;i<sels.length;i++){var el=document.querySelector(sels[i]);if(vis(el))return true;}return false;}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+25000;\nwhile(Date.now()<deadline){\n  if(networkErr()) throw new Error('OASIS unreachable (proxy/network) - rotate proxy.');\n  if(emailReady()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(networkErr()) throw new Error('OASIS unreachable (proxy/network) - rotate proxy.');\nthrow new Error('OASIS signup page did not load an email field in time.');",
+          "into": "oasisAccess"
+        }
+      },
+      {
+        "id": "n_email",
+        "kind": "fill",
+        "position": {
+          "x": 340,
+          "y": 30
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[name=\"Email\"], #input-54, input[type=\"email\"]",
+          "value": "{{identity.email}}"
+        }
+      },
+      {
+        "id": "n_agree",
+        "kind": "evaluate",
+        "position": {
+          "x": 100,
+          "y": 100
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline=Date.now()+8000;\nvar ripple=null;\nwhile(Date.now()<deadline){\n  ripple=Array.from(document.querySelectorAll('.v-input--selection-controls__ripple')).find(vis);\n  if(ripple)break;\n  await sleep(250);\n}\nif(!ripple)return 'no-agree-checkbox';\nripple.scrollIntoView({block:'center'});\nripple.click();\nawait sleep(300);\nreturn 'agree-clicked';",
+          "into": "oasisAgree"
+        }
+      },
+      {
+        "id": "n_continue",
+        "kind": "click",
+        "position": {
+          "x": 340,
+          "y": 170
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "span.button--primary, .button--primary"
+        }
+      },
+      {
+        "id": "n_emailcheck",
+        "kind": "evaluate",
+        "position": {
+          "x": 100,
+          "y": 240
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction firstNameField(){\n  var sels=['input[placeholder=\"First name\" i]','input[aria-label=\"First name\" i]','input[name=\"firstName\" i]','#input-73','#input-77'];\n  for(var i=0;i<sels.length;i++){if(vis(document.querySelector(sels[i])))return true;}\n  return false;\n}\nfunction registered(){\n  var notYou=Array.from(document.querySelectorAll('.landingpage-header__email-accent b, .mr-1 b')).find(vis);\n  if(notYou&&/not you/i.test(String(notYou.textContent||'')))return true;\n  var body=String(document.body?document.body.innerText:'').toLowerCase();\n  if(vis(document.querySelector('.footer-link'))&&/(log in|sign in|already have)/i.test(body))return true;\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<20000){await sleep(200);}\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  if(firstNameField())return 'signup';\n  if(registered()) throw new Error('OASIS account already exists for this email - marking email as used.');\n  await sleep(300);\n}\nif(registered()) throw new Error('OASIS account already exists for this email - marking email as used.');\nthrow new Error('Email step did not resolve to the signup details form.');",
+          "into": "oasisEmailStep"
+        }
+      },
+      {
+        "id": "n_firstname",
+        "kind": "fill",
+        "position": {
+          "x": 340,
+          "y": 310
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[placeholder=\"First name\" i], input[aria-label=\"First name\" i], input[name=\"firstName\" i]",
+          "value": "{{identity.firstName}}"
+        }
+      },
+      {
+        "id": "n_lastname",
+        "kind": "fill",
+        "position": {
+          "x": 100,
+          "y": 380
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[placeholder=\"Last name\" i], input[aria-label=\"Last name\" i], input[name=\"lastName\" i]",
+          "value": "{{identity.lastName}}"
+        }
+      },
+      {
+        "id": "n_countryopen",
+        "kind": "click",
+        "position": {
+          "x": 340,
+          "y": 450
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "span.current, .current"
+        }
+      },
+      {
+        "id": "n_countrypick",
+        "kind": "click",
+        "position": {
+          "x": 100,
+          "y": 520
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "li:has-text(\"{{addresses.0.country}}\") strong, li:has-text(\"{{addresses.0.country}}\"), strong:has-text(\"{{addresses.0.country}}\")"
+        }
+      },
+      {
+        "id": "n_phone",
+        "kind": "fill",
+        "position": {
+          "x": 340,
+          "y": 590
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[type=\"tel\"], #input-82",
+          "value": "{{identity.phone}}"
+        }
+      },
+      {
+        "id": "n_address",
+        "kind": "fill",
+        "position": {
+          "x": 100,
+          "y": 660
+        },
+        "config": {
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000,
+          "selector": "input[autocomplete=\"no-thanks\"], #gen-1159887",
+          "value": "{{addresses.0.city}}"
+        }
+      },
+      {
+        "id": "n_addresspick",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 730
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline=Date.now()+15000;\nvar items=[];\nwhile(Date.now()<deadline){\n  items=Array.from(document.querySelectorAll('.v-list-item__title')).filter(vis);\n  if(items.length)break;\n  await sleep(250);\n}\nif(!items.length) throw new Error('OASIS address suggestions did not appear.');\nvar first=items[0];\nif(/we couldn't find that town|we couldn’t find that town|no results|not found/i.test(String(first.textContent||''))){\n  throw new Error('OASIS did not recognize the address - retry with a new address.');\n}\nvar clickable=(first.closest&&first.closest('.v-list-item'))||first;\nclickable.scrollIntoView({block:'center'});\nclickable.click();\nawait sleep(400);\nreturn String(first.textContent||'').trim();",
+          "into": "oasisAddress"
+        }
+      },
+      {
+        "id": "n_dobopen",
+        "kind": "click",
+        "position": {
+          "x": 100,
+          "y": 800
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "#input-86, input[role=\"button\"][aria-haspopup=\"true\"], input[aria-haspopup=\"true\"]"
+        }
+      },
+      {
+        "id": "n_dobpick",
+        "kind": "evaluate",
+        "position": {
+          "x": 340,
+          "y": 870
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nasync function waitFor(fn,ms){var d=Date.now()+ms;while(Date.now()<d){var v=fn();if(v)return v;await sleep(200);}return null;}\nvar age=18+Math.floor(Math.random()*38);\nvar year=(new Date()).getFullYear()-age;\nvar yearLi=await waitFor(function(){\n  var lis=Array.from(document.querySelectorAll('.v-date-picker-years li, .v-picker__body ul li'));\n  return lis.find(function(el){return vis(el)&&String(el.textContent||'').trim()===String(year);});\n},15000);\nif(!yearLi){\n  var anyLis=Array.from(document.querySelectorAll('.v-date-picker-years li, .v-picker__body ul li')).filter(vis);\n  if(!anyLis.length) throw new Error('DOB year list not found.');\n  yearLi=anyLis[Math.floor(anyLis.length/2)];\n  year=parseInt(String(yearLi.textContent||'').trim(),10)||year;\n}\nyearLi.scrollIntoView({block:'center'});\nyearLi.click();\nawait sleep(800);\nvar monthBtns=await waitFor(function(){\n  var b=Array.from(document.querySelectorAll('.v-date-picker-table--month button, .v-date-picker-table--month .v-btn')).filter(function(el){return vis(el)&&!el.disabled;});\n  return b.length?b:null;\n},10000);\nif(!monthBtns) throw new Error('DOB month picker not found.');\nvar mi=Math.floor(Math.random()*monthBtns.length);\nmonthBtns[mi].scrollIntoView({block:'center'});\nmonthBtns[mi].click();\nawait sleep(800);\nvar dayBtns=await waitFor(function(){\n  var b=Array.from(document.querySelectorAll('.v-date-picker-table--date button, .v-date-picker-table--date .v-btn')).filter(function(el){return vis(el)&&!el.disabled&&String(el.textContent||'').trim();});\n  return b.length?b:null;\n},10000);\nif(!dayBtns) throw new Error('DOB day picker not found.');\nvar di=Math.floor(Math.random()*dayBtns.length);\nvar dayText=String(dayBtns[di].textContent||'').trim();\ndayBtns[di].scrollIntoView({block:'center'});\ndayBtns[di].click();\nawait sleep(500);\nreturn year+'-'+(mi+1)+'-'+dayText;",
+          "into": "oasisDob"
+        }
+      },
+      {
+        "id": "n_terms",
+        "kind": "evaluate",
+        "position": {
+          "x": 100,
+          "y": 940
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline=Date.now()+10000;\nvar ripples=[];\nwhile(Date.now()<deadline){\n  ripples=Array.from(document.querySelectorAll('.v-input--selection-controls__ripple')).filter(vis);\n  if(ripples.length)break;\n  await sleep(250);\n}\nif(!ripples.length) throw new Error('OASIS terms checkbox not found.');\nvar target=ripples[ripples.length-1];\ntarget.scrollIntoView({block:'center'});\ntarget.click();\nawait sleep(300);\nreturn 'terms-checked';",
+          "into": "oasisTerms"
+        }
+      },
+      {
+        "id": "n_submit",
+        "kind": "click",
+        "position": {
+          "x": 340,
+          "y": 1010
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "span.button--primary, .button--primary"
+        }
+      },
+      {
+        "id": "n_outcome",
+        "kind": "evaluate",
+        "position": {
+          "x": 100,
+          "y": 1080
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction snap(){var t=(document.title||'').toLowerCase();var b=String(document.body?document.body.innerText:'').toLowerCase();return {b:b,all:t+' '+b};}\nfunction formStillUp(){\n  var sels=['input[placeholder=\"First name\" i]','input[type=\"tel\"]','input[autocomplete=\"no-thanks\"]'];\n  for(var i=0;i<sels.length;i++){if(vis(document.querySelector(sels[i])))return true;}\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<30000){await sleep(200);}\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  var s=snap();\n  if(s.all.includes(\"this site can't be reached\")||s.all.includes('err_connection')||s.all.includes('err_proxy')||s.all.includes('err_timed_out')) throw new Error('OASIS submission unreachable - rotate proxy.');\n  if(/welcome|check your email|verify your email|confirm your email|thank you|account created|you're all set|success/i.test(s.b) && !formStillUp())return 'done';\n  if(!formStillUp() && !/signupwb/i.test(location.href))return 'done';\n  await sleep(400);\n}\nif(formStillUp()) throw new Error('OASIS signup did not complete (form still present - check for validation errors).');\nreturn 'done';",
+          "into": "oasisOutcome"
+        }
+      },
+      {
+        "id": "n_save",
+        "kind": "accounts.save",
+        "position": {
+          "x": 340,
+          "y": 1150
+        },
+        "config": {
+          "email": "{{identity.email}}",
+          "status": "active"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_n_start_n_goto",
+        "from": "n_start",
+        "fromPort": "next",
+        "to": "n_goto"
+      },
+      {
+        "id": "e_n_goto_n_access",
+        "from": "n_goto",
+        "fromPort": "next",
+        "to": "n_access"
+      },
+      {
+        "id": "e_n_access_n_email",
+        "from": "n_access",
+        "fromPort": "next",
+        "to": "n_email"
+      },
+      {
+        "id": "e_n_email_n_agree",
+        "from": "n_email",
+        "fromPort": "next",
+        "to": "n_agree"
+      },
+      {
+        "id": "e_n_agree_n_continue",
+        "from": "n_agree",
+        "fromPort": "next",
+        "to": "n_continue"
+      },
+      {
+        "id": "e_n_continue_n_emailcheck",
+        "from": "n_continue",
+        "fromPort": "next",
+        "to": "n_emailcheck"
+      },
+      {
+        "id": "e_n_emailcheck_n_firstname",
+        "from": "n_emailcheck",
+        "fromPort": "next",
+        "to": "n_firstname"
+      },
+      {
+        "id": "e_n_firstname_n_lastname",
+        "from": "n_firstname",
+        "fromPort": "next",
+        "to": "n_lastname"
+      },
+      {
+        "id": "e_n_lastname_n_countryopen",
+        "from": "n_lastname",
+        "fromPort": "next",
+        "to": "n_countryopen"
+      },
+      {
+        "id": "e_n_countryopen_n_countrypick",
+        "from": "n_countryopen",
+        "fromPort": "next",
+        "to": "n_countrypick"
+      },
+      {
+        "id": "e_n_countrypick_n_phone",
+        "from": "n_countrypick",
+        "fromPort": "next",
+        "to": "n_phone"
+      },
+      {
+        "id": "e_n_phone_n_address",
+        "from": "n_phone",
+        "fromPort": "next",
+        "to": "n_address"
+      },
+      {
+        "id": "e_n_address_n_addresspick",
+        "from": "n_address",
+        "fromPort": "next",
+        "to": "n_addresspick"
+      },
+      {
+        "id": "e_n_addresspick_n_dobopen",
+        "from": "n_addresspick",
+        "fromPort": "next",
+        "to": "n_dobopen"
+      },
+      {
+        "id": "e_n_dobopen_n_dobpick",
+        "from": "n_dobopen",
+        "fromPort": "next",
+        "to": "n_dobpick"
+      },
+      {
+        "id": "e_n_dobpick_n_terms",
+        "from": "n_dobpick",
+        "fromPort": "next",
+        "to": "n_terms"
+      },
+      {
+        "id": "e_n_terms_n_submit",
+        "from": "n_terms",
+        "fromPort": "next",
+        "to": "n_submit"
+      },
+      {
+        "id": "e_n_submit_n_outcome",
+        "from": "n_submit",
+        "fromPort": "next",
+        "to": "n_outcome"
+      },
+      {
+        "id": "e_n_outcome_n_save",
+        "from": "n_outcome",
+        "fromPort": "next",
+        "to": "n_save"
+      }
+    ],
+    "author": {
+      "name": "Sete_"
+    }
+  }
+}
