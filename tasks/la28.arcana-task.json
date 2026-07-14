@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T16:58:27.567Z",
+  "exportedAt": "2026-07-14T07:51:06.927Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.1.6",
+    "version": "1.1.7",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -24,8 +24,8 @@
         "id": "n_9081ea46",
         "kind": "noop",
         "position": {
-          "x": 92.00000000000001,
-          "y": -182.66666666666666
+          "x": -167.78031829946065,
+          "y": -391.1391149440611
         },
         "config": {}
       },
@@ -33,8 +33,8 @@
         "id": "n_inxo4k74",
         "kind": "goto",
         "position": {
-          "x": 85.23531702965028,
-          "y": -77.795075513218
+          "x": 11.385256622875886,
+          "y": -392.77902209509887
         },
         "config": {
           "url": "https://t.co/0rfWaqCIEi",
@@ -46,8 +46,8 @@
         "id": "n_la28access",
         "kind": "evaluate",
         "position": {
-          "x": 85,
-          "y": -25
+          "x": 205.93265118241698,
+          "y": -397.40717334299455
         },
         "config": {
           "script": "// t.co -> tickets.la28.org can redirect CLIENT-SIDE (after domcontentloaded), so\n// a single check - even after a fixed settle - races the redirect on a slow\n// proxy and reads t.co / an intermediate, missing the block. POLL instead: keep\n// looking until we either see Akamai's \"Access Denied\" (throw, so the run\n// rotates proxy) or the real LA28 page (continue). Navigations during the poll\n// destroy this isolated world; the engine retries the whole node on the settled\n// page, so the poll always ends up on the final document.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction denied(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  return /access denied/i.test(title)\n    || (/access denied/i.test(body) && /(don't have permission|reference #|edgesuite\\.net)/i.test(body));\n}\nfunction la28Ready(){\n  // Positive proof we reached the real LA28 site (not t.co / an intermediate) so\n  // we can stop early on a clean run instead of polling the full window.\n  var title=(document.title||'').trim();\n  if(/official la28|la28.*(ticket|olympic|paralympic)/i.test(title)) return true;\n  var host=(location.host||'');\n  var body=(document.body?document.body.innerText:'')||'';\n  return /la28\\.org/i.test(host)\n    && /register for the la28|get tickets|waiting room|create an account|legal terms and privacy|mark your calendar/i.test(body);\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(denied()) throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\n  if(la28Ready()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(denied()) throw new Error('LA28 Access Denied - this proxy IP is blocked. Use a different proxy.');\nreturn (document.title||'').trim();",
@@ -58,8 +58,8 @@
         "id": "n_6iphto3c",
         "kind": "fill",
         "position": {
-          "x": 227.11765851482517,
-          "y": 79.7691289100577
+          "x": 52.24978229678143,
+          "y": 73.82124196386573
         },
         "config": {
           "speed": "natural",
@@ -267,8 +267,8 @@
         "id": "n_9kyhana0",
         "kind": "click",
         "position": {
-          "x": 260.2201110973692,
-          "y": -76.88848899910755
+          "x": 46.97777817779169,
+          "y": -246.18576145105268
         },
         "config": {
           "delayMs": 0,
@@ -281,8 +281,8 @@
         "id": "n_f6nqspvm",
         "kind": "click",
         "position": {
-          "x": 443.2201110973692,
-          "y": -78.88848899910755
+          "x": 470.06692842829426,
+          "y": -85.85786532454577
         },
         "config": {
           "delayMs": 0,
@@ -295,22 +295,22 @@
         "id": "n_4snf2wqx",
         "kind": "click",
         "position": {
-          "x": 55.22011109736923,
-          "y": 14.111511000892449
+          "x": 54.29631793684314,
+          "y": -14.515562768089296
         },
         "config": {
           "delayMs": 0,
           "force": false,
           "timeoutMs": 300000,
-          "selector": "xpath=/html/body/div[2]/div[2]/div[3]/a/div"
+          "selector": "a[href=\"../register/\"]"
         }
       },
       {
         "id": "n_la28wait",
         "kind": "dwell",
         "position": {
-          "x": 130,
-          "y": 40
+          "x": 672.6228043606234,
+          "y": -90.26671588898633
         },
         "config": {
           "ms": 4000
@@ -320,8 +320,8 @@
         "id": "n_la28guard",
         "kind": "evaluate",
         "position": {
-          "x": 185,
-          "y": 48
+          "x": 837.6618095478739,
+          "y": -75.66400725828501
         },
         "config": {
           "script": "// After the queue-join / botdetect click, Queue-it either sends us into the\n// waiting room or - if the IP is flagged - to /queue/error403 (\"We are sorry,\n// your access has been restricted\"). It takes a moment to decide, so check ONCE\n// too early (the old bug) races the redirect and misses the block - then the\n// next step hangs 300s on a dead page. Wait for load, then POLL until we either\n// see the block (throw, so the run rotates proxy) or the waiting-room proceed\n// element appears (continue).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction blocked(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  var href=location.href||'';\n  return /access denied|restricted access/i.test(title)\n    || /error403|queue-it\\.net/i.test(href)\n    || /your access has been restricted|access has been restricted/i.test(body);\n}\nfunction proceedReady(){\n  try{\n    var el=document.evaluate('/html/body/div[2]/div[2]/div[3]/a/div',document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;\n    if(el){var r=el.getBoundingClientRect();return r.width>0&&r.height>0;}\n  }catch(e){}\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+12000;\nwhile(Date.now()<deadline){\n  if(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\n  if(proceedReady()) break;\n  await sleep(500);\n}\nif(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\ntry { var b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn (document.title||'').trim();",
@@ -355,8 +355,8 @@
         "id": "n_la28xbranch",
         "kind": "branch",
         "position": {
-          "x": 587.4360954929433,
-          "y": -248.12360965355487
+          "x": 656.4315840687701,
+          "y": -289.75881827689864
         },
         "config": {
           "left": "{{la28XpathReady}}",
@@ -368,8 +368,8 @@
         "id": "n_la28consent",
         "kind": "evaluate",
         "position": {
-          "x": 125,
-          "y": 95
+          "x": -117.7430903388204,
+          "y": -241.67750807146055
         },
         "config": {
           "script": "// Dismiss LA28's first-load consent gate (\"Legal Terms and Privacy\" CONTINUE,\n// and/or a cookie CMP). Searches the main DOM, OPEN shadow roots, and\n// same-origin iframes for the consent button (by id or exact visible text),\n// prefers one inside a modal/overlay, clicks it, and confirms it closed.\n// If nothing reachable is found it throws a DIAG string listing iframes +\n// shadow hosts so the exact structure (e.g. a cross-origin CMP iframe) is known.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<2||r.height<2)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  var W=window.innerWidth||9999,H=window.innerHeight||9999;\n  if(r.bottom<0||r.top>H||r.right<0||r.left>W)return false;\n  return true;\n}\nfunction parentOf(n){\n  var p=n.parentElement;\n  if(!p){var rt=n.getRootNode&&n.getRootNode();p=(rt&&rt.host)||null;}\n  return p;\n}\nfunction inOverlay(el){\n  var n=el;\n  while(n&&n.nodeType===1){\n    if(n.getAttribute&&(n.getAttribute('role')==='dialog'||n.getAttribute('aria-modal')==='true'))return true;\n    try{var s=getComputedStyle(n);if((s.position==='fixed'||s.position==='sticky')&&parseInt(s.zIndex||'0',10)>=5)return true;}catch(e){}\n    if(n===document.body)break;\n    n=parentOf(n);\n  }\n  return false;\n}\nfunction clickIt(el){\n  var t=(el.closest&&el.closest('button, a, [role=button], input[type=submit], input[type=button], [onclick]'))||el;\n  try{t.scrollIntoView({block:'center'});}catch(e){}\n  try{t.click();}catch(e){}\n  if(t!==el){try{el.click();}catch(e){}}\n}\nfunction allRoots(){\n  var roots=[document],stack=[document];\n  while(stack.length){\n    var root=stack.pop(),els;\n    try{els=root.querySelectorAll('*');}catch(e){continue;}\n    for(var i=0;i<els.length;i++){var sh=els[i].shadowRoot;if(sh){roots.push(sh);stack.push(sh);}}\n  }\n  var ifr=document.querySelectorAll('iframe');\n  for(var j=0;j<ifr.length;j++){var dd=null;try{dd=ifr[j].contentDocument;}catch(e){}if(dd)roots.push(dd);}\n  return roots;\n}\nfunction findIn(root){\n  try{var byId=root.querySelector('#cmpbntyestxt');if(byId&&vis(byId))return byId;}catch(e){}\n  var exact=/^(continue|i agree|agree|accept all|accept cookies|accept|allow all|got it|ok)$/i;\n  var nodes;\n  try{nodes=root.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button], span, div, p');}catch(e){return null;}\n  var best=null;\n  for(var i=0;i<nodes.length;i++){\n    var el=nodes[i];\n    if(!vis(el))continue;\n    var txt=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();\n    if(!exact.test(txt))continue;\n    var r=el.getBoundingClientRect();\n    if(r.height>140||r.width>900)continue;\n    if(inOverlay(el))return el;\n    if(!best)best=el;\n  }\n  return best;\n}\nfunction pick(){var roots=allRoots();for(var i=0;i<roots.length;i++){var el=findIn(roots[i]);if(el)return el;}return null;}\nfunction diag(){\n  var out={rs:document.readyState,iframes:[],shadowHosts:[],btns:[]};\n  var ifr=document.querySelectorAll('iframe');\n  for(var i=0;i<ifr.length;i++){var co;try{co=ifr[i].contentDocument?'same':'cross';}catch(e){co='cross';}out.iframes.push(((ifr[i].src||'no-src').slice(0,90))+' ['+co+']');}\n  var all=document.querySelectorAll('*');\n  for(var j=0;j<all.length;j++){if(all[j].shadowRoot)out.shadowHosts.push(all[j].tagName.toLowerCase()+(all[j].id?('#'+all[j].id):''));}\n  var cl=document.querySelectorAll('button, a, [role=button], input[type=submit], input[type=button]');\n  for(var k=0;k<cl.length&&out.btns.length<20;k++){if(vis(cl[k])){var t=(cl[k].innerText||cl[k].value||'').replace(/\\s+/g,' ').trim().slice(0,28);if(t)out.btns.push(t);}}\n  return out;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<15000){await sleep(200);}\nvar deadline=Date.now()+45000;\nwhile(Date.now()<deadline){\n  var el=pick();\n  if(el){clickIt(el);await sleep(700);if(!vis(el))return 'consent-clicked';}\n  await sleep(400);\n}\nreturn 'consent-not-found';",
@@ -380,8 +380,8 @@
         "id": "n_la28emailcheck",
         "kind": "evaluate",
         "position": {
-          "x": 227,
-          "y": 150
+          "x": 234.1374643354303,
+          "y": 70.29831492102765
         },
         "config": {
           "script": "// After the email is entered, give Gigya time to run its server-side check and\n// flag an already-registered address (error 400003: \"An account from a prior\n// Olympic & Paralympic Games exists for this email address. Click here to log\n// in.\"). That case - and only that case - puts a login <a> inside the email\n// error span. If it shows, fail fast so this email counts as used.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<1&&r.height<1)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  return true;\n}\n// Blur the email field so Gigya fires its on-blur server validation.\ntry{\n  var em=document.querySelector('#register-site-login input[name=\"email\"]')||document.querySelector('input[name=\"email\"]');\n  if(em){em.blur();em.dispatchEvent(new Event('blur',{bubbles:true}));em.dispatchEvent(new Event('change',{bubbles:true}));}\n}catch(e){}\n// Human wait 6-10s for the async check to come back.\nawait sleep(6000+Math.floor(Math.random()*4001));\nvar link=document.querySelector('#gigya-error-msg-gigya-register-form-email > a');\nif(link&&vis(link)){\n  throw new Error('email already used');\n}\nreturn 'email-ok';",
@@ -556,7 +556,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "GpTemP+pLhTvsM/G8a/vKqHOIbRRZyGRAMddIqixccAeuul+Tf59E3a9E8WPY1gEg4iHStFDa95C1Wj6uZfkBw=="
+      "signature": "R2hB7nbtZdBl0Y7PSIXQC5RNbAsvM7zgQbMMD/HxpOHx2uM7XtIvUPwcho5SvqXJoWr8UeO34fYDlyA4PQwSCQ=="
     }
   }
 }
