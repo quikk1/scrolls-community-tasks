@@ -61,7 +61,7 @@
       "id": "la28-ENTRY",
       "name": "LA28 Ticket Entry",
       "description": "LA28 ticket-draw entry automation: passes the waiting room, confirms the LA28 ID email verification code (Key Vault mailboxes or an AYCD list), and accepts the legal-terms consent, then fills the entry form - selects the ticket categories, a session/artist, and the attribute options - solves the captcha and submits the entry. Handles the profile check and re-login/verification branches. Runs with or without a Profile Group and is email-only (no SMS), so all it needs is an email source.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="

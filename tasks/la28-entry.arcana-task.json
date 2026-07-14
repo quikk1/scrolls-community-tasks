@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-13T19:19:55.368Z",
+  "exportedAt": "2026-07-14T11:49:03.465Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.1",
+    "version": "1.0.2",
     "metadata": {
       "id": "la28-ENTRY",
       "name": "LA28-ENTRY",
@@ -40,7 +40,7 @@
         "config": {
           "url": "https://t.co/0rfWaqCIEi",
           "waitUntil": "domcontentloaded",
-          "timeoutMs": 60000
+          "timeoutMs": 120000
         }
       },
       {
@@ -66,7 +66,7 @@
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "input[name=\"username\"]:visible",
           "value": "{{identity.email}}"
         }
@@ -82,7 +82,7 @@
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "input[type=\"password\"][name=\"password\"].gigya-input-password:visible",
           "value": "{{identity.password}}"
         }
@@ -115,7 +115,7 @@
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "input#gigya-textbox-code",
           "value": "{{emailCode}}"
         }
@@ -130,7 +130,7 @@
         "config": {
           "delayMs": 0,
           "force": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "form#gigya-otp-update-form > div.gigya-layout-row:nth-of-type(3) > div.gigya-composite-control.gigya-composite-control-submit:nth-of-type(1) > input.gigya-input-submit"
         }
       },
@@ -158,7 +158,7 @@
         "config": {
           "delayMs": 0,
           "force": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "button.botdetect-button, [class*=\"botdetect\"] button, button:has-text(\"Join\"), a:has-text(\"Join\"), div[role=\"button\"]:has-text(\"Join\")"
         }
       },
@@ -243,7 +243,7 @@
         "config": {
           "delayMs": 0,
           "force": false,
-          "timeoutMs": 100000,
+          "timeoutMs": 120000,
           "selector": "input[type=\"submit\"]:visible"
         }
       },
@@ -306,7 +306,7 @@
         "config": {
           "selector": "select[data-qa=\"select-additionalCustomerAttributes-1\"]",
           "value": "{{attrRandom}}",
-          "timeoutMs": 100000,
+          "timeoutMs": 120000,
           "instant": false
         }
       },
@@ -332,7 +332,7 @@
         "config": {
           "selector": "select[data-qa=\"select-categoryFavorites288-1\"]",
           "value": "{{randCat288}}",
-          "timeoutMs": 100000,
+          "timeoutMs": 120000,
           "instant": false
         }
       },
@@ -358,7 +358,7 @@
         "config": {
           "selector": "select[data-qa=\"select-categoryFavorites289-1\"]",
           "value": "{{randCat289}}",
-          "timeoutMs": 100000,
+          "timeoutMs": 120000,
           "instant": false
         }
       },
@@ -384,7 +384,7 @@
         "config": {
           "selector": "select[data-qa=\"select-artistFavorites-1\"]",
           "value": "{{randArtist}}",
-          "timeoutMs": 100000,
+          "timeoutMs": 120000,
           "instant": false
         }
       },
@@ -398,7 +398,7 @@
         "config": {
           "delayMs": 0,
           "force": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "button[data-qa=\"save-data-button\"]"
         }
       },
@@ -451,7 +451,7 @@
         "config": {
           "delayMs": 0,
           "force": false,
-          "timeoutMs": 60000,
+          "timeoutMs": 120000,
           "selector": "input[type=\"submit\"]:visible"
         }
       },
@@ -526,7 +526,7 @@
         },
         "config": {
           "checked": true,
-          "timeoutMs": 100000,
+          "timeoutMs": 120000,
           "selector": "section.profile-section.c-inner > div.container > div.row > div.col-xs-12.col-md-offset-2 > app-sports-profile-lotteries > section.ng-star-inserted.profile-field-section > div.styled-checkbox.no-padding-right > label.label.fullwidth"
         }
       }
@@ -782,7 +782,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "LYzVUu0YvM1EbBq6ox0PVl4Z6RJPaBFUg5dNGSQWKyIIszSfRaKHMKel6OJbHztCw94Z4nlsNa7P/sO9RUHoCg=="
+      "signature": "R5v559kFYTmk0hPiX9YqKZZIG0adeoVZ01CxFMvX8gsUFUOfL/2fZfgPayXt7i1eSD4Eg22cNBpj+wX+B5RZCQ=="
     }
   }
 }
