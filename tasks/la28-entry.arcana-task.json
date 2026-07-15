@@ -3,7 +3,7 @@
   "exportedAt": "2026-07-14T11:49:03.465Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.2",
+    "version": "1.0.3",
     "metadata": {
       "id": "la28-ENTRY",
       "name": "LA28-ENTRY",
@@ -67,7 +67,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 120000,
-          "selector": "input[name=\"username\"]:visible",
+          "selector": "input[name=\"username\"]:visible, input[name=\"loginID\"]:visible, input[type=\"email\"]:visible, input[autocomplete=\"username\"]:visible",
           "value": "{{identity.email}}"
         }
       },
@@ -83,7 +83,7 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 120000,
-          "selector": "input[type=\"password\"][name=\"password\"].gigya-input-password:visible",
+          "selector": "input[type=\"password\"][name=\"password\"]:visible, input[type=\"password\"].gigya-input-password:visible, input[type=\"password\"]:visible",
           "value": "{{identity.password}}"
         }
       },
@@ -174,6 +174,105 @@
         }
       },
       {
+        "id": "n_la28privacygate",
+        "kind": "evaluate",
+        "position": {
+          "x": 310,
+          "y": -174
+        },
+        "config": {
+          "script": "// Wait for the asynchronously-rendered privacy modal, but do not synthesize\n// a DOM click here. The true branch uses the engine's native click node.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nvar deadline=Date.now()+10000;\nwhile(Date.now()<deadline){var a=document.querySelector('#cmpwelcomebtnyes > a'),box=document.querySelector('#cmpwelcomebtnyes');if(a&&(visible(a)||visible(box)))return '1';await sleep(250);}\nreturn '';",
+          "into": "la28PrivacyPresent"
+        }
+      },
+      {
+        "id": "n_la28privacybranch",
+        "kind": "branch",
+        "position": {
+          "x": 390,
+          "y": -245
+        },
+        "config": {
+          "left": "{{la28PrivacyPresent}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
+        "id": "n_la28privacyclick",
+        "kind": "click",
+        "position": {
+          "x": 470,
+          "y": -245
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 15000,
+          "selector": "#cmpwelcomebtnyes > a"
+        }
+      },
+      {
+        "id": "n_la28privacyverify",
+        "kind": "evaluate",
+        "position": {
+          "x": 551,
+          "y": -245
+        },
+        "config": {
+          "script": "// Confirm the native click closed the modal before queue navigation.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nvar deadline=Date.now()+5000;while(Date.now()<deadline){if(!visible(document.querySelector('#cmpwelcomebtnyes > a'))&&!visible(document.querySelector('#cmpwelcomebtnyes')))return 'closed';await sleep(200);}\nthrow new Error('LA28 privacy popup remained open after native click (#cmpwelcomebtnyes > a).');",
+          "into": "la28PrivacyResult"
+        }
+      },
+      {
+        "id": "n_la28legalexact",
+        "kind": "evaluate",
+        "position": {
+          "x": 390,
+          "y": -174
+        },
+        "config": {
+          "script": "// LA28 legal modal's actual clickable control. Its visible CONTINUE label\n// may live below the anchor, so target the stable clickable selector directly.\nvar b=document.querySelector('#cmpwelcomebtnyes > a');\nif(!b)return 'absent';\nvar r=b.getBoundingClientRect(),s=getComputedStyle(b);\nif(r.width<2||r.height<2||s.visibility==='hidden'||s.display==='none')return 'hidden';\ntry{b.scrollIntoView({block:'center'});}catch(e){}\ntry{b.focus();}catch(e){}\nb.click();\nreturn 'clicked';",
+          "into": "la28LegalExact"
+        }
+      },
+      {
+        "id": "n_la28legal",
+        "kind": "evaluate",
+        "position": {
+          "x": 470,
+          "y": -174
+        },
+        "config": {
+          "script": "// Dismiss the LA28 Legal Terms and Privacy overlay wherever its CONTINUE\n// label lives (button child, open shadow root, or same-origin iframe).\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction roots(){var out=[document],stack=[document];while(stack.length){var root=stack.pop(),els=[];try{els=root.querySelectorAll('*');}catch(e){}for(var i=0;i<els.length;i++){if(els[i].shadowRoot){out.push(els[i].shadowRoot);stack.push(els[i].shadowRoot);}}}var frames=document.querySelectorAll('iframe');for(var j=0;j<frames.length;j++){try{if(frames[j].contentDocument)out.push(frames[j].contentDocument);}catch(e){}}return out;}\nvar rs=roots();for(var i=0;i<rs.length;i++){var body='';try{body=(rs[i].body?rs[i].body.innerText:(rs[i].host?rs[i].host.innerText:''))||'';}catch(e){}if(!/legal terms and privacy|terms & conditions.*privacy policy/i.test(body))continue;var nodes=[];try{nodes=rs[i].querySelectorAll('#cmpbntyestxt,button,a,[role=button],input[type=button],input[type=submit],span,div,p');}catch(e){}for(var j=0;j<nodes.length;j++){var el=nodes[j],txt=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();if(!visible(el)||!/^continue$/i.test(txt))continue;var r=el.getBoundingClientRect();if(r.width>900||r.height>160)continue;var target=(el.closest&&el.closest('button,a,[role=button],input[type=button],input[type=submit],[onclick]'))||el;try{target.scrollIntoView({block:'center'});}catch(e){}try{target.focus();}catch(e){}target.click();return 'clicked';}}return 'absent';",
+          "into": "la28Legal"
+        }
+      },
+      {
+        "id": "n_la28statevisible",
+        "kind": "evaluate",
+        "position": {
+          "x": 551,
+          "y": -174
+        },
+        "config": {
+          "script": "// Route the current LA28 state. Gigya renders many hidden template forms, so\n// scan every selector match and choose a visible element rather than querySelector's\n// first (usually hidden) match.\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction first(sels){for(var i=0;i<sels.length;i++){var nodes=[];try{nodes=document.querySelectorAll(sels[i]);}catch(e){}for(var j=0;j<nodes.length;j++){if(visible(nodes[j]))return nodes[j];}}return null;}\nfunction click(el){try{el.scrollIntoView({block:'center'});}catch(e){}try{el.focus();}catch(e){}el.click();}\nvar title=(document.title||'').trim(),body=(document.body?document.body.innerText:'')||'',href=(location.href||'').toLowerCase();\nif(/error403|access[-_/]?denied|restricted[-_/]?access/.test(href)||/access denied|restricted access/i.test(title)||/your access has been restricted|access has been restricted|you do not have permission to access/i.test(body))throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\nvar email=first(['input[name=\"username\"]','input[name=\"loginID\"]','input[type=\"email\"]','input[autocomplete=\"username\"]']);\nvar password=first(['input[type=\"password\"][name=\"password\"]','input[type=\"password\"].gigya-input-password','input[type=\"password\"]']);\nif(email&&password)return 'login';\nif(/profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title)||first(['app-sports-profile-lotteries','button[data-qa=\"save-data-button\"]']))return 'profile';\nvar action=first(['#buttonConfirmVisitorPresence','#cmpbntyestxt','button.cmpwelcomebtnyes','a[href*=\"/mycustomerdata\"]','button.botdetect-button','[class*=\"botdetect\"] button']);\nif(!action){var all=document.querySelectorAll('button,a,[role=button]');for(var i=0;i<all.length;i++){var txt=(all[i].innerText||all[i].textContent||'').replace(/\\s+/g,' ').trim();if(visible(all[i])&&/^(continue|join|confirm)$/i.test(txt)){action=all[i];break;}}}\nif(action)click(action);\nreturn 'wait';",
+          "into": "la28QueueState"
+        }
+      },
+      {
+        "id": "n_la28state",
+        "kind": "evaluate",
+        "position": {
+          "x": 551,
+          "y": -174
+        },
+        "config": {
+          "script": "// Route every LA28/Queue-it state without waiting on an element that belongs\n// to a different page. Also advance any optional entry/consent/keep-alive UI.\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction first(sels){for(var i=0;i<sels.length;i++){var el=null;try{el=document.querySelector(sels[i]);}catch(e){}if(visible(el))return el;}return null;}\nfunction click(el){try{el.scrollIntoView({block:'center'});}catch(e){}try{el.focus();}catch(e){}el.click();}\nvar title=(document.title||'').trim(),body=(document.body?document.body.innerText:'')||'',href=(location.href||'').toLowerCase();\nif(/error403|access[-_/]?denied|restricted[-_/]?access/.test(href)||/access denied|restricted access/i.test(title)||/your access has been restricted|access has been restricted|you do not have permission to access/i.test(body))throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\nvar email=first(['input[name=\"username\"]','input[name=\"loginID\"]','input[type=\"email\"]','input[autocomplete=\"username\"]']);\nvar password=first(['input[type=\"password\"][name=\"password\"]','input[type=\"password\"].gigya-input-password','input[type=\"password\"]']);\nif(email&&password)return 'login';\nif(/profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title)||first(['app-sports-profile-lotteries','button[data-qa=\"save-data-button\"]']))return 'profile';\nvar action=first(['#buttonConfirmVisitorPresence','#cmpbntyestxt','button.cmpwelcomebtnyes','a[href*=\"/mycustomerdata\"]','button.botdetect-button','[class*=\"botdetect\"] button']);\nif(!action){var all=document.querySelectorAll('button,a,[role=button]');for(var i=0;i<all.length;i++){var txt=(all[i].innerText||all[i].textContent||'').replace(/\\s+/g,' ').trim();if(visible(all[i])&&/^(continue|join|confirm)$/i.test(txt)){action=all[i];break;}}}\nif(action)click(action);\nreturn 'wait';",
+          "into": "la28QueueState"
+        }
+      },
+      {
         "id": "n_la28guard",
         "kind": "evaluate",
         "position": {
@@ -181,8 +280,57 @@
           "y": -174
         },
         "config": {
-          "script": "// After the queue-join / botdetect click, Queue-it either sends us into the\n// waiting room or - if the IP is flagged - to /queue/error403 (\"We are sorry,\n// your access has been restricted\"). It takes a moment to decide, so check ONCE\n// too early (the old bug) races the redirect and misses the block - then the\n// next step hangs 300s on a dead page. Wait for load, then POLL until we either\n// see the block (throw, so the run rotates proxy) or the waiting-room proceed\n// element appears (continue).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction blocked(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  var href=location.href||'';\n  return /access denied|restricted access/i.test(title)\n    || /error403|queue-it\\.net/i.test(href)\n    || /your access has been restricted|access has been restricted/i.test(body);\n}\nfunction proceedReady(){\n  try{\n    var el=document.evaluate('/html/body/div[2]/div[2]/div[3]/a/div',document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;\n    if(el){var r=el.getBoundingClientRect();return r.width>0&&r.height>0;}\n  }catch(e){}\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+12000;\nwhile(Date.now()<deadline){\n  if(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\n  if(proceedReady()) break;\n  await sleep(500);\n}\nif(blocked()) throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\ntry { var b = document.querySelector('button.cmpwelcomebtnyes'); if (b) b.click(); } catch (e) {}\nreturn (document.title||'').trim();",
-          "into": "la28Title"
+          "script": "// Classify the current Queue-it/LA28 page. The graph loops on 'wait' so\n// cancellation remains responsive between checks; blocked pages fail immediately.\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<2||r.height<2)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;\n}\nfunction blocked(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  var href=(location.href||'').toLowerCase();\n  return /error403|access[-_/]?denied|restricted[-_/]?access/.test(href)\n    || /access denied|restricted access/i.test(title)\n    || /your access has been restricted|access has been restricted|you do not have permission to access/i.test(body);\n}\nfunction loginReady(){\n  return visible(document.querySelector('input[name=\"username\"]'))\n    && visible(document.querySelector('input[type=\"password\"][name=\"password\"]'));\n}\nfunction profileReady(){\n  var title=(document.title||'').trim();\n  if(/profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title))return true;\n  return visible(document.querySelector('app-sports-profile-lotteries'))\n    || visible(document.querySelector('button[data-qa=\"save-data-button\"]'));\n}\nfunction clickKeepAlive(){\n  var body=(document.body?document.body.innerText:'')||'';\n  if(!/don.?t lose your spot|confirm you.?re still here|lose your position in the queue/i.test(body))return false;\n  var nodes=document.querySelectorAll('button, a, [role=button], input[type=button], input[type=submit]');\n  for(var i=0;i<nodes.length;i++){\n    var el=nodes[i];\n    if(!visible(el))continue;\n    var txt=(el.innerText||el.textContent||el.value||el.getAttribute&&el.getAttribute('aria-label')||'').replace(/\\s+/g,' ').trim();\n    if(!/^(confirm|i.?m still here|stay in queue)$/i.test(txt))continue;\n    var target=(el.closest&&el.closest('button,a,[role=button],input'))||el;\n    try{target.scrollIntoView({block:'center'});}catch(e){}\n    try{target.click();}catch(e){}\n    return true;\n  }\n  return false;\n}\nfunction clickProceed(){\n  var el=null;\n  try{\n    el=document.evaluate('/html/body/div[2]/div[2]/div[3]/a/div',document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;\n  }catch(e){}\n  if(!visible(el))return false;\n  var target=(el.closest&&el.closest('a,button,[role=button]'))||el;\n  try{target.scrollIntoView({block:'center'});}catch(e){}\n  try{target.click();}catch(e){}\n  return true;\n}\nif(blocked())throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\nif(clickKeepAlive())return 'wait';\nif(profileReady())return 'profile';\nif(loginReady())return 'login';\n// Queue-it normally redirects automatically, but some completed queues expose a\n// proceed link. Click it when present, then let the graph wait and classify again.\nclickProceed();\ntry{var b=document.querySelector('button.cmpwelcomebtnyes');if(visible(b))b.click();}catch(e){}\nreturn 'wait';",
+          "into": "la28QueueState"
+        }
+      },
+      {
+        "id": "n_la28queuewait",
+        "kind": "branch",
+        "position": {
+          "x": 735,
+          "y": -174
+        },
+        "config": {
+          "left": "{{la28QueueState}}",
+          "op": "==",
+          "right": "wait"
+        }
+      },
+      {
+        "id": "n_la28presence",
+        "kind": "evaluate",
+        "position": {
+          "x": 735,
+          "y": -65
+        },
+        "config": {
+          "script": "// Queue-it periodically asks the visitor to prove they are still present.\n// Use its stable element id rather than relying on translated/changing button text.\nvar b=document.querySelector('#buttonConfirmVisitorPresence');\nif(!b)return 'absent';\nvar r=b.getBoundingClientRect();\nvar s=getComputedStyle(b);\nif(r.width<2||r.height<2||s.visibility==='hidden'||s.display==='none')return 'hidden';\ntry{b.scrollIntoView({block:'center'});}catch(e){}\ntry{b.focus();}catch(e){}\nb.click();\nreturn 'clicked';",
+          "into": "la28Presence"
+        }
+      },
+      {
+        "id": "n_la28queuepoll",
+        "kind": "dwell",
+        "position": {
+          "x": 735,
+          "y": -65
+        },
+        "config": {
+          "ms": 5000
+        }
+      },
+      {
+        "id": "n_la28queueprofile",
+        "kind": "branch",
+        "position": {
+          "x": 925,
+          "y": -174
+        },
+        "config": {
+          "left": "{{la28QueueState}}",
+          "op": "==",
+          "right": "profile"
         }
       },
       {
@@ -403,6 +551,68 @@
         }
       },
       {
+        "id": "n_la28authstate",
+        "kind": "evaluate",
+        "position": {
+          "x": 1120,
+          "y": -174
+        },
+        "config": {
+          "script": "// Persist after Log In until LA28 exposes a real next state. Gigya can leave the\n// page spinner up for much longer than its initial network request, so elapsed time alone\n// must never be treated as an OTP transition or successful authentication.\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction first(sels){for(var i=0;i<sels.length;i++){var nodes=[];try{nodes=document.querySelectorAll(sels[i]);}catch(e){}for(var j=0;j<nodes.length;j++){if(visible(nodes[j]))return nodes[j];}}return null;}\nfunction errorText(el){return ((el&&el.textContent)||'').replace(/\\s+/g,' ').trim();}\nvar tries=Number(\"{{capState.tries}}\")||0;\nvar title=(document.title||'').trim();\nvar href=(location.href||'').toLowerCase();\nif(/profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title)||/(\\/profile|\\/mycustomerdata|\\/myprofile)/.test(href)||first(['app-sports-profile-lotteries','button[data-qa=\"save-data-button\"]']))return {state:'profile',tries:tries};\nif(first(['input#gigya-textbox-code','form#gigya-otp-update-form input[name=\"code\"]','form#gigya-otp-update-form input[type=\"text\"]']))return {state:'otp',tries:tries};\nvar errors=[];try{errors=document.querySelectorAll('.gigya-error-msg-active,[class*=\"gigya-error-code-\"]');}catch(e){}\nvar other='';\nfor(var i=0;i<errors.length;i++){\n  if(!visible(errors[i]))continue;\n  var cls=String(errors[i].className||''),txt=errorText(errors[i]);\n  if(/gigya-error-code-401020|gigya-error-code-401023/.test(cls)||/not a robot|captcha|recaptcha/i.test(txt)){\n    if(tries>=3)throw new Error('LA28 login captcha was rejected after 3 solve attempts.');\n    return {state:'captcha',tries:tries+1};\n  }\n  if(txt&&!other)other=txt;\n}\nif(other)throw new Error('LA28 login failed: '+other.slice(0,240));\nreturn {state:'wait',tries:tries};",
+          "into": "capState"
+        }
+      },
+      {
+        "id": "n_la28authprofile",
+        "kind": "branch",
+        "position": {
+          "x": 1200,
+          "y": -174
+        },
+        "config": {
+          "left": "{{capState.state}}",
+          "op": "==",
+          "right": "profile"
+        }
+      },
+      {
+        "id": "n_la28authotp",
+        "kind": "branch",
+        "position": {
+          "x": 1280,
+          "y": -174
+        },
+        "config": {
+          "left": "{{capState.state}}",
+          "op": "==",
+          "right": "otp"
+        }
+      },
+      {
+        "id": "n_la28authcaptcha",
+        "kind": "branch",
+        "position": {
+          "x": 1360,
+          "y": -174
+        },
+        "config": {
+          "left": "{{capState.state}}",
+          "op": "==",
+          "right": "captcha"
+        }
+      },
+      {
+        "id": "n_la28authwait",
+        "kind": "dwell",
+        "position": {
+          "x": 1440,
+          "y": -65
+        },
+        "config": {
+          "ms": 5000
+        }
+      },
+      {
         "id": "n_la28caperr",
         "kind": "evaluate",
         "position": {
@@ -489,7 +699,7 @@
         },
         "config": {
           "email": "{{identity.email}}",
-          "password": "JOSEJAVIERjj10!_!!!",
+          "password": "{{identity.password}}",
           "site": "tickets.la28.org",
           "status": "active"
         }
@@ -560,7 +770,49 @@
         "id": "e_la28acc",
         "from": "n_la28access",
         "fromPort": "next",
-        "to": "n_la28consent"
+        "to": "n_la28privacyclick"
+      },
+      {
+        "id": "e_la28privacygate",
+        "from": "n_la28privacygate",
+        "fromPort": "next",
+        "to": "n_la28privacybranch"
+      },
+      {
+        "id": "e_la28privacytrue",
+        "from": "n_la28privacybranch",
+        "fromPort": "true",
+        "to": "n_la28privacyclick"
+      },
+      {
+        "id": "e_la28privacyfalse",
+        "from": "n_la28privacybranch",
+        "fromPort": "false",
+        "to": "n_la28statevisible"
+      },
+      {
+        "id": "e_la28privacyclick",
+        "from": "n_la28privacyclick",
+        "fromPort": "next",
+        "to": "n_la28privacyverify"
+      },
+      {
+        "id": "e_la28privacyverify",
+        "from": "n_la28privacyverify",
+        "fromPort": "next",
+        "to": "n_la28statevisible"
+      },
+      {
+        "id": "e_la28legalexact",
+        "from": "n_la28legalexact",
+        "fromPort": "next",
+        "to": "n_la28legal"
+      },
+      {
+        "id": "e_la28legal",
+        "from": "n_la28legal",
+        "fromPort": "next",
+        "to": "n_la28state"
       },
       {
         "id": "e_tkkhqyfb",
@@ -612,8 +864,44 @@
       },
       {
         "id": "e_zdw7p2ee",
-        "from": "n_la28guard",
+        "from": "n_la28statevisible",
         "fromPort": "next",
+        "to": "n_la28queuewait"
+      },
+      {
+        "id": "e_la28queuewaittrue",
+        "from": "n_la28queuewait",
+        "fromPort": "true",
+        "to": "n_la28presence"
+      },
+      {
+        "id": "e_la28presence",
+        "from": "n_la28presence",
+        "fromPort": "next",
+        "to": "n_la28queuepoll"
+      },
+      {
+        "id": "e_la28queuepoll",
+        "from": "n_la28queuepoll",
+        "fromPort": "next",
+        "to": "n_la28statevisible"
+      },
+      {
+        "id": "e_la28queuewaitfalse",
+        "from": "n_la28queuewait",
+        "fromPort": "false",
+        "to": "n_la28queueprofile"
+      },
+      {
+        "id": "e_la28queueprofiletrue",
+        "from": "n_la28queueprofile",
+        "fromPort": "true",
+        "to": "n_la28checkbox"
+      },
+      {
+        "id": "e_la28queueprofilefalse",
+        "from": "n_la28queueprofile",
+        "fromPort": "false",
         "to": "n_6iphto3c"
       },
       {
@@ -632,7 +920,7 @@
         "id": "e_wnupbwt1",
         "from": "n_aiitnmxf",
         "fromPort": "next",
-        "to": "n_la28caperr"
+        "to": "n_la28authstate"
       },
       {
         "id": "e_la28profcheck",
@@ -734,7 +1022,7 @@
         "id": "e_la28relogin",
         "from": "n_la28relogin",
         "fromPort": "next",
-        "to": "n_la28caperr"
+        "to": "n_la28authstate"
       },
       {
         "id": "e_la28verify",
@@ -777,6 +1065,54 @@
         "from": "n_8llgs07h",
         "fromPort": "next",
         "to": "n_la28attrpick"
+      },
+      {
+        "id": "e_la28authstate",
+        "from": "n_la28authstate",
+        "fromPort": "next",
+        "to": "n_la28authprofile"
+      },
+      {
+        "id": "e_la28authprofiletrue",
+        "from": "n_la28authprofile",
+        "fromPort": "true",
+        "to": "n_la28checkbox"
+      },
+      {
+        "id": "e_la28authprofilefalse",
+        "from": "n_la28authprofile",
+        "fromPort": "false",
+        "to": "n_la28authotp"
+      },
+      {
+        "id": "e_la28authotptrue",
+        "from": "n_la28authotp",
+        "fromPort": "true",
+        "to": "n_1z4bw39i"
+      },
+      {
+        "id": "e_la28authotpfalse",
+        "from": "n_la28authotp",
+        "fromPort": "false",
+        "to": "n_la28authcaptcha"
+      },
+      {
+        "id": "e_la28authcaptchatrue",
+        "from": "n_la28authcaptcha",
+        "fromPort": "true",
+        "to": "n_la28capsolve"
+      },
+      {
+        "id": "e_la28authcaptchafalse",
+        "from": "n_la28authcaptcha",
+        "fromPort": "false",
+        "to": "n_la28authwait"
+      },
+      {
+        "id": "e_la28authwait",
+        "from": "n_la28authwait",
+        "fromPort": "next",
+        "to": "n_la28authstate"
       }
     ],
     "author": {
