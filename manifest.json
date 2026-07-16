@@ -92,7 +92,7 @@
       "id": "oasis",
       "name": "OASIS Account Generator",
       "description": "Creates oasis.os.fan (Oasis fan) accounts end to end: enters the email, ticks the required marketing consent, fills the sign-up details, and saves the account on success. Fully proxy-geo aware - the city/town, phone number, and dialing country all follow wherever the run's proxy exits, and the page's own language is handled automatically (locale-independent, so it works on any-country proxies). Date of birth is random but always 18+. Name and email come from the run profile's identity. Fails fast with a clear message if the email is already registered or the proxy geo can't be resolved.",
-      "version": "1.2.3",
+      "version": "1.2.4",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="

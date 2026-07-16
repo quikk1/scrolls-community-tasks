@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-16T23:32:34.335Z",
+  "exportedAt": "2026-07-16T23:37:34.095Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.2.3",
+    "version": "1.2.4",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -115,15 +115,29 @@
         }
       },
       {
-        "id": "n_names",
-        "kind": "evaluate",
+        "id": "n_firstname",
+        "kind": "fill",
         "position": {
           "x": 0,
           "y": 960
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nvar tel=document.querySelector('input[type=\"tel\"]');\nvar texts=textInputs().filter(function(i){return i.getAttribute('autocomplete')!=='no-thanks';});\nvar names=texts.filter(function(i){return after(i,tel);});\nif(names.length<2) names=texts.slice(0,2);\nif(!names[0]||!names[1]) throw new Error('OASIS name fields not found.');\nsetVal(names[0],\"{{identity.firstName}}\");\nsetVal(names[1],\"{{identity.lastName}}\");\nawait sleep(150);\nreturn {first:names[0].value,last:names[1].value};",
-          "into": "oasisNames"
+          "selector": "xpath=(//input[@type=\"text\" and not(@name=\"Email\")])[1]",
+          "value": "{{identity.firstName}}",
+          "timeoutMs": 40000
+        }
+      },
+      {
+        "id": "n_lastname",
+        "kind": "fill",
+        "position": {
+          "x": 0,
+          "y": 1080
+        },
+        "config": {
+          "selector": "xpath=(//input[@type=\"text\" and not(@name=\"Email\")])[2]",
+          "value": "{{identity.lastName}}",
+          "timeoutMs": 40000
         }
       },
       {
@@ -131,7 +145,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1080
+          "y": 1200
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nvar iso=String(\"{{vars.geo.cc}}\"||\"\").trim().toLowerCase();\nif(!iso) return 'no-country';\nvar trigger=document.querySelector('.vue-country-select .dropdown')||document.querySelector('.vue-country-select');\nif(!trigger) return 'no-country-widget';\ntrigger.click(); await sleep(600);\nvar items=Array.from(document.querySelectorAll('.vue-country-select .dropdown-item, .vue-country-select .dropdown-list li')).filter(vis);\nvar target=items.find(function(li){return li.querySelector('.vti__flag.'+iso);});\nif(!target){ trigger.click(); return 'country-not-found:'+iso; }\ntarget.scrollIntoView({block:'center'}); target.click(); await sleep(300);\nreturn 'country-'+iso;",
@@ -143,7 +157,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1200
+          "y": 1320
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction d(n){var s='';for(var i=0;i<n;i++)s+=Math.floor(Math.random()*10);return s;}\nfunction pick(a){return a[Math.floor(Math.random()*a.length)];}\nvar cc=String(\"{{vars.geo.cc}}\"||\"\").toUpperCase();\nvar gens={\n  US:function(){return pick('23456789'.split(''))+d(2)+pick('23456789'.split(''))+d(6);},\n  GB:function(){return '7'+pick(['4','7','8','9'])+d(8);},\n  IE:function(){return '8'+pick(['3','5','6','7','9'])+d(7);},\n  ES:function(){return pick(['6','7'])+d(8);},\n  FR:function(){return pick(['6','7'])+d(8);},\n  DE:function(){return '15'+d(9);},\n  IT:function(){return '3'+pick(['1','2','3','4','5','6','8'])+d(8);},\n  NL:function(){return '6'+d(8);},\n  AU:function(){return '4'+d(8);},\n  PT:function(){return '9'+pick(['1','2','3','6'])+d(7);},\n  BE:function(){return '4'+pick(['5','6','7','8','9'])+d(7);},\n  PL:function(){return pick(['5','6','7','8'])+d(8);},\n  SE:function(){return '7'+pick(['0','2','3','6','9'])+d(7);},\n  CH:function(){return '7'+pick(['5','6','7','8','9'])+d(7);},\n  AT:function(){return '6'+pick(['5','6','7','8','9'])+d(8);},\n  BR:function(){return pick(['11','21','31','41','51','61','71','81'])+'9'+d(8);},\n  MX:function(){return '1'+d(9);}\n};\ngens.CA=gens.US;\nvar num=(gens[cc]?gens[cc]():d(9));\nvar el=document.querySelector('input[type=\"tel\"]');\nif(!el) throw new Error('OASIS phone field not found.');\nsetVal(el,num);\nawait sleep(150);\nreturn {cc:cc,num:num};",
@@ -155,7 +169,7 @@
         "kind": "typeText",
         "position": {
           "x": 0,
-          "y": 1320
+          "y": 1440
         },
         "config": {
           "selector": "input[autocomplete=\"no-thanks\"]",
@@ -169,7 +183,7 @@
         "kind": "click",
         "position": {
           "x": 0,
-          "y": 1440
+          "y": 1560
         },
         "config": {
           "selector": ".v-list-item:has-text(\"{{vars.geo.city}}\")",
@@ -181,7 +195,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1560
+          "y": 1680
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nvar city=document.querySelector('input[autocomplete=\"no-thanks\"]');\nvar texts=textInputs();\nvar dob=city ? texts.filter(function(i){return after(city,i);})[0] : texts[texts.length-1];\nif(!dob) throw new Error('OASIS date-of-birth field not found.');\ndob.scrollIntoView({block:'center'}); dob.click(); await sleep(400);\nreturn 'dob-opened';",
@@ -193,7 +207,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1680
+          "y": 1800
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nasync function waitFor(fn,ms){var d=Date.now()+ms;while(Date.now()<d){var v=fn();if(v)return v;await sleep(200);}return null;}\nvar age=20+Math.floor(Math.random()*36);\nvar year=(new Date()).getFullYear()-age;\nvar yearLi=await waitFor(function(){\n  var lis=Array.from(document.querySelectorAll('.v-date-picker-years li, .v-picker__body ul li'));\n  return lis.find(function(el){return vis(el)&&String(el.textContent||'').trim()===String(year);});\n},15000);\nif(!yearLi){\n  var anyLis=Array.from(document.querySelectorAll('.v-date-picker-years li, .v-picker__body ul li')).filter(vis);\n  if(!anyLis.length) throw new Error('DOB year list not found.');\n  yearLi=anyLis[Math.floor(anyLis.length/2)];\n  year=parseInt(String(yearLi.textContent||'').trim(),10)||year;\n}\nyearLi.scrollIntoView({block:'center'});\nyearLi.click();\nawait sleep(800);\nvar monthBtns=await waitFor(function(){\n  var b=Array.from(document.querySelectorAll('.v-date-picker-table--month button, .v-date-picker-table--month .v-btn')).filter(function(el){return vis(el)&&!el.disabled;});\n  return b.length?b:null;\n},10000);\nif(!monthBtns) throw new Error('DOB month picker not found.');\nvar mi=Math.floor(Math.random()*monthBtns.length);\nmonthBtns[mi].scrollIntoView({block:'center'});\nmonthBtns[mi].click();\nawait sleep(800);\nvar dayBtns=await waitFor(function(){\n  var b=Array.from(document.querySelectorAll('.v-date-picker-table--date button, .v-date-picker-table--date .v-btn')).filter(function(el){return vis(el)&&!el.disabled&&String(el.textContent||'').trim();});\n  return b.length?b:null;\n},10000);\nif(!dayBtns) throw new Error('DOB day picker not found.');\nvar di=Math.floor(Math.random()*dayBtns.length);\nvar dayText=String(dayBtns[di].textContent||'').trim();\ndayBtns[di].scrollIntoView({block:'center'});\ndayBtns[di].click();\nawait sleep(500);\nreturn year+'-'+(mi+1)+'-'+dayText;",
@@ -205,7 +219,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1800
+          "y": 1920
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nvar deadline=Date.now()+10000;\nwhile(Date.now()<deadline){\n  var box=Array.from(document.querySelectorAll('.v-input--selection-controls input[type=\"checkbox\"], input[type=\"checkbox\"]')).filter(vis)[0];\n  if(box){\n    if(box.checked) return 'agree-checked';\n    var wrap=box.closest('.v-input--selection-controls')||box.parentElement;\n    var target=(wrap&&wrap.querySelector('.v-input--selection-controls__ripple'))||wrap||box;\n    target.scrollIntoView({block:'center'}); target.click(); await sleep(300);\n    if(box.checked) return 'agree-checked';\n    box.click(); await sleep(300);\n    if(box.checked) return 'agree-checked';\n  }\n  await sleep(300);\n}\nreturn 'no-agree-checkbox';",
@@ -213,11 +227,23 @@
         }
       },
       {
+        "id": "n_presubmit",
+        "kind": "dwell",
+        "position": {
+          "x": 0,
+          "y": 2040
+        },
+        "config": {
+          "minMs": 5000,
+          "maxMs": 10000
+        }
+      },
+      {
         "id": "n_submit",
         "kind": "click",
         "position": {
           "x": 0,
-          "y": 1920
+          "y": 2160
         },
         "config": {
           "selector": "span.button--primary, .button--primary",
@@ -229,7 +255,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 2040
+          "y": 2280
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction detailsUp(){return vis(document.querySelector('input[type=\"tel\"]'))||vis(document.querySelector('input[autocomplete=\"no-thanks\"]'));}\nfunction netErr(){var s=String(document.body?document.body.innerText:'').toLowerCase()+' '+String(document.title||'').toLowerCase();return s.includes('err_connection')||s.includes('err_proxy')||s.includes('err_timed_out')||s.indexOf(\"site can\")>-1&&s.indexOf('reached')>-1;}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<30000){await sleep(200);}\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  if(netErr()) throw new Error('OASIS submission unreachable - rotate proxy.');\n  if(!detailsUp()){ await sleep(1200); if(!detailsUp()) return 'done'; }\n  await sleep(400);\n}\nthrow new Error('OASIS signup did not complete after submit (details form still present).');",
@@ -241,7 +267,7 @@
         "kind": "click",
         "position": {
           "x": 0,
-          "y": 2160
+          "y": 2400
         },
         "config": {
           "selector": "a.footer-link.footer-text",
@@ -253,7 +279,7 @@
         "kind": "dwell",
         "position": {
           "x": 0,
-          "y": 2280
+          "y": 2520
         },
         "config": {
           "ms": 3000
@@ -264,7 +290,7 @@
         "kind": "accounts.save",
         "position": {
           "x": 0,
-          "y": 2400
+          "y": 2640
         },
         "config": {
           "email": "{{identity.email}}",
@@ -315,65 +341,75 @@
       {
         "id": "e_7",
         "from": "n_emailcheck",
-        "to": "n_names"
+        "to": "n_firstname"
       },
       {
         "id": "e_8",
-        "from": "n_names",
-        "to": "n_country"
+        "from": "n_firstname",
+        "to": "n_lastname"
       },
       {
         "id": "e_9",
+        "from": "n_lastname",
+        "to": "n_country"
+      },
+      {
+        "id": "e_10",
         "from": "n_country",
         "to": "n_phone"
       },
       {
-        "id": "e_10",
+        "id": "e_11",
         "from": "n_phone",
         "to": "n_address"
       },
       {
-        "id": "e_11",
+        "id": "e_12",
         "from": "n_address",
         "to": "n_addrpick"
       },
       {
-        "id": "e_12",
+        "id": "e_13",
         "from": "n_addrpick",
         "to": "n_dobopen"
       },
       {
-        "id": "e_13",
+        "id": "e_14",
         "from": "n_dobopen",
         "to": "n_dobpick"
       },
       {
-        "id": "e_14",
+        "id": "e_15",
         "from": "n_dobpick",
         "to": "n_consent"
       },
       {
-        "id": "e_15",
+        "id": "e_16",
         "from": "n_consent",
+        "to": "n_presubmit"
+      },
+      {
+        "id": "e_17",
+        "from": "n_presubmit",
         "to": "n_submit"
       },
       {
-        "id": "e_16",
+        "id": "e_18",
         "from": "n_submit",
         "to": "n_outcome"
       },
       {
-        "id": "e_17",
+        "id": "e_19",
         "from": "n_outcome",
         "to": "n_skipstep"
       },
       {
-        "id": "e_18",
+        "id": "e_20",
         "from": "n_skipstep",
         "to": "n_wait"
       },
       {
-        "id": "e_19",
+        "id": "e_21",
         "from": "n_wait",
         "to": "n_save"
       }
@@ -382,7 +418,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "SO6fiHsW04vyqYY3M03w+crGydsBeB5ywLw7YdabAVGWSqVCzCA7t+2OELO/n/mrAiGEC1VDVqSyiWVl0vWYDw=="
+      "signature": "rA94iV+z5g0b4+/UTLOvBAxOPBVCtTdN2vk8Apnt4JbNTJ5JJRZFiHE7muxAfXgv/oQIX8sef9OFgctQ5IRBCg=="
     }
   }
 }
