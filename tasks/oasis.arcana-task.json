@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-16T23:26:02.624Z",
+  "exportedAt": "2026-07-16T23:32:34.335Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.2.2",
+    "version": "1.2.3",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -249,11 +249,22 @@
         }
       },
       {
+        "id": "n_wait",
+        "kind": "dwell",
+        "position": {
+          "x": 0,
+          "y": 2280
+        },
+        "config": {
+          "ms": 3000
+        }
+      },
+      {
         "id": "n_save",
         "kind": "accounts.save",
         "position": {
           "x": 0,
-          "y": 2280
+          "y": 2400
         },
         "config": {
           "email": "{{identity.email}}",
@@ -359,6 +370,11 @@
       {
         "id": "e_18",
         "from": "n_skipstep",
+        "to": "n_wait"
+      },
+      {
+        "id": "e_19",
+        "from": "n_wait",
         "to": "n_save"
       }
     ],
@@ -366,7 +382,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "qfnWkhA8ISjhe48qHGHT2ZVbpiIvmFmeeGBkhaeFLKP+EdqH/Xwee036EIyGwsolj1XAS2NAZsQ+/Gb78AgYAw=="
+      "signature": "SO6fiHsW04vyqYY3M03w+crGydsBeB5ywLw7YdabAVGWSqVCzCA7t+2OELO/n/mrAiGEC1VDVqSyiWVl0vWYDw=="
     }
   }
 }
