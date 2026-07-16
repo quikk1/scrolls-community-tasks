@@ -24,7 +24,7 @@ const authCaptcha = graph.nodes.find((node) => node.id === "n_la28authcaptcha");
 const authWait = graph.nodes.find((node) => node.id === "n_la28authwait");
 const saveAccount = graph.nodes.find((node) => node.id === "n_la28saveacct");
 
-assert.equal(graph.version, "1.0.3");
+assert.equal(graph.version, "1.0.4");
 assert.equal(privacyGate?.kind, "evaluate");
 assert.equal(privacyGate?.config?.into, "la28PrivacyPresent");
 assert.equal(privacyBranch?.kind, "branch");
@@ -59,6 +59,7 @@ assert.equal(authWait?.kind, "dwell");
 assert.equal(authWait?.config?.ms, 5000);
 assert.equal(saveAccount?.kind, "accounts.save");
 assert.equal(saveAccount?.config?.password, "{{identity.password}}");
+assert.equal(saveAccount?.config?.label, graph.metadata.name);
 
 const edge = (from, port, to) => graph.edges.some(
   (item) => item.from === from && item.fromPort === port && item.to === to,

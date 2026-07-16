@@ -3,7 +3,7 @@
   "exportedAt": "2026-07-14T11:49:03.465Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.3",
+    "version": "1.0.4",
     "metadata": {
       "id": "la28-ENTRY",
       "name": "LA28-ENTRY",
@@ -701,7 +701,8 @@
           "email": "{{identity.email}}",
           "password": "{{identity.password}}",
           "site": "tickets.la28.org",
-          "status": "active"
+          "status": "active",
+          "label": "LA28-ENTRY"
         }
       },
       {
