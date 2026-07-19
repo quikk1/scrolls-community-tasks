@@ -3,7 +3,7 @@
   "exportedAt": "2026-07-14T11:49:03.465Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.4",
+    "version": "1.0.5",
     "metadata": {
       "id": "la28-ENTRY",
       "name": "LA28-ENTRY",
@@ -246,6 +246,18 @@
         "config": {
           "script": "// Dismiss the LA28 Legal Terms and Privacy overlay wherever its CONTINUE\n// label lives (button child, open shadow root, or same-origin iframe).\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction roots(){var out=[document],stack=[document];while(stack.length){var root=stack.pop(),els=[];try{els=root.querySelectorAll('*');}catch(e){}for(var i=0;i<els.length;i++){if(els[i].shadowRoot){out.push(els[i].shadowRoot);stack.push(els[i].shadowRoot);}}}var frames=document.querySelectorAll('iframe');for(var j=0;j<frames.length;j++){try{if(frames[j].contentDocument)out.push(frames[j].contentDocument);}catch(e){}}return out;}\nvar rs=roots();for(var i=0;i<rs.length;i++){var body='';try{body=(rs[i].body?rs[i].body.innerText:(rs[i].host?rs[i].host.innerText:''))||'';}catch(e){}if(!/legal terms and privacy|terms & conditions.*privacy policy/i.test(body))continue;var nodes=[];try{nodes=rs[i].querySelectorAll('#cmpbntyestxt,button,a,[role=button],input[type=button],input[type=submit],span,div,p');}catch(e){}for(var j=0;j<nodes.length;j++){var el=nodes[j],txt=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();if(!visible(el)||!/^continue$/i.test(txt))continue;var r=el.getBoundingClientRect();if(r.width>900||r.height>160)continue;var target=(el.closest&&el.closest('button,a,[role=button],input[type=button],input[type=submit],[onclick]'))||el;try{target.scrollIntoView({block:'center'});}catch(e){}try{target.focus();}catch(e){}target.click();return 'clicked';}}return 'absent';",
           "into": "la28Legal"
+        }
+      },
+      {
+        "id": "n_la28queuecaptcha",
+        "kind": "evaluate",
+        "position": {
+          "x": 468,
+          "y": -112
+        },
+        "config": {
+          "script": "// Queue-it sometimes replaces the waiting room with a picture-code human\n// verification challenge. This module cannot solve that queue-level challenge,\n// so stop the run immediately rather than clicking it or waiting forever.\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nvar body=(document.body?document.body.innerText:'')||'';\nvar copy=/complete this quick step to confirm you.?re a human/i.test(body)||(/enter the code from the picture/i.test(body)&&/i.?m not a robot/i.test(body));\nvar image=document.querySelector('img[src*=\"captcha\" i],img[id*=\"captcha\" i],img[class*=\"captcha\" i],[id*=\"botdetect\" i] img,[class*=\"botdetect\" i] img');\nvar input=document.querySelector('input[id*=\"captcha\" i],input[name*=\"captcha\" i],[id*=\"botdetect\" i] input[type=\"text\"],[class*=\"botdetect\" i] input[type=\"text\"]');\nif(copy||(visible(image)&&visible(input)))throw new Error('LA28 queue human-verification challenge detected - stopping this run.');\nreturn 'clear';",
+          "into": "la28QueueCaptchaState"
         }
       },
       {
@@ -789,7 +801,7 @@
         "id": "e_la28privacyfalse",
         "from": "n_la28privacybranch",
         "fromPort": "false",
-        "to": "n_la28statevisible"
+        "to": "n_la28queuecaptcha"
       },
       {
         "id": "e_la28privacyclick",
@@ -801,7 +813,7 @@
         "id": "e_la28privacyverify",
         "from": "n_la28privacyverify",
         "fromPort": "next",
-        "to": "n_la28statevisible"
+        "to": "n_la28queuecaptcha"
       },
       {
         "id": "e_la28legalexact",
@@ -884,6 +896,12 @@
       {
         "id": "e_la28queuepoll",
         "from": "n_la28queuepoll",
+        "fromPort": "next",
+        "to": "n_la28queuecaptcha"
+      },
+      {
+        "id": "e_la28queuecaptcha",
+        "from": "n_la28queuecaptcha",
         "fromPort": "next",
         "to": "n_la28statevisible"
       },

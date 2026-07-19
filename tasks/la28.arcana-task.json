@@ -3,7 +3,7 @@
   "exportedAt": "2026-07-14T07:51:06.927Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.1.7",
+    "version": "1.1.8",
     "metadata": {
       "id": "la28",
       "name": "LA28",
@@ -377,6 +377,238 @@
         }
       },
       {
+        "id": "n_la28logqueue",
+        "kind": "log",
+        "position": {
+          "x": 286,
+          "y": -112
+        },
+        "config": {
+          "level": "info",
+          "message": "Checking the LA28 waiting room and keeping the queue session active."
+        }
+      },
+      {
+        "id": "n_la28queuecaptcha",
+        "kind": "evaluate",
+        "position": {
+          "x": 468,
+          "y": -112
+        },
+        "config": {
+          "script": "// Queue-it sometimes replaces the waiting room with a picture-code human\n// verification challenge. This module cannot solve that queue-level challenge,\n// so stop the run immediately rather than clicking it or waiting forever.\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nvar body=(document.body?document.body.innerText:'')||'';\nvar copy=/complete this quick step to confirm you.?re a human/i.test(body)||(/enter the code from the picture/i.test(body)&&/i.?m not a robot/i.test(body));\nvar image=document.querySelector('img[src*=\"captcha\" i],img[id*=\"captcha\" i],img[class*=\"captcha\" i],[id*=\"botdetect\" i] img,[class*=\"botdetect\" i] img');\nvar input=document.querySelector('input[id*=\"captcha\" i],input[name*=\"captcha\" i],[id*=\"botdetect\" i] input[type=\"text\"],[class*=\"botdetect\" i] input[type=\"text\"]');\nif(copy||(visible(image)&&visible(input)))throw new Error('LA28 queue human-verification challenge detected - stopping this run.');\nreturn 'clear';",
+          "into": "la28QueueCaptchaState"
+        }
+      },
+      {
+        "id": "n_la28statevisible",
+        "kind": "evaluate",
+        "position": {
+          "x": 551,
+          "y": -174
+        },
+        "config": {
+          "script": "// Route the current LA28 state. Gigya renders many hidden template forms, so\n// scan every selector match and choose a visible element rather than querySelector's\n// first (usually hidden) match.\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction first(sels){for(var i=0;i<sels.length;i++){var nodes=[];try{nodes=document.querySelectorAll(sels[i]);}catch(e){}for(var j=0;j<nodes.length;j++){if(visible(nodes[j]))return nodes[j];}}return null;}\nfunction click(el){try{el.scrollIntoView({block:'center'});}catch(e){}try{el.focus();}catch(e){}el.click();}\nvar title=(document.title||'').trim(),body=(document.body?document.body.innerText:'')||'',href=(location.href||'').toLowerCase();\nif(/error403|access[-_/]?denied|restricted[-_/]?access/.test(href)||/access denied|restricted access/i.test(title)||/your access has been restricted|access has been restricted|you do not have permission to access/i.test(body))throw new Error('LA28 blocked (Akamai/Queue-it): this proxy IP is flagged - rotating to a fresh proxy.');\nvar email=first(['input[name=\"username\"]','input[name=\"loginID\"]','input[type=\"email\"]','input[autocomplete=\"username\"]']);\nvar password=first(['input[type=\"password\"][name=\"password\"]','input[type=\"password\"].gigya-input-password','input[type=\"password\"]']);\nif(email&&password)return 'login';\nif(/profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title)||first(['app-sports-profile-lotteries','button[data-qa=\"save-data-button\"]']))return 'profile';\nvar action=first(['#buttonConfirmVisitorPresence','#cmpbntyestxt','button.cmpwelcomebtnyes','a[href*=\"/mycustomerdata\"]','button.botdetect-button','[class*=\"botdetect\"] button']);\nif(!action){var all=document.querySelectorAll('button,a,[role=button]');for(var i=0;i<all.length;i++){var txt=(all[i].innerText||all[i].textContent||'').replace(/\\s+/g,' ').trim();if(visible(all[i])&&/^(continue|join|confirm)$/i.test(txt)){action=all[i];break;}}}\nif(action)click(action);\nreturn 'wait';",
+          "into": "la28QueueState"
+        }
+      },
+      {
+        "id": "n_la28queuewait",
+        "kind": "branch",
+        "position": {
+          "x": 735,
+          "y": -174
+        },
+        "config": {
+          "left": "{{la28QueueState}}",
+          "op": "==",
+          "right": "wait"
+        }
+      },
+      {
+        "id": "n_la28presence",
+        "kind": "evaluate",
+        "position": {
+          "x": 735,
+          "y": -65
+        },
+        "config": {
+          "script": "// Queue-it periodically asks the visitor to prove they are still present.\n// Use its stable element id rather than relying on translated/changing button text.\nvar b=document.querySelector('#buttonConfirmVisitorPresence');\nif(!b)return 'absent';\nvar r=b.getBoundingClientRect();\nvar s=getComputedStyle(b);\nif(r.width<2||r.height<2||s.visibility==='hidden'||s.display==='none')return 'hidden';\ntry{b.scrollIntoView({block:'center'});}catch(e){}\ntry{b.focus();}catch(e){}\nb.click();\nreturn 'clicked';",
+          "into": "la28Presence"
+        }
+      },
+      {
+        "id": "n_la28queuepoll",
+        "kind": "dwell",
+        "position": {
+          "x": 735,
+          "y": -65
+        },
+        "config": {
+          "ms": 5000
+        }
+      },
+      {
+        "id": "n_la28queueprofile",
+        "kind": "branch",
+        "position": {
+          "x": 925,
+          "y": -174
+        },
+        "config": {
+          "left": "{{la28QueueState}}",
+          "op": "==",
+          "right": "profile"
+        }
+      },
+      {
+        "id": "n_la28queueprofilefail",
+        "kind": "fail",
+        "position": {
+          "x": 1115,
+          "y": -174
+        },
+        "config": {
+          "message": "LA28 account generator reached an authenticated profile instead of the login page. Start with a fresh browser session."
+        }
+      },
+      {
+        "id": "n_la28logregister",
+        "kind": "log",
+        "position": {
+          "x": 1115,
+          "y": -65
+        },
+        "config": {
+          "level": "info",
+          "message": "Waiting room cleared. Opening the LA28 account registration form."
+        }
+      },
+      {
+        "id": "n_la28logsubmitwait",
+        "kind": "log",
+        "position": {
+          "x": 65,
+          "y": 366
+        },
+        "config": {
+          "level": "info",
+          "message": "Registration submitted. Waiting for the email verification screen."
+        }
+      },
+      {
+        "id": "n_la28submitstate",
+        "kind": "evaluate",
+        "position": {
+          "x": 236,
+          "y": 366
+        },
+        "config": {
+          "script": "// A successful click is not proof Gigya completed the registration request.\n// Wait for a VISIBLE OTP field before starting AYCD; hidden Gigya templates do\n// not count. If the registration form remains after 45s, allow one real native\n// re-click through the graph, then fail clearly instead of fetching a code that\n// can never be entered.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nfunction first(sels){for(var i=0;i<sels.length;i++){var nodes=[];try{nodes=document.querySelectorAll(sels[i]);}catch(e){}for(var j=0;j<nodes.length;j++){if(visible(nodes[j]))return nodes[j];}}return null;}\nfunction profileReady(){var title=(document.title||'').trim(),href=(location.href||'').toLowerCase();return /profile\\s*[-\\u2013|]\\s*official\\s+la28/i.test(title)||/(\\/profile|\\/mycustomerdata|\\/myprofile)/.test(href)||!!first(['app-sports-profile-lotteries','button[data-qa=\"save-data-button\"]']);}\nfunction activeError(){var nodes=[];try{nodes=document.querySelectorAll('.gigya-error-msg-active,[class*=\"gigya-error-code-\"]');}catch(e){}for(var i=0;i<nodes.length;i++){if(!visible(nodes[i]))continue;var txt=(nodes[i].textContent||'').replace(/\\s+/g,' ').trim();if(txt)return txt;}return '';}\nvar attempts=Number(\"{{la28SubmitState.attempts}}\")||1;\nvar otpSelectors=['input#gigya-textbox-code','form#gigya-otp-update-form input[name=\"code\"]','form#gigya-otp-update-form input[type=\"text\"]'];\nvar submitSelectors=['#register-site-login input.gigya-input-submit','form#gigya-register-form input[type=\"submit\"]'];\nvar deadline=Date.now()+45000;\nwhile(Date.now()<deadline){\n  if(first(otpSelectors))return {state:'otp',attempts:attempts};\n  if(profileReady())return {state:'profile',attempts:attempts};\n  var err=activeError();\n  if(err){if(/prior olympic|already.*account|click here to log in/i.test(err))throw new Error('email already used');throw new Error('LA28 registration submit failed: '+err.slice(0,240));}\n  await sleep(400);\n}\nif(first(otpSelectors))return {state:'otp',attempts:attempts};\nif(profileReady())return {state:'profile',attempts:attempts};\nif(first(submitSelectors)&&attempts<2)return {state:'retry',attempts:attempts+1};\nthrow new Error('LA28 registration submit did not reach the email verification screen after '+attempts+' attempt(s).');",
+          "into": "la28SubmitState"
+        }
+      },
+      {
+        "id": "n_la28submitotp",
+        "kind": "branch",
+        "position": {
+          "x": 421,
+          "y": 366
+        },
+        "config": {
+          "left": "{{la28SubmitState.state}}",
+          "op": "==",
+          "right": "otp"
+        }
+      },
+      {
+        "id": "n_la28submitretry",
+        "kind": "branch",
+        "position": {
+          "x": 602,
+          "y": 366
+        },
+        "config": {
+          "left": "{{la28SubmitState.state}}",
+          "op": "==",
+          "right": "retry"
+        }
+      },
+      {
+        "id": "n_la28submitretryclick",
+        "kind": "click",
+        "position": {
+          "x": 775,
+          "y": 366
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "#register-site-login input.gigya-input-submit"
+        }
+      },
+      {
+        "id": "n_la28logretry",
+        "kind": "log",
+        "position": {
+          "x": 775,
+          "y": 302
+        },
+        "config": {
+          "level": "warn",
+          "message": "The verification screen did not appear. Retrying the registration submit once."
+        }
+      },
+      {
+        "id": "n_la28submitprofile",
+        "kind": "branch",
+        "position": {
+          "x": 775,
+          "y": 430
+        },
+        "config": {
+          "left": "{{la28SubmitState.state}}",
+          "op": "==",
+          "right": "profile"
+        }
+      },
+      {
+        "id": "n_la28logotp",
+        "kind": "log",
+        "position": {
+          "x": 421,
+          "y": 302
+        },
+        "config": {
+          "level": "info",
+          "message": "Verification screen ready. Waiting for the LA28 email code."
+        }
+      },
+      {
+        "id": "n_la28logprofile",
+        "kind": "log",
+        "position": {
+          "x": 948,
+          "y": 494
+        },
+        "config": {
+          "level": "info",
+          "message": "Registration reached the LA28 profile directly. Saving the account."
+        }
+      },
+      {
+        "id": "n_la28submitfail",
+        "kind": "fail",
+        "position": {
+          "x": 948,
+          "y": 430
+        },
+        "config": {
+          "message": "LA28 registration did not expose an email verification form after submit."
+        }
+      },
+      {
         "id": "n_la28emailcheck",
         "kind": "evaluate",
         "position": {
@@ -454,7 +686,79 @@
         "id": "e_6h0vfset",
         "from": "n_rrs4vtxn",
         "fromPort": "next",
+        "to": "n_la28logsubmitwait"
+      },
+      {
+        "id": "e_la28logsubmitwait",
+        "from": "n_la28logsubmitwait",
+        "fromPort": "next",
+        "to": "n_la28submitstate"
+      },
+      {
+        "id": "e_la28submitstate",
+        "from": "n_la28submitstate",
+        "fromPort": "next",
+        "to": "n_la28submitotp"
+      },
+      {
+        "id": "e_la28submitotptrue",
+        "from": "n_la28submitotp",
+        "fromPort": "true",
+        "to": "n_la28logotp"
+      },
+      {
+        "id": "e_la28logotp",
+        "from": "n_la28logotp",
+        "fromPort": "next",
         "to": "n_1z4bw39i"
+      },
+      {
+        "id": "e_la28submitotpfalse",
+        "from": "n_la28submitotp",
+        "fromPort": "false",
+        "to": "n_la28submitretry"
+      },
+      {
+        "id": "e_la28submitretrytrue",
+        "from": "n_la28submitretry",
+        "fromPort": "true",
+        "to": "n_la28logretry"
+      },
+      {
+        "id": "e_la28logretry",
+        "from": "n_la28logretry",
+        "fromPort": "next",
+        "to": "n_la28submitretryclick"
+      },
+      {
+        "id": "e_la28submitretryclick",
+        "from": "n_la28submitretryclick",
+        "fromPort": "next",
+        "to": "n_la28submitstate"
+      },
+      {
+        "id": "e_la28submitretryfalse",
+        "from": "n_la28submitretry",
+        "fromPort": "false",
+        "to": "n_la28submitprofile"
+      },
+      {
+        "id": "e_la28submitprofiletrue",
+        "from": "n_la28submitprofile",
+        "fromPort": "true",
+        "to": "n_la28logprofile"
+      },
+      {
+        "id": "e_la28logprofile",
+        "from": "n_la28logprofile",
+        "fromPort": "next",
+        "to": "n_chlvu159"
+      },
+      {
+        "id": "e_la28submitprofilefalse",
+        "from": "n_la28submitprofile",
+        "fromPort": "false",
+        "to": "n_la28submitfail"
       },
       {
         "id": "e_7za77igi",
@@ -544,7 +848,67 @@
         "id": "e_la28consent",
         "from": "n_la28consent",
         "fromPort": "next",
-        "to": "n_9kyhana0"
+        "to": "n_la28logqueue"
+      },
+      {
+        "id": "e_la28logqueue",
+        "from": "n_la28logqueue",
+        "fromPort": "next",
+        "to": "n_la28queuecaptcha"
+      },
+      {
+        "id": "e_la28queuecaptcha",
+        "from": "n_la28queuecaptcha",
+        "fromPort": "next",
+        "to": "n_la28statevisible"
+      },
+      {
+        "id": "e_la28statevisible",
+        "from": "n_la28statevisible",
+        "fromPort": "next",
+        "to": "n_la28queuewait"
+      },
+      {
+        "id": "e_la28queuewaittrue",
+        "from": "n_la28queuewait",
+        "fromPort": "true",
+        "to": "n_la28presence"
+      },
+      {
+        "id": "e_la28presence",
+        "from": "n_la28presence",
+        "fromPort": "next",
+        "to": "n_la28queuepoll"
+      },
+      {
+        "id": "e_la28queuepoll",
+        "from": "n_la28queuepoll",
+        "fromPort": "next",
+        "to": "n_la28queuecaptcha"
+      },
+      {
+        "id": "e_la28queuewaitfalse",
+        "from": "n_la28queuewait",
+        "fromPort": "false",
+        "to": "n_la28queueprofile"
+      },
+      {
+        "id": "e_la28queueprofiletrue",
+        "from": "n_la28queueprofile",
+        "fromPort": "true",
+        "to": "n_la28queueprofilefail"
+      },
+      {
+        "id": "e_la28queueprofilefalse",
+        "from": "n_la28queueprofile",
+        "fromPort": "false",
+        "to": "n_la28logregister"
+      },
+      {
+        "id": "e_la28logregister",
+        "from": "n_la28logregister",
+        "fromPort": "next",
+        "to": "n_4snf2wqx"
       },
       {
         "id": "e_la28emailcheck",
