@@ -1,13 +1,13 @@
 {
   "format": "arcana-marketplace/v1",
   "repository": "quikk1/scrolls-community-tasks",
-  "updatedAt": "2026-07-17",
+  "updatedAt": "2026-07-19",
   "tasks": [
     {
       "id": "la28",
       "name": "LA28 Account Generator",
-      "description": "LA28 ticket account generator: passes the waiting room, switches to the sign-up form, fills the profile details (name, email, password, country, zip), confirms the email verification code, and saves the account. After the waiting room it fails fast on a Restricted-access page (blocked IP/region) and best-effort accepts the legal-terms popup. Runs with or without a Profile Group - on None it uses a generated identity and address, so all it needs is an email source (Key Vault mailboxes or an AYCD list). Fails fast with \"email already used\" if the address is already registered from a prior Olympic & Paralympic Games.",
-      "version": "1.1.7",
+      "description": "LA28 ticket account generator: passes the waiting room, keeps the queue session alive, switches to the sign-up form, fills the profile details (name, email, password, country, zip), confirms the email verification code, and saves the account. It fails fast on Restricted-access pages (blocked IP/region) and unsupported queue picture-code challenges, and best-effort accepts the legal-terms popup. Runs with or without a Profile Group - on None it uses a generated identity and address, so all it needs is an email source (Key Vault mailboxes, an AYCD list, or a catchall domain). Fails fast with \"email already used\" if the address is already registered from a prior Olympic & Paralympic Games.",
+      "version": "1.1.8",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
@@ -61,7 +61,7 @@
       "id": "la28-ENTRY",
       "name": "LA28 Ticket Entry",
       "description": "LA28 ticket-draw entry automation: passes the waiting room, confirms the LA28 ID email verification code (Key Vault mailboxes or an AYCD list), and accepts the legal-terms consent, then fills the entry form - selects the ticket categories, a session/artist, and the attribute options - solves the captcha and submits the entry. Handles the profile check and re-login/verification branches. Runs with or without a Profile Group and is email-only (no SMS), so all it needs is an email source.",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="

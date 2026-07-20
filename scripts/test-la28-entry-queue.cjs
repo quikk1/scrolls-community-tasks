@@ -12,6 +12,7 @@ const privacyClick = graph.nodes.find((node) => node.id === "n_la28privacyclick"
 const privacyVerify = graph.nodes.find((node) => node.id === "n_la28privacyverify");
 const legalExact = graph.nodes.find((node) => node.id === "n_la28legalexact");
 const legal = graph.nodes.find((node) => node.id === "n_la28legal");
+const queueCaptcha = graph.nodes.find((node) => node.id === "n_la28queuecaptcha");
 const stateNode = graph.nodes.find((node) => node.id === "n_la28statevisible");
 const waitBranch = graph.nodes.find((node) => node.id === "n_la28queuewait");
 const presence = graph.nodes.find((node) => node.id === "n_la28presence");
@@ -24,7 +25,7 @@ const authCaptcha = graph.nodes.find((node) => node.id === "n_la28authcaptcha");
 const authWait = graph.nodes.find((node) => node.id === "n_la28authwait");
 const saveAccount = graph.nodes.find((node) => node.id === "n_la28saveacct");
 
-assert.equal(graph.version, "1.0.4");
+assert.equal(graph.version, "1.0.5");
 assert.equal(privacyGate?.kind, "evaluate");
 assert.equal(privacyGate?.config?.into, "la28PrivacyPresent");
 assert.equal(privacyBranch?.kind, "branch");
@@ -35,6 +36,9 @@ assert.equal(legalExact?.kind, "evaluate");
 assert.match(legalExact?.config?.script ?? "", /#cmpwelcomebtnyes > a/);
 assert.equal(legal?.kind, "evaluate");
 assert.match(legal?.config?.script ?? "", /legal terms and privacy/i);
+assert.equal(queueCaptcha?.kind, "evaluate");
+assert.equal(queueCaptcha?.config?.into, "la28QueueCaptchaState");
+assert.match(queueCaptcha?.config?.script ?? "", /queue human-verification challenge detected/i);
 assert.equal(stateNode?.kind, "evaluate");
 assert.equal(stateNode?.config?.into, "la28QueueState");
 assert.equal(guard?.kind, "evaluate");
@@ -67,13 +71,14 @@ const edge = (from, port, to) => graph.edges.some(
 assert.ok(edge("n_la28access", "next", "n_la28privacyclick"));
 assert.ok(edge("n_la28privacygate", "next", "n_la28privacybranch"));
 assert.ok(edge("n_la28privacybranch", "true", "n_la28privacyclick"));
-assert.ok(edge("n_la28privacybranch", "false", "n_la28statevisible"));
+assert.ok(edge("n_la28privacybranch", "false", "n_la28queuecaptcha"));
 assert.ok(edge("n_la28privacyclick", "next", "n_la28privacyverify"));
-assert.ok(edge("n_la28privacyverify", "next", "n_la28statevisible"));
+assert.ok(edge("n_la28privacyverify", "next", "n_la28queuecaptcha"));
+assert.ok(edge("n_la28queuecaptcha", "next", "n_la28statevisible"));
 assert.ok(edge("n_la28statevisible", "next", "n_la28queuewait"));
 assert.ok(edge("n_la28queuewait", "true", "n_la28presence"));
 assert.ok(edge("n_la28presence", "next", "n_la28queuepoll"));
-assert.ok(edge("n_la28queuepoll", "next", "n_la28statevisible"));
+assert.ok(edge("n_la28queuepoll", "next", "n_la28queuecaptcha"));
 assert.ok(edge("n_la28queuewait", "false", "n_la28queueprofile"));
 assert.ok(edge("n_la28queueprofile", "true", "n_la28checkbox"));
 assert.ok(edge("n_la28queueprofile", "false", "n_6iphto3c"));
@@ -114,6 +119,11 @@ const runPrivacyGate = new AsyncFunction(
   "document",
   "getComputedStyle",
   privacyGate.config.script,
+);
+const runQueueCaptcha = new AsyncFunction(
+  "document",
+  "getComputedStyle",
+  queueCaptcha.config.script,
 );
 const runAuthState = new AsyncFunction(
   "document",
@@ -217,6 +227,26 @@ async function scenario({ initial, proceed = false, keepAlive = false }) {
 }
 
 (async () => {
+  const challengeImage = visibleElement();
+  const challengeInput = visibleElement();
+  await assert.rejects(
+    () => runQueueCaptcha(
+      {
+        body: { innerText: "Complete this quick step to confirm you're a human. Enter the code from the picture: I'm not a robot" },
+        querySelector: (selector) => selector.startsWith("img[") ? challengeImage : challengeInput,
+      },
+      () => ({ visibility: "visible", display: "block", opacity: "1" }),
+    ),
+    /LA28 queue human-verification challenge detected/,
+  );
+  assert.equal(
+    await runQueueCaptcha(
+      { body: { innerText: "You are now in line. Estimated wait time" }, querySelector: () => null },
+      () => ({ visibility: "visible", display: "block", opacity: "1" }),
+    ),
+    "clear",
+  );
+
   let privacyClicks = 0;
   const privacyAnchor = visibleElement(() => { privacyClicks += 1; });
   const privacyResult = await runPrivacyGate(
