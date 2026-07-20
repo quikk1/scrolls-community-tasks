@@ -114,7 +114,8 @@
       ],
       "category": "account-generator",
       "status": "ready",
-      "publishedAt": "2026-07-17"
+      "publishedAt": "2026-07-17",
+      "emailMode": "list"
     }
   ]
 }
