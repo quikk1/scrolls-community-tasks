@@ -1,13 +1,13 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-21T11:04:32.133Z",
+  "exportedAt": "2026-07-21T11:27:56.490Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.0",
+    "version": "1.3.1",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
-      "description": "OASIS (oasis.os.fan) signup - native module. LOCALE-INDEPENDENT selectors (page renders in the proxy's language). ADAPTIVE details form: fills only the fields the page actually renders, so a location-only variant gets the location and nothing else. City/country/phone from the proxy geo; DOB random 18+; names/email from the profile identity.",
+      "description": "OASIS (oasis.os.fan) signup - native module. LOCALE-INDEPENDENT selectors (page renders in the proxy's language). ADAPTIVE details form: fills only the fields the page actually renders, in any combination - location only, names without a location, or the full form. City/country/phone from the proxy geo; DOB random 18+; names/email from the profile identity.",
       "tags": [],
       "inputs": []
     },
@@ -122,7 +122,7 @@
           "y": 960
         },
         "config": {
-          "script": "// ADAPTIVE name step. The details form has two shapes: the full one (first\n// name, last name, country, phone, location, DOB) and a reduced one that asks\n// for LOCATION ONLY. The old build filled inputs by POSITION\n// ((//input[@type='text'])[1] / [2]), so on the reduced form it typed the first\n// name straight into the location box and then stalled looking for [2].\n//\n// Locale-independent anchor: the location field is the one carrying\n// autocomplete=\"no-thanks\" (a site attribute, not translated text). Real name\n// fields are the visible text inputs that come BEFORE it in document order.\n// Zero of those => location-only => fill nothing here and let n_address do it.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction locField(){return document.querySelector('input[autocomplete=\"no-thanks\"]');}\nfunction cands(){\n  var loc=locField();\n  return Array.from(document.querySelectorAll('input')).filter(function(i){\n    var t=(i.type||'').toLowerCase();\n    if(!vis(i)) return false;\n    if(t!==''&&t!=='text') return false;              // skips tel / email / checkbox\n    if(i.name==='Email') return false;\n    if(i.getAttribute('autocomplete')==='no-thanks') return false;  // the location box\n    if(i.closest('.vue-country-select')) return false;              // country search box\n    if(loc&&!after(i,loc)) return false;              // anything after location = DOB\n    return true;\n  });\n}\nvar first=String(\"{{identity.firstName}}\"||'').trim();\nvar last=String(\"{{identity.lastName}}\"||'').trim();\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(vis(locField())||vis(document.querySelector('input[type=\"tel\"]'))) break;\n  await sleep(300);\n}\nawait sleep(400);\nvar loc=locField();\nvar f=cands();\n// Location-only: the page asks for nothing but the location.\nif(loc&&f.length===0) return 'location-only';\n// No location anchor AND not the familiar two-field layout - refuse to guess\n// rather than risk typing a name into whatever box happens to be first.\nif(!loc&&f.length<2) return 'ambiguous-skip';\nif(loc&&f.length===1){ setVal(f[0],(first+' '+last).trim()); return 'single-name-field'; }\nsetVal(f[0],first);\nawait sleep(120);\nsetVal(f[1],last);\nreturn 'names-filled-'+f.length;",
+          "script": "// ADAPTIVE name step. The details form has two shapes: the full one (first\n// name, last name, country, phone, location, DOB) and a reduced one that asks\n// for LOCATION ONLY. The old build filled inputs by POSITION\n// ((//input[@type='text'])[1] / [2]), so on the reduced form it typed the first\n// name straight into the location box and then stalled looking for [2].\n//\n// Locale-independent anchor: the location field is the one carrying\n// autocomplete=\"no-thanks\" (a site attribute, not translated text). Real name\n// fields are the visible text inputs that come BEFORE it in document order.\n// Zero of those => location-only => fill nothing here and let n_address do it.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction locField(){return document.querySelector('input[autocomplete=\"no-thanks\"]');}\nfunction cands(){\n  var loc=locField();\n  return Array.from(document.querySelectorAll('input')).filter(function(i){\n    var t=(i.type||'').toLowerCase();\n    if(!vis(i)) return false;\n    if(t!==''&&t!=='text') return false;              // skips tel / email / checkbox\n    if(i.name==='Email') return false;\n    if(i.getAttribute('autocomplete')==='no-thanks') return false;  // the location box\n    if(i.closest('.vue-country-select')) return false;              // country search box\n    if(i.readOnly) return false;                      // DOB picker box, never a name\n    if(loc&&!after(i,loc)) return false;              // anything after location = DOB\n    return true;\n  });\n}\nvar first=String(\"{{identity.firstName}}\"||'').trim();\nvar last=String(\"{{identity.lastName}}\"||'').trim();\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(vis(locField())||vis(document.querySelector('input[type=\"tel\"]'))) break;\n  await sleep(300);\n}\nawait sleep(400);\nvar loc=locField();\nvar f=cands();\n// Location-only: the page asks for nothing but the location.\nif(loc&&f.length===0) return 'location-only';\n// No location anchor AND not the familiar two-field layout - refuse to guess\n// rather than risk typing a name into whatever box happens to be first.\nif(!loc&&f.length<2) return 'ambiguous-skip';\nif(loc&&f.length===1){ setVal(f[0],(first+' '+last).trim()); return 'single-name-field'; }\nsetVal(f[0],first);\nawait sleep(120);\nsetVal(f[1],last);\nreturn 'names-filled-'+f.length;",
           "into": "oasisNames"
         }
       },
@@ -151,11 +151,37 @@
         }
       },
       {
+        "id": "n_hasloc",
+        "kind": "elementExists",
+        "position": {
+          "x": 0,
+          "y": 1320
+        },
+        "config": {
+          "selector": "input[autocomplete=\"no-thanks\"]",
+          "timeoutMs": 5000,
+          "into": "hasLoc"
+        }
+      },
+      {
+        "id": "n_locbranch",
+        "kind": "branch",
+        "position": {
+          "x": 0,
+          "y": 1440
+        },
+        "config": {
+          "left": "{{vars.hasLoc}}",
+          "op": "truthy",
+          "right": ""
+        }
+      },
+      {
         "id": "n_address",
         "kind": "typeText",
         "position": {
           "x": 0,
-          "y": 1320
+          "y": 1560
         },
         "config": {
           "selector": "input[autocomplete=\"no-thanks\"]",
@@ -169,7 +195,7 @@
         "kind": "click",
         "position": {
           "x": 0,
-          "y": 1440
+          "y": 1680
         },
         "config": {
           "selector": ".v-list-item:has-text(\"{{vars.geo.city}}\")",
@@ -181,10 +207,10 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1560
+          "y": 1800
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nvar city=document.querySelector('input[autocomplete=\"no-thanks\"]');\nvar texts=textInputs();\n// DOB is the text input that follows the location box. On the reduced form\n// there is nothing after it - skip rather than fail the run.\nvar dob=city ? texts.filter(function(i){return after(city,i);})[0] : null;\nif(!dob) return 'no-dob';\ndob.scrollIntoView({block:'center'}); dob.click(); await sleep(400);\nreturn 'dob-opened';",
+          "script": "// The DOB field sits right after the location box when there is one. On the\n// variant that has names but NO location, fall back to probing the trailing\n// text inputs and only accept one that actually opens a date picker.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction pickerUp(){return !!document.querySelector('.v-date-picker-years, .v-date-picker-table, .v-picker__body');}\nvar city=document.querySelector('input[autocomplete=\"no-thanks\"]');\nvar texts=textInputs();\nvar cands = city ? texts.filter(function(i){return after(city,i);})\n                 : texts.slice().reverse().slice(0,3);\nfor(var k=0;k<cands.length;k++){\n  cands[k].scrollIntoView({block:'center'});\n  cands[k].click();\n  await sleep(500);\n  if(pickerUp()) return 'dob-opened';\n}\nreturn 'no-dob';",
           "into": "oasisDobOpen"
         }
       },
@@ -193,7 +219,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1680
+          "y": 1920
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nasync function waitFor(fn,ms){var d=Date.now()+ms;while(Date.now()<d){var v=fn();if(v)return v;await sleep(200);}return null;}\n// n_dobopen returns 'no-dob' when the form has no date field; the picker then\n// never opens, so bail out quietly instead of throwing.\nif(String(\"{{vars.oasisDobOpen}}\"||'')==='no-dob') return 'no-dob';\nvar age=20+Math.floor(Math.random()*36);\nvar year=(new Date()).getFullYear()-age;\nvar yearLi=await waitFor(function(){\n  var lis=Array.from(document.querySelectorAll('.v-date-picker-years li, .v-picker__body ul li'));\n  return lis.find(function(el){return vis(el)&&String(el.textContent||'').trim()===String(year);});\n},15000);\nif(!yearLi){\n  var anyLis=Array.from(document.querySelectorAll('.v-date-picker-years li, .v-picker__body ul li')).filter(vis);\n  if(!anyLis.length) return 'no-dob';\n  yearLi=anyLis[Math.floor(anyLis.length/2)];\n  year=parseInt(String(yearLi.textContent||'').trim(),10)||year;\n}\nyearLi.scrollIntoView({block:'center'});\nyearLi.click();\nawait sleep(800);\nvar monthBtns=await waitFor(function(){\n  var b=Array.from(document.querySelectorAll('.v-date-picker-table--month button, .v-date-picker-table--month .v-btn')).filter(function(el){return vis(el)&&!el.disabled;});\n  return b.length?b:null;\n},10000);\nif(!monthBtns) throw new Error('DOB month picker not found.');\nvar mi=Math.floor(Math.random()*monthBtns.length);\nmonthBtns[mi].scrollIntoView({block:'center'});\nmonthBtns[mi].click();\nawait sleep(800);\nvar dayBtns=await waitFor(function(){\n  var b=Array.from(document.querySelectorAll('.v-date-picker-table--date button, .v-date-picker-table--date .v-btn')).filter(function(el){return vis(el)&&!el.disabled&&String(el.textContent||'').trim();});\n  return b.length?b:null;\n},10000);\nif(!dayBtns) throw new Error('DOB day picker not found.');\nvar di=Math.floor(Math.random()*dayBtns.length);\nvar dayText=String(dayBtns[di].textContent||'').trim();\ndayBtns[di].scrollIntoView({block:'center'});\ndayBtns[di].click();\nawait sleep(500);\nreturn year+'-'+(mi+1)+'-'+dayText;",
@@ -205,7 +231,7 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 1800
+          "y": 2040
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline=Date.now()+10000;\nwhile(Date.now()<deadline){\n  var box=Array.from(document.querySelectorAll('.v-input--selection-controls input[type=\"checkbox\"], input[type=\"checkbox\"]')).filter(vis)[0];\n  if(box){\n    if(box.checked) return 'agree-checked';\n    var wrap=box.closest('.v-input--selection-controls')||box.parentElement;\n    var target=(wrap&&wrap.querySelector('.v-input--selection-controls__ripple'))||wrap||box;\n    target.scrollIntoView({block:'center'}); target.click(); await sleep(300);\n    if(box.checked) return 'agree-checked';\n    box.click(); await sleep(300);\n    if(box.checked) return 'agree-checked';\n  }\n  await sleep(300);\n}\nreturn 'no-agree-checkbox';",
@@ -217,7 +243,7 @@
         "kind": "dwell",
         "position": {
           "x": 0,
-          "y": 1920
+          "y": 2160
         },
         "config": {
           "minMs": 5000,
@@ -229,7 +255,7 @@
         "kind": "click",
         "position": {
           "x": 0,
-          "y": 2040
+          "y": 2280
         },
         "config": {
           "selector": "span.button--primary, .button--primary",
@@ -241,10 +267,10 @@
         "kind": "evaluate",
         "position": {
           "x": 0,
-          "y": 2160
+          "y": 2400
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction detailsUp(){return vis(document.querySelector('input[type=\"tel\"]'))||vis(document.querySelector('input[autocomplete=\"no-thanks\"]'));}\nfunction netErr(){var s=String(document.body?document.body.innerText:'').toLowerCase()+' '+String(document.title||'').toLowerCase();return s.includes('err_connection')||s.includes('err_proxy')||s.includes('err_timed_out')||s.indexOf(\"site can\")>-1&&s.indexOf('reached')>-1;}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<30000){await sleep(200);}\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  if(netErr()) throw new Error('OASIS submission unreachable - rotate proxy.');\n  if(!detailsUp()){ await sleep(1200); if(!detailsUp()) return 'done'; }\n  await sleep(400);\n}\nthrow new Error('OASIS signup did not complete after submit (details form still present).');",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction detailsUp(){\n  if(vis(document.querySelector('input[type=\"tel\"]'))) return true;\n  if(vis(document.querySelector('input[autocomplete=\"no-thanks\"]'))) return true;\n  return textInputs().filter(function(i){return i.name!=='Email';}).length>0;\n}\nfunction netErr(){var s=String(document.body?document.body.innerText:'').toLowerCase()+' '+String(document.title||'').toLowerCase();return s.includes('err_connection')||s.includes('err_proxy')||s.includes('err_timed_out')||s.indexOf(\"site can\")>-1&&s.indexOf('reached')>-1;}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<30000){await sleep(200);}\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  if(netErr()) throw new Error('OASIS submission unreachable - rotate proxy.');\n  if(!detailsUp()){ await sleep(1200); if(!detailsUp()) return 'done'; }\n  await sleep(400);\n}\nthrow new Error('OASIS signup did not complete after submit (details form still present).');",
           "into": "oasisOutcome"
         }
       },
@@ -253,7 +279,7 @@
         "kind": "click",
         "position": {
           "x": 0,
-          "y": 2280
+          "y": 2520
         },
         "config": {
           "selector": "a.footer-link.footer-text",
@@ -265,7 +291,7 @@
         "kind": "dwell",
         "position": {
           "x": 0,
-          "y": 2400
+          "y": 2640
         },
         "config": {
           "ms": 3000
@@ -276,7 +302,7 @@
         "kind": "accounts.save",
         "position": {
           "x": 0,
-          "y": 2520
+          "y": 2760
         },
         "config": {
           "email": "{{identity.email}}",
@@ -353,64 +379,82 @@
         "id": "e_10",
         "from": "n_phone",
         "fromPort": "next",
-        "to": "n_address"
+        "to": "n_hasloc"
       },
       {
         "id": "e_11",
+        "from": "n_hasloc",
+        "fromPort": "next",
+        "to": "n_locbranch"
+      },
+      {
+        "id": "e_12",
+        "from": "n_locbranch",
+        "fromPort": "true",
+        "to": "n_address"
+      },
+      {
+        "id": "e_13",
+        "from": "n_locbranch",
+        "fromPort": "false",
+        "to": "n_dobopen"
+      },
+      {
+        "id": "e_14",
         "from": "n_address",
         "fromPort": "next",
         "to": "n_addrpick"
       },
       {
-        "id": "e_12",
+        "id": "e_15",
         "from": "n_addrpick",
         "fromPort": "next",
         "to": "n_dobopen"
       },
       {
-        "id": "e_13",
+        "id": "e_16",
         "from": "n_dobopen",
         "fromPort": "next",
         "to": "n_dobpick"
       },
       {
-        "id": "e_14",
+        "id": "e_17",
         "from": "n_dobpick",
         "fromPort": "next",
         "to": "n_consent"
       },
       {
-        "id": "e_15",
+        "id": "e_18",
         "from": "n_consent",
         "fromPort": "next",
         "to": "n_presubmit"
       },
       {
-        "id": "e_16",
+        "id": "e_19",
         "from": "n_presubmit",
         "fromPort": "next",
         "to": "n_submit"
       },
       {
-        "id": "e_17",
+        "id": "e_20",
         "from": "n_submit",
         "fromPort": "next",
         "to": "n_outcome"
       },
       {
-        "id": "e_18",
+        "id": "e_21",
         "from": "n_outcome",
         "fromPort": "next",
         "to": "n_skipstep"
       },
       {
-        "id": "e_19",
+        "id": "e_22",
         "from": "n_skipstep",
         "fromPort": "next",
         "to": "n_wait"
       },
       {
-        "id": "e_20",
+        "id": "e_23",
         "from": "n_wait",
         "fromPort": "next",
         "to": "n_save"
@@ -420,7 +464,7 @@
     "author": {
       "name": "Sete_",
       "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "6SUUgmCpthYKjIyxR/ABbppTOECM2V9Q1zS5G7BV5nC0SeWsWu6Gt12aLM9HjQe06G/7UMGlS+8D83M6YqiOCg=="
+      "signature": "Kh2U+ONysjGT+Ye4Z63OcaREax4gOBfhKSeILCoRyxqGbyon5+4uILzkhVF1LoggOTiY0XhDLU/RSiZm4F38Ag=="
     }
   }
 }
