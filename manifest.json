@@ -120,8 +120,8 @@
     {
       "id": "target",
       "name": "Target Account Generator",
-      "description": "Target account generator: passes PerimeterX, establishes the signup session from the homepage (the \"Sign in or create account\" click that arms the auth session), fills the profile details (email, first/last name, password), confirms the email one-time passcode, and saves the account. Fails fast on PerimeterX Access-Denied pages (blocked IP - rotate the proxy) and on \"email already registered\". Runs with or without a Profile Group - on None it uses a generated identity, so all it needs is an email source (Key Vault mailboxes or an email:password list).",
-      "version": "1.0.0",
+      "description": "Target account generator: passes PerimeterX, establishes the signup session from the homepage (the \"Sign in or create account\" click that arms the auth session), fills the profile details (email, first/last name, password) and the birthday (from the identity's date of birth), confirms the email one-time passcode, and saves the account. Fails fast on PerimeterX Access-Denied pages (blocked IP - rotate the proxy) and on \"email already registered\". Runs with or without a Profile Group - on None it uses a generated identity, so all it needs is an email source (Key Vault mailboxes or an email:password list).",
+      "version": "1.0.1",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
