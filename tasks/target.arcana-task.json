@@ -1,0 +1,432 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-08-03T12:26:19.124Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "metadata": {
+      "id": "target",
+      "name": "Target",
+      "description": "Creates a Target account on the profile's own browser engine (proxy + fingerprint + human input, to pass PerimeterX). Homepage -> 'Sign in or create account' (establishes the signup session via auth_codes) -> email -> profile -> password -> Create account -> email OTP (imap) -> verify -> accounts.save.",
+      "tags": [],
+      "inputs": []
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "evaluate",
+      "imap",
+      "webhook"
+    ],
+    "variables": [],
+    "start": "n_start",
+    "nodes": [
+      {
+        "id": "n_start",
+        "kind": "noop",
+        "config": {},
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "n_goto",
+        "kind": "goto",
+        "config": {
+          "url": "https://www.target.com/",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000
+        },
+        "position": {
+          "x": 0,
+          "y": 96
+        }
+      },
+      {
+        "id": "n_access",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction blocked(){\n  var title=(document.title||'').trim();\n  var body=(document.body?document.body.innerText:'')||'';\n  return /access denied/i.test(title)\n    || (/access denied|you don't have permission|reference #/i.test(body) && /edgesuite|akamai|perimeterx|px-captcha/i.test(body));\n}\nfunction ready(){\n  var host=(location.host||'');\n  var body=(document.body?document.body.innerText:'')||'';\n  return /target\\.com/i.test(host) && /sign in|create account|cart|categories|deals|target circle|weekly ad/i.test(body);\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(blocked()) throw new Error('Target Access Denied - this proxy IP is blocked. Rotate proxy.');\n  if(ready()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(blocked()) throw new Error('Target Access Denied - this proxy IP is blocked. Rotate proxy.');\nreturn (document.title||'').trim();",
+          "into": "accessTitle"
+        },
+        "position": {
+          "x": 0,
+          "y": 192
+        }
+      },
+      {
+        "id": "n_idle",
+        "kind": "idle",
+        "config": {
+          "ms": 1800
+        },
+        "position": {
+          "x": 0,
+          "y": 288
+        }
+      },
+      {
+        "id": "n_consent",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();if(r.width<2||r.height<2)return false;var s=getComputedStyle(el);return s.visibility!=='hidden'&&s.display!=='none';}\nfunction clickText(re){\n  var nodes=document.querySelectorAll('button, a, [role=button], input[type=button], input[type=submit]');\n  for(var i=0;i<nodes.length;i++){var el=nodes[i];if(!vis(el))continue;var t=(el.innerText||el.textContent||el.value||'').replace(/\\s+/g,' ').trim();if(re.test(t)&&t.length<40){try{el.scrollIntoView({block:'center'});}catch(e){}try{el.click();}catch(e){}return true;}}\n  return false;\n}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<10000){await sleep(200);}\nawait sleep(1200);\nclickText(/^(accept all|accept|accept cookies|got it|ok|i agree|agree|allow all|continue)$/i);\nreturn 'consent-done';",
+          "into": "consent"
+        },
+        "position": {
+          "x": 0,
+          "y": 384
+        }
+      },
+      {
+        "id": "n_signin",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction findByText(re){\n  var nodes=document.querySelectorAll('button, a, [role=button], div, span, p');\n  for(var i=0;i<nodes.length;i++){var el=nodes[i];if(!vis(el))continue;var t=(el.innerText||el.textContent||'').replace(/\\s+/g,' ').trim();if(re.test(t)&&t.length<60)return el;}\n  return null;\n}\nfunction emailUp(){\n  var el=document.querySelector('input[name=\"username\"], input#username, input[autocomplete=\"username\"], input[type=\"email\"]');\n  return !!(el&&vis(el));\n}\nvar entry=findByText(/sign in or create account/i) || document.querySelector('[data-test=\"accountNav-signIn\"], a[href*=\"/login\"]');\nif(entry){try{entry.scrollIntoView({block:'center'});}catch(e){}try{entry.click();}catch(e){}}\nawait sleep(2500);\nif(!emailUp()){\n  var acct=findByText(/^account$/i) || document.querySelector('[data-test=\"accountNav\"], [aria-label*=\"account\" i]');\n  if(acct){try{acct.click();}catch(e){}await sleep(1600);}\n  var si=findByText(/sign in or create account/i) || document.querySelector('[data-test=\"accountNav-signIn\"], a[href*=\"/login\"]');\n  if(si){try{si.click();}catch(e){}}\n}\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){ if(emailUp()) return 'signin'; await sleep(400); }\nthrow new Error('could not reach the Target signin/email step');",
+          "into": "signinState"
+        },
+        "position": {
+          "x": 0,
+          "y": 480
+        }
+      },
+      {
+        "id": "n_email",
+        "kind": "fill",
+        "config": {
+          "selector": "input[name='username'], input#username, input[autocomplete='username'], input[type='email']",
+          "value": "{{identity.email}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 60000
+        },
+        "position": {
+          "x": 0,
+          "y": 576
+        }
+      },
+      {
+        "id": "n_continue",
+        "kind": "click",
+        "config": {
+          "selector": "button:has-text('Continue')",
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000
+        },
+        "position": {
+          "x": 0,
+          "y": 672
+        }
+      },
+      {
+        "id": "n_emailcheck",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction profileUp(){\n  var el=document.querySelector('input[name=\"firstnamecreateaccount\"], input[id*=\"firstname\" i], input[autocomplete=\"given-name\"], input[name=\"firstName\"]');\n  return !!(el&&vis(el));\n}\nfunction existing(){\n  var body=(document.body?document.body.innerText:'')||'';\n  return /welcome back|enter your password|already have an account|that email is already|already registered|sign in with your/i.test(body);\n}\nfunction pxCaptcha(){ return !!document.querySelector('#px-captcha') || /robot or human|press and hold/i.test((document.body?document.body.innerText:'')||''); }\nvar deadline=Date.now()+30000;\nwhile(Date.now()<deadline){\n  if(existing()) throw new Error('email already used');\n  if(profileUp()) return 'profile';\n  await sleep(400);\n}\nif(existing()) throw new Error('email already used');\nif(pxCaptcha()) throw new Error('PerimeterX challenge after email - rotate proxy');\nthrow new Error('email step did not reach the profile form');",
+          "into": "emailState"
+        },
+        "position": {
+          "x": 0,
+          "y": 768
+        }
+      },
+      {
+        "id": "n_firstname",
+        "kind": "fill",
+        "config": {
+          "selector": "input[name='firstnamecreateaccount'], input[id*='firstname' i], input[autocomplete='given-name'], input[name='firstName']",
+          "value": "{{identity.firstName}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000
+        },
+        "position": {
+          "x": 0,
+          "y": 864
+        }
+      },
+      {
+        "id": "n_lastname",
+        "kind": "fill",
+        "config": {
+          "selector": "input[name='lastnamecreateaccount'], input[id*='lastname' i], input[autocomplete='family-name'], input[name='lastName']",
+          "value": "{{identity.lastName}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000
+        },
+        "position": {
+          "x": 0,
+          "y": 960
+        }
+      },
+      {
+        "id": "n_pwfactor",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar pf=document.querySelector('input[name=\"auth-factor\"][value=\"password\"], #password-checkbox, input[type=\"radio\"][value=\"password\"]');\nif(pf){\n  try{pf.scrollIntoView({block:'center'});}catch(e){}\n  if(!pf.checked){ try{pf.click();}catch(e){} }\n  await sleep(1000);\n}\nvar pw=document.querySelector('input[type=\"password\"], input[name*=\"password\" i], input[autocomplete=\"new-password\"]');\nreturn (pw&&vis(pw)) ? 'password-ready' : 'password-maybe';",
+          "into": "pwState"
+        },
+        "position": {
+          "x": 0,
+          "y": 1056
+        }
+      },
+      {
+        "id": "n_password",
+        "kind": "fill",
+        "config": {
+          "selector": "input[type='password'], input[name*='password' i], input[autocomplete='new-password']",
+          "value": "{{identity.password}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 30000
+        },
+        "position": {
+          "x": 0,
+          "y": 1152
+        }
+      },
+      {
+        "id": "n_create",
+        "kind": "click",
+        "config": {
+          "selector": "button:has-text('Create account')",
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000
+        },
+        "position": {
+          "x": 0,
+          "y": 1248
+        }
+      },
+      {
+        "id": "n_waitotp",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction otpUp(){\n  var body=(document.body?document.body.innerText:'')||'';\n  if(/verification code|enter your code|we've sent your code|we sent your code|secure.?code|you've got mail/i.test(body)) return true;\n  var el=Array.prototype.find.call(document.querySelectorAll('input'), function(e){ return vis(e) && /otp|code|verification/i.test((e.name||'')+' '+(e.id||'')+' '+(e.placeholder||'')+' '+(e.autocomplete||'')); });\n  return !!el;\n}\nfunction pxCaptcha(){ return !!document.querySelector('#px-captcha') || /robot or human|press and hold/i.test((document.body?document.body.innerText:'')||''); }\nfunction existing(){\n  var body=(document.body?document.body.innerText:'')||'';\n  return /welcome back|already have an account|that email is already|already registered/i.test(body);\n}\nvar deadline=Date.now()+45000;\nwhile(Date.now()<deadline){\n  if(otpUp()) return 'otp';\n  if(existing()) throw new Error('email already used');\n  if(pxCaptcha()) throw new Error('PerimeterX challenge after create-account - rotate proxy');\n  await sleep(500);\n}\nthrow new Error('timed out waiting for the verification screen');",
+          "into": "otpState"
+        },
+        "position": {
+          "x": 0,
+          "y": 1344
+        }
+      },
+      {
+        "id": "n_waitemail",
+        "kind": "imap.waitForMessage",
+        "config": {
+          "mailboxLabel": "Primary",
+          "recipient": "{{identity.email}}",
+          "subjectMatch": "target|verify|verification|code|secure",
+          "codeOnly": true,
+          "lookbackMs": 300000,
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "emailCode"
+        },
+        "position": {
+          "x": 0,
+          "y": 1440
+        }
+      },
+      {
+        "id": "n_fillotp",
+        "kind": "evaluate",
+        "config": {
+          "script": "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setValue(el, value){ var proto=(el instanceof HTMLTextAreaElement)?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; var setter=Object.getOwnPropertyDescriptor(proto,'value'); if(setter&&setter.set) setter.set.call(el, value); el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); }\nvar code=\"{{emailCode}}\";\nvar boxes=Array.prototype.filter.call(document.querySelectorAll('input[id*=\"verification\" i], input[id*=\"code\" i], input[name*=\"code\" i], input[id*=\"otp\" i]'), vis);\nif(boxes.length>=code.length){ for(var i=0;i<code.length;i++){ boxes[i].focus(); setValue(boxes[i], code[i]); } return 'otp-filled-split'; }\nvar single=Array.prototype.find.call(document.querySelectorAll('input'), function(el){ return vis(el) && /otp|code|verification/i.test((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.autocomplete||'')); });\nif(single){ single.focus(); setValue(single, code); return 'otp-filled'; }\nthrow new Error('could not locate the OTP input');",
+          "into": "otpFill"
+        },
+        "position": {
+          "x": 0,
+          "y": 1536
+        }
+      },
+      {
+        "id": "n_verify",
+        "kind": "click",
+        "config": {
+          "selector": "button:has-text('Verify'), button:has-text('Submit')",
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 30000
+        },
+        "position": {
+          "x": 0,
+          "y": 1632
+        }
+      },
+      {
+        "id": "n_confirm",
+        "kind": "evaluate",
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction otpStillUp(){\n  var body=(document.body?document.body.innerText:'')||'';\n  if(/verification code|enter your code|we've sent your code|we sent your code/i.test(body)) return true;\n  var el=Array.prototype.find.call(document.querySelectorAll('input'), function(e){ return vis(e) && /otp|code|verification/i.test((e.name||'')+' '+(e.id||'')+' '+(e.placeholder||'')); });\n  return !!el;\n}\nvar deadline=Date.now()+25000;\nwhile(Date.now()<deadline){\n  if(!otpStillUp()) return 'verified';\n  await sleep(500);\n}\nthrow new Error('verification code was not accepted');",
+          "into": "confirmState"
+        },
+        "position": {
+          "x": 0,
+          "y": 1728
+        }
+      },
+      {
+        "id": "n_save",
+        "kind": "accounts.save",
+        "config": {
+          "email": "{{identity.email}}",
+          "password": "{{identity.password}}",
+          "site": "target.com",
+          "label": "Target",
+          "status": "verified"
+        },
+        "position": {
+          "x": 0,
+          "y": 1824
+        }
+      },
+      {
+        "id": "n_webhook",
+        "kind": "webhook.fire",
+        "config": {
+          "event": "task.succeeded",
+          "data": {
+            "tool": "target-signup",
+            "email": "{{identity.email}}",
+            "site": "target.com"
+          }
+        },
+        "position": {
+          "x": 0,
+          "y": 1920
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_0_n_start",
+        "from": "n_start",
+        "fromPort": "next",
+        "to": "n_goto"
+      },
+      {
+        "id": "e_1_n_goto",
+        "from": "n_goto",
+        "fromPort": "next",
+        "to": "n_access"
+      },
+      {
+        "id": "e_2_n_access",
+        "from": "n_access",
+        "fromPort": "next",
+        "to": "n_idle"
+      },
+      {
+        "id": "e_3_n_idle",
+        "from": "n_idle",
+        "fromPort": "next",
+        "to": "n_consent"
+      },
+      {
+        "id": "e_4_n_consent",
+        "from": "n_consent",
+        "fromPort": "next",
+        "to": "n_signin"
+      },
+      {
+        "id": "e_5_n_signin",
+        "from": "n_signin",
+        "fromPort": "next",
+        "to": "n_email"
+      },
+      {
+        "id": "e_6_n_email",
+        "from": "n_email",
+        "fromPort": "next",
+        "to": "n_continue"
+      },
+      {
+        "id": "e_7_n_continue",
+        "from": "n_continue",
+        "fromPort": "next",
+        "to": "n_emailcheck"
+      },
+      {
+        "id": "e_8_n_emailcheck",
+        "from": "n_emailcheck",
+        "fromPort": "next",
+        "to": "n_firstname"
+      },
+      {
+        "id": "e_9_n_firstname",
+        "from": "n_firstname",
+        "fromPort": "next",
+        "to": "n_lastname"
+      },
+      {
+        "id": "e_10_n_lastname",
+        "from": "n_lastname",
+        "fromPort": "next",
+        "to": "n_pwfactor"
+      },
+      {
+        "id": "e_11_n_pwfactor",
+        "from": "n_pwfactor",
+        "fromPort": "next",
+        "to": "n_password"
+      },
+      {
+        "id": "e_12_n_password",
+        "from": "n_password",
+        "fromPort": "next",
+        "to": "n_create"
+      },
+      {
+        "id": "e_13_n_create",
+        "from": "n_create",
+        "fromPort": "next",
+        "to": "n_waitotp"
+      },
+      {
+        "id": "e_14_n_waitotp",
+        "from": "n_waitotp",
+        "fromPort": "next",
+        "to": "n_waitemail"
+      },
+      {
+        "id": "e_15_n_waitemail",
+        "from": "n_waitemail",
+        "fromPort": "next",
+        "to": "n_fillotp"
+      },
+      {
+        "id": "e_16_n_fillotp",
+        "from": "n_fillotp",
+        "fromPort": "next",
+        "to": "n_verify"
+      },
+      {
+        "id": "e_17_n_verify",
+        "from": "n_verify",
+        "fromPort": "next",
+        "to": "n_confirm"
+      },
+      {
+        "id": "e_18_n_confirm",
+        "from": "n_confirm",
+        "fromPort": "next",
+        "to": "n_save"
+      },
+      {
+        "id": "e_19_n_save",
+        "from": "n_save",
+        "fromPort": "next",
+        "to": "n_webhook"
+      }
+    ]
+  }
+}

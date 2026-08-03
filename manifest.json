@@ -1,7 +1,7 @@
 {
   "format": "arcana-marketplace/v1",
   "repository": "quikk1/scrolls-community-tasks",
-  "updatedAt": "2026-07-21",
+  "updatedAt": "2026-08-03",
   "tasks": [
     {
       "id": "la28",
@@ -116,6 +116,34 @@
       "status": "ready",
       "publishedAt": "2026-07-21",
       "emailMode": "list"
+    },
+    {
+      "id": "target",
+      "name": "Target Account Generator",
+      "description": "Target account generator: passes PerimeterX, establishes the signup session from the homepage (the \"Sign in or create account\" click that arms the auth session), fills the profile details (email, first/last name, password), confirms the email one-time passcode, and saves the account. Fails fast on PerimeterX Access-Denied pages (blocked IP - rotate the proxy) and on \"email already registered\". Runs with or without a Profile Group - on None it uses a generated identity, so all it needs is an email source (Key Vault mailboxes or an email:password list).",
+      "version": "1.0.0",
+      "author": {
+        "name": "Sete_",
+        "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
+      },
+      "downloadPath": "tasks/target.arcana-task.json",
+      "tags": [
+        "target",
+        "account-generator",
+        "signup"
+      ],
+      "permissions": [
+        "accounts",
+        "browser",
+        "evaluate",
+        "imap",
+        "webhook"
+      ],
+      "category": "account-generator",
+      "status": "ready",
+      "publishedAt": "2026-08-03",
+      "minRole": "admin",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAB2ElEQVR42u3dUY7DMAgE0Ln/2fZO6f9qpW1sBgaYqP/BT67SAKZ46q4f4MtPYZDQFNHxQiOXEil0dMmUQncaNhNm0PCYMImGwYR5NLFMGKwTYoTBNCFM2KBzY4QlOsdG2KNzZoRVOgdG2Kbz1ggLdV4ZQURH5KYnQDpP3JJIkBmT5nvfOZB4IiInPDpQi3TlCVCj5DE1VJBuqVwjeRUzBUi/jnQF1FSHFHww0CNwcYG664SvIgzoEbsoQGN0ApcTAERdRonR30Dib55Vmwj52yf5OVAJpPN7N/ymv4ESYi3MnNzcAjnbpzzrJg2kkHu/Auq4fdI2Efpun5xNxAWSKuDkAanVGqm/TolAglXAE6Du3y92SAYqAtKstRtIAEi2G4QUmIEMZCADGWgSkB/zBvKrhoEigZzucMIsHcgpVyftE4EmlH1cOHTpuQJoV/OC21/cQFUEtKgFz02crC7XRW3AbiQndtpvOYrgwyxcoBXHoXygjg40/0imD/X+D+Rj4UlAkwcLeDSFh5tcDzdJK06I3PQQyAOW1hl9v2oPeQsF8pjA4UYHi/WoUg6Qh93OYbpcoAdu84E0maLW5aH/uUC1TIy1+I9H6oASpBKC958fKQEdexUG+QF6yM4zErYzcgAAAABJRU5ErkJggg=="
     }
   ]
 }
