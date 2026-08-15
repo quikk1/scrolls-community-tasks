@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T22:11:48.803Z",
+  "exportedAt": "2026-08-15T22:17:27.595Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.4",
+    "version": "0.1.5",
     "metadata": {
       "id": "riot-entry",
       "name": "Riftbound Product Registration",
@@ -103,7 +103,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
           "into": "regState"
         }
       },
@@ -204,7 +204,7 @@
           "y": 1200
         },
         "config": {
-          "message": "Riftbound registration blade never became ready"
+          "message": "Riftbound registration never offered a way in - blade reported: {{regState}}"
         }
       },
       {
@@ -715,7 +715,7 @@
         },
         "config": {
           "selector": "label[for=\"RB3864-00-00\"], [data-testid=\"product-selection-card\"] label",
-          "timeoutMs": 120000
+          "timeoutMs": 30000
         }
       },
       {
@@ -731,15 +731,40 @@
         }
       },
       {
-        "id": "n_click_legal",
-        "kind": "click",
+        "id": "n_probe_selected",
+        "kind": "evaluate",
         "position": {
           "x": 1600,
           "y": 300
         },
         "config": {
+          "into": "productSelected",
+          "script": "/* card state after the product click */\nfor(var i=0;i<10;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]'))return '1';\n  await new Promise(function(r){setTimeout(r,300);});\n}\nreturn '0';"
+        }
+      },
+      {
+        "id": "n_br_selected",
+        "kind": "branch",
+        "position": {
+          "x": 1600,
+          "y": 450
+        },
+        "config": {
+          "left": "{{productSelected}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
+        "id": "n_click_legal",
+        "kind": "click",
+        "position": {
+          "x": 1600,
+          "y": 600
+        },
+        "config": {
           "selector": "[data-testid=\"legal-agreement-checkbox\"], label[data-testid=\"legal-agreement-label\"]",
-          "timeoutMs": 120000
+          "timeoutMs": 30000
         }
       },
       {
@@ -747,7 +772,7 @@
         "kind": "evaluate",
         "position": {
           "x": 1600,
-          "y": 450
+          "y": 750
         },
         "config": {
           "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<15;i++){\n  var card=document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]');\n  var box=document.querySelector('[data-testid=\"legal-agreement-checkbox\"]');\n  var checked=!box||box.checked===true||box.getAttribute('aria-checked')==='true'||box.getAttribute('data-state')==='checked';\n  var btn=document.querySelector('[data-testid=\"register-cta\"]');\n  var enabled=!!btn&&!btn.disabled&&!btn.hasAttribute('disabled')&&btn.getAttribute('aria-disabled')!=='true';\n  if(card&&checked&&enabled)return '1';\n  await sleep(400);\n}\nreturn '0';",
@@ -759,7 +784,7 @@
         "kind": "branch",
         "position": {
           "x": 1600,
-          "y": 600
+          "y": 900
         },
         "config": {
           "left": "{{regReady}}",
@@ -772,7 +797,7 @@
         "kind": "math.incVar",
         "position": {
           "x": 1600,
-          "y": 750
+          "y": 1050
         },
         "config": {
           "name": "fixTries",
@@ -785,7 +810,7 @@
         "kind": "branch",
         "position": {
           "x": 1600,
-          "y": 900
+          "y": 1200
         },
         "config": {
           "left": "{{fixTries}}",
@@ -798,7 +823,7 @@
         "kind": "fail",
         "position": {
           "x": 1600,
-          "y": 1050
+          "y": 1350
         },
         "config": {
           "message": "Could not arm the Riftbound register button (product or legal consent did not stick)"
@@ -809,11 +834,11 @@
         "kind": "click",
         "position": {
           "x": 1600,
-          "y": 1200
+          "y": 1500
         },
         "config": {
           "selector": "[data-testid=\"register-cta\"]",
-          "timeoutMs": 120000
+          "timeoutMs": 30000
         }
       },
       {
@@ -821,7 +846,7 @@
         "kind": "dwell",
         "position": {
           "x": 1600,
-          "y": 1350
+          "y": 1650
         },
         "config": {
           "ms": 3000
@@ -835,7 +860,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
           "into": "entryResult"
         }
       },
@@ -1528,7 +1553,25 @@
         "id": "e_dwell_item__next",
         "from": "n_dwell_item",
         "fromPort": "next",
+        "to": "n_probe_selected"
+      },
+      {
+        "id": "e_probe_selected__next",
+        "from": "n_probe_selected",
+        "fromPort": "next",
+        "to": "n_br_selected"
+      },
+      {
+        "id": "e_br_selected__true",
+        "from": "n_br_selected",
+        "fromPort": "true",
         "to": "n_click_legal"
+      },
+      {
+        "id": "e_br_selected__false",
+        "from": "n_br_selected",
+        "fromPort": "false",
+        "to": "n_tick_fix"
       },
       {
         "id": "e_click_legal__next",
