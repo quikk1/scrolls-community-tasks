@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T23:22:25.356Z",
+  "exportedAt": "2026-08-15T23:27:25.249Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.7",
+    "version": "0.1.8",
     "metadata": {
       "id": "riot-entry",
       "name": "Riftbound Product Registration",
@@ -23,6 +23,13 @@
           "defaultValue": "Riftbound T1 Signature Edition",
           "placeholder": "Riftbound T1 Signature Edition",
           "hint": "Names this run's Inventory rows, the same as the native riot-entry tool's --event-name. Entered accounts keep whichever Database folder they are already in."
+        },
+        {
+          "id": "recheckEntered",
+          "label": "Re-check entered accounts",
+          "type": "boolean",
+          "defaultValue": false,
+          "hint": "Off: an account already marked as entered for this campaign is skipped without opening a browser - including entries made by the requests-based riot-entry tool, which writes the same marker. On: open the page and confirm with Riot instead."
         }
       ]
     },
@@ -59,11 +66,84 @@
         }
       },
       {
+        "id": "n_marker_has",
+        "kind": "string.contains",
+        "position": {
+          "x": 0,
+          "y": 300
+        },
+        "config": {
+          "string": "{{account.notes}}",
+          "substring": "riot entry campaign 31: OPTED_IN | items RB3864-00-00",
+          "from": 0,
+          "into": "alreadyEntered"
+        }
+      },
+      {
+        "id": "n_br_marker",
+        "kind": "branch",
+        "position": {
+          "x": 0,
+          "y": 450
+        },
+        "config": {
+          "left": "{{alreadyEntered}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_br_recheck",
+        "kind": "branch",
+        "position": {
+          "x": 0,
+          "y": 600
+        },
+        "config": {
+          "left": "{{inputs.recheckEntered}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_log_skip",
+        "kind": "log",
+        "position": {
+          "x": 0,
+          "y": 750
+        },
+        "config": {
+          "level": "info",
+          "message": "Skipping {{account.username}}: already recorded as entered in campaign 31 (RB3864-00-00). Tick \"Re-check entered accounts\" to verify it on the page instead."
+        }
+      },
+      {
+        "id": "n_status_skip",
+        "kind": "setVar",
+        "position": {
+          "x": 0,
+          "y": 900
+        },
+        "config": {
+          "name": "entryStatus",
+          "value": "already_opted_in"
+        }
+      },
+      {
+        "id": "n_result_skip",
+        "kind": "setResult",
+        "position": {
+          "x": 0,
+          "y": 1050
+        },
+        "config": {
+          "value": "{\"status\":\"already_opted_in\",\"source\":\"account notes\",\"campaign\":\"31\",\"items\":[\"RB3864-00-00\"],\"username\":\"{{account.username}}\",\"email\":\"{{account.email}}\"}"
+        }
+      },
+      {
         "id": "n_br_creds",
         "kind": "branch",
         "position": {
           "x": 0,
-          "y": 300
+          "y": 1200
         },
         "config": {
           "left": "{{account.username}}",
@@ -75,7 +155,7 @@
         "kind": "fail",
         "position": {
           "x": 0,
-          "y": 450
+          "y": 1350
         },
         "config": {
           "message": "No saved riotgames.com account with a username for {{identity.email}} - generate the account first. (no retry)"
@@ -86,7 +166,7 @@
         "kind": "goto",
         "position": {
           "x": 0,
-          "y": 600
+          "y": 1500
         },
         "config": {
           "url": "https://playriftbound.com/en-us/preorder/registration/",
@@ -1160,7 +1240,49 @@
         "id": "e_pick__next",
         "from": "n_pick",
         "fromPort": "next",
+        "to": "n_marker_has"
+      },
+      {
+        "id": "e_marker_has__next",
+        "from": "n_marker_has",
+        "fromPort": "next",
+        "to": "n_br_marker"
+      },
+      {
+        "id": "e_br_marker__true",
+        "from": "n_br_marker",
+        "fromPort": "true",
+        "to": "n_br_recheck"
+      },
+      {
+        "id": "e_br_marker__false",
+        "from": "n_br_marker",
+        "fromPort": "false",
         "to": "n_br_creds"
+      },
+      {
+        "id": "e_br_recheck__true",
+        "from": "n_br_recheck",
+        "fromPort": "true",
+        "to": "n_br_creds"
+      },
+      {
+        "id": "e_br_recheck__false",
+        "from": "n_br_recheck",
+        "fromPort": "false",
+        "to": "n_log_skip"
+      },
+      {
+        "id": "e_log_skip__next",
+        "from": "n_log_skip",
+        "fromPort": "next",
+        "to": "n_status_skip"
+      },
+      {
+        "id": "e_status_skip__next",
+        "from": "n_status_skip",
+        "fromPort": "next",
+        "to": "n_result_skip"
       },
       {
         "id": "e_br_creds__true",
