@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T17:49:21.022Z",
+  "exportedAt": "2026-08-15T21:37:05.586Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.1",
+    "version": "0.1.2",
     "metadata": {
       "id": "riot-entry",
       "name": "Riftbound Product Registration",
@@ -103,7 +103,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(pick('[data-testid=\"signin-cta\"]'))return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        if(/^(sign[ -]?in|log[ -]?in)$/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
           "into": "regState"
         }
       },
@@ -219,11 +219,36 @@
         }
       },
       {
+        "id": "n_signin_mark",
+        "kind": "evaluate",
+        "position": {
+          "x": 640,
+          "y": 0
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        if(/^(sign[ -]?in|log[ -]?in)$/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nvar old=document.querySelectorAll('[data-scrolls-signin]');\nfor(var k=0;k<old.length;k++)old[k].removeAttribute('data-scrolls-signin');\nvar target=findSignIn();\nif(!target)return '0';\ntarget.setAttribute('data-scrolls-signin','1');\nreturn '1';",
+          "into": "signinFound"
+        }
+      },
+      {
+        "id": "n_br_signin_found",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 150
+        },
+        "config": {
+          "left": "{{signinFound}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
         "id": "n_tick_signin",
         "kind": "math.incVar",
         "position": {
           "x": 640,
-          "y": 0
+          "y": 300
         },
         "config": {
           "name": "signinTries",
@@ -236,7 +261,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 150
+          "y": 450
         },
         "config": {
           "left": "{{signinTries}}",
@@ -249,7 +274,7 @@
         "kind": "goto",
         "position": {
           "x": 640,
-          "y": 300
+          "y": 600
         },
         "config": {
           "url": "https://xsso.playriftbound.com/login?uri=https%3A%2F%2Fplayriftbound.com%2Fen-us%2Fpreorder%2Fregistration%2F&product_id=riftbound&locale=en_US",
@@ -258,15 +283,36 @@
         }
       },
       {
+        "id": "n_try_signin",
+        "kind": "tryCatch",
+        "position": {
+          "x": 640,
+          "y": 750
+        },
+        "config": {}
+      },
+      {
         "id": "n_click_signin",
         "kind": "click",
         "position": {
           "x": 640,
-          "y": 450
+          "y": 900
         },
         "config": {
-          "selector": "[data-testid=\"signin-cta\"]",
-          "timeoutMs": 120000
+          "selector": "[data-scrolls-signin=\"1\"]",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_br_signin_err",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 1050
+        },
+        "config": {
+          "left": "{{WAS_ERROR}}",
+          "op": "truthy"
         }
       },
       {
@@ -274,10 +320,10 @@
         "kind": "evaluate",
         "position": {
           "x": 640,
-          "y": 600
+          "y": 1200
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<24;i++){\n  var host=location.hostname;\n  if(host.indexOf('playriftbound.com')!==-1&&host.indexOf('xsso.')===-1)return 'registration';\n  var err=pick('[data-testid=\"error-message\"], [data-testid=\"error-text\"]');\n  var msg=text(err);\n  if(msg)return 'error:'+msg.slice(0,160);\n  // A form that is still on screen is only actionable while it is EMPTY. Riot\n  // leaves both forms mounted with their values while the submit is in flight,\n  // so reporting 'mfa'/'login' on sight would re-submit the credentials and -\n  // worse - go wait for a second OTP email that Riot never sends.\n  var boxes=document.querySelectorAll('[data-testid=\"input-mfa\"] input, input[data-testid=\"input-mfa\"]');\n  if(boxes.length){\n    var typed=0;\n    for(var b=0;b<boxes.length;b++){if((boxes[b].value||'').length)typed++;}\n    return typed?'wait':'mfa';\n  }\n  var frames=document.querySelectorAll('iframe[src*=\"hcaptcha.com\"]');\n  for(var f=0;f<frames.length;f++){\n    if(visible(frames[f])&&/challenge/i.test(frames[f].title||''))return 'captcha';\n  }\n  var user=pick('input[data-testid=\"input-username\"], [data-testid=\"input-username\"] input, input[name=\"username\"]');\n  if(user)return (user.value||'').trim()==='{{account.username}}'?'wait':'login';\n  await sleep(500);\n}\nreturn 'wait';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        if(/^(sign[ -]?in|log[ -]?in)$/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var host=location.hostname;\n  if(host.indexOf('playriftbound.com')!==-1&&host.indexOf('xsso.')===-1)return 'registration';\n  var err=pick('[data-testid=\"error-message\"], [data-testid=\"error-text\"]');\n  var msg=text(err);\n  if(msg)return 'error:'+msg.slice(0,160);\n  // A form that is still on screen is only actionable while it is EMPTY. Riot\n  // leaves both forms mounted with their values while the submit is in flight,\n  // so reporting 'mfa'/'login' on sight would re-submit the credentials and -\n  // worse - go wait for a second OTP email that Riot never sends.\n  var boxes=document.querySelectorAll('[data-testid=\"input-mfa\"] input, input[data-testid=\"input-mfa\"]');\n  if(boxes.length){\n    var typed=0;\n    for(var b=0;b<boxes.length;b++){if((boxes[b].value||'').length)typed++;}\n    return typed?'wait':'mfa';\n  }\n  var frames=document.querySelectorAll('iframe[src*=\"hcaptcha.com\"]');\n  for(var f=0;f<frames.length;f++){\n    if(visible(frames[f])&&/challenge/i.test(frames[f].title||''))return 'captcha';\n  }\n  var user=pick('input[data-testid=\"input-username\"], [data-testid=\"input-username\"] input, input[name=\"username\"]');\n  if(user)return (user.value||'').trim()==='{{account.username}}'?'wait':'login';\n  await sleep(500);\n}\nreturn 'wait';",
           "into": "authState"
         }
       },
@@ -286,7 +332,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 750
+          "y": 1350
         },
         "config": {
           "left": "{{authState}}",
@@ -299,7 +345,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 900
+          "y": 1500
         },
         "config": {
           "left": "{{authState}}",
@@ -312,7 +358,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 1050
+          "y": 1650
         },
         "config": {
           "left": "{{authState}}",
@@ -325,7 +371,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 1200
+          "y": 1800
         },
         "config": {
           "left": "{{authState}}",
@@ -338,7 +384,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 1350
+          "y": 1950
         },
         "config": {
           "left": "{{authState}}",
@@ -351,7 +397,7 @@
         "kind": "fail",
         "position": {
           "x": 640,
-          "y": 1500
+          "y": 2100
         },
         "config": {
           "message": "Riot sign-in failed: {{authState}}"
@@ -362,7 +408,7 @@
         "kind": "math.incVar",
         "position": {
           "x": 640,
-          "y": 1650
+          "y": 2250
         },
         "config": {
           "name": "authTries",
@@ -375,7 +421,7 @@
         "kind": "branch",
         "position": {
           "x": 640,
-          "y": 1800
+          "y": 2400
         },
         "config": {
           "left": "{{authTries}}",
@@ -388,7 +434,7 @@
         "kind": "fail",
         "position": {
           "x": 640,
-          "y": 1950
+          "y": 2550
         },
         "config": {
           "message": "Riot sign-in never reached the registration page"
@@ -399,7 +445,7 @@
         "kind": "dwell",
         "position": {
           "x": 640,
-          "y": 2100
+          "y": 2700
         },
         "config": {
           "ms": 3000
@@ -680,7 +726,7 @@
           "y": 450
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<15;i++){\n  var card=document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]');\n  var box=document.querySelector('[data-testid=\"legal-agreement-checkbox\"]');\n  var checked=!box||box.checked===true||box.getAttribute('aria-checked')==='true'||box.getAttribute('data-state')==='checked';\n  var btn=document.querySelector('[data-testid=\"register-cta\"]');\n  var enabled=!!btn&&!btn.disabled&&!btn.hasAttribute('disabled')&&btn.getAttribute('aria-disabled')!=='true';\n  if(card&&checked&&enabled)return '1';\n  await sleep(400);\n}\nreturn '0';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        if(/^(sign[ -]?in|log[ -]?in)$/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<15;i++){\n  var card=document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]');\n  var box=document.querySelector('[data-testid=\"legal-agreement-checkbox\"]');\n  var checked=!box||box.checked===true||box.getAttribute('aria-checked')==='true'||box.getAttribute('data-state')==='checked';\n  var btn=document.querySelector('[data-testid=\"register-cta\"]');\n  var enabled=!!btn&&!btn.disabled&&!btn.hasAttribute('disabled')&&btn.getAttribute('aria-disabled')!=='true';\n  if(card&&checked&&enabled)return '1';\n  await sleep(400);\n}\nreturn '0';",
           "into": "regReady"
         }
       },
@@ -765,7 +811,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(pick('[data-testid=\"signin-cta\"]'))return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        if(/^(sign[ -]?in|log[ -]?in)$/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
           "into": "entryResult"
         }
       },
@@ -1074,7 +1120,7 @@
         "id": "e_br_reg_unauth__true",
         "from": "n_br_reg_unauth",
         "fromPort": "true",
-        "to": "n_tick_signin"
+        "to": "n_signin_mark"
       },
       {
         "id": "e_br_reg_unauth__false",
@@ -1119,6 +1165,24 @@
         "to": "n_probe_reg"
       },
       {
+        "id": "e_signin_mark__next",
+        "from": "n_signin_mark",
+        "fromPort": "next",
+        "to": "n_br_signin_found"
+      },
+      {
+        "id": "e_br_signin_found__true",
+        "from": "n_br_signin_found",
+        "fromPort": "true",
+        "to": "n_tick_signin"
+      },
+      {
+        "id": "e_br_signin_found__false",
+        "from": "n_br_signin_found",
+        "fromPort": "false",
+        "to": "n_goto_login"
+      },
+      {
         "id": "e_tick_signin__next",
         "from": "n_tick_signin",
         "fromPort": "next",
@@ -1134,17 +1198,35 @@
         "id": "e_br_signin_max__false",
         "from": "n_br_signin_max",
         "fromPort": "false",
+        "to": "n_try_signin"
+      },
+      {
+        "id": "e_try_signin__loop",
+        "from": "n_try_signin",
+        "fromPort": "loop",
         "to": "n_click_signin"
+      },
+      {
+        "id": "e_try_signin__exit",
+        "from": "n_try_signin",
+        "fromPort": "exit",
+        "to": "n_br_signin_err"
+      },
+      {
+        "id": "e_br_signin_err__true",
+        "from": "n_br_signin_err",
+        "fromPort": "true",
+        "to": "n_goto_login"
+      },
+      {
+        "id": "e_br_signin_err__false",
+        "from": "n_br_signin_err",
+        "fromPort": "false",
+        "to": "n_probe_auth"
       },
       {
         "id": "e_goto_login__next",
         "from": "n_goto_login",
-        "fromPort": "next",
-        "to": "n_probe_auth"
-      },
-      {
-        "id": "e_click_signin__next",
-        "from": "n_click_signin",
         "fromPort": "next",
         "to": "n_probe_auth"
       },
