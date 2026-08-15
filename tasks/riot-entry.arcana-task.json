@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T22:17:27.595Z",
+  "exportedAt": "2026-08-15T23:13:06.750Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.5",
+    "version": "0.1.6",
     "metadata": {
       "id": "riot-entry",
       "name": "Riftbound Product Registration",
@@ -30,7 +30,6 @@
       "accounts",
       "browser",
       "evaluate",
-      "captcha",
       "imap",
       "inventory"
     ],
@@ -580,28 +579,26 @@
         }
       },
       {
-        "id": "n_captcha",
-        "kind": "captcha.waitForSolved",
+        "id": "n_log_captcha",
+        "kind": "log",
         "position": {
           "x": 1280,
           "y": 0
         },
         "config": {
-          "captchaType": "hcaptcha",
-          "timeoutMs": 180000,
-          "intervalMs": 1500,
-          "into": "captchaToken"
+          "level": "warn",
+          "message": "Riot showed an interactive hCaptcha challenge for {{account.username}} - skipping this attempt."
         }
       },
       {
-        "id": "n_dwell_captcha",
-        "kind": "dwell",
+        "id": "n_fail_captcha",
+        "kind": "fail",
         "position": {
           "x": 1280,
           "y": 150
         },
         "config": {
-          "ms": 2000
+          "message": "Skipped: Riot showed an interactive hCaptcha challenge on the sign-in form."
         }
       },
       {
@@ -1385,7 +1382,7 @@
         "id": "e_br_auth_captcha__true",
         "from": "n_br_auth_captcha",
         "fromPort": "true",
-        "to": "n_captcha"
+        "to": "n_log_captcha"
       },
       {
         "id": "e_br_auth_captcha__false",
@@ -1478,16 +1475,10 @@
         "to": "n_probe_auth"
       },
       {
-        "id": "e_captcha__next",
-        "from": "n_captcha",
+        "id": "e_log_captcha__next",
+        "from": "n_log_captcha",
         "fromPort": "next",
-        "to": "n_dwell_captcha"
-      },
-      {
-        "id": "e_dwell_captcha__next",
-        "from": "n_dwell_captcha",
-        "fromPort": "next",
-        "to": "n_probe_auth"
+        "to": "n_fail_captcha"
       },
       {
         "id": "e_otp_wait__next",
