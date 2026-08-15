@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T23:13:06.750Z",
+  "exportedAt": "2026-08-15T23:22:25.356Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.6",
+    "version": "0.1.7",
     "metadata": {
       "id": "riot-entry",
       "name": "Riftbound Product Registration",
@@ -78,7 +78,7 @@
           "y": 450
         },
         "config": {
-          "message": "No saved riotgames.com account with a username for {{identity.email}} - generate the account first."
+          "message": "No saved riotgames.com account with a username for {{identity.email}} - generate the account first. (no retry)"
         }
       },
       {
@@ -508,7 +508,7 @@
           "y": 300
         },
         "config": {
-          "message": "Riot rejected the saved credentials for {{account.username}}"
+          "message": "Riot rejected the saved credentials for {{account.username}} (no retry)"
         }
       },
       {
@@ -598,7 +598,7 @@
           "y": 150
         },
         "config": {
-          "message": "Skipped: Riot showed an interactive hCaptcha challenge on the sign-in form."
+          "message": "Skipped: Riot showed an interactive hCaptcha challenge on the sign-in form. (no retry)"
         }
       },
       {
