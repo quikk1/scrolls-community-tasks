@@ -1,7 +1,7 @@
 {
   "format": "arcana-marketplace/v1",
   "repository": "quikk1/scrolls-community-tasks",
-  "updatedAt": "2026-08-03",
+  "updatedAt": "2026-08-15",
   "tasks": [
     {
       "id": "la28",
@@ -144,6 +144,41 @@
       "publishedAt": "2026-08-03",
       "minRole": "admin",
       "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAB2ElEQVR42u3dUY7DMAgE0Ln/2fZO6f9qpW1sBgaYqP/BT67SAKZ46q4f4MtPYZDQFNHxQiOXEil0dMmUQncaNhNm0PCYMImGwYR5NLFMGKwTYoTBNCFM2KBzY4QlOsdG2KNzZoRVOgdG2Kbz1ggLdV4ZQURH5KYnQDpP3JJIkBmT5nvfOZB4IiInPDpQi3TlCVCj5DE1VJBuqVwjeRUzBUi/jnQF1FSHFHww0CNwcYG664SvIgzoEbsoQGN0ApcTAERdRonR30Dib55Vmwj52yf5OVAJpPN7N/ymv4ESYi3MnNzcAjnbpzzrJg2kkHu/Auq4fdI2Efpun5xNxAWSKuDkAanVGqm/TolAglXAE6Du3y92SAYqAtKstRtIAEi2G4QUmIEMZCADGWgSkB/zBvKrhoEigZzucMIsHcgpVyftE4EmlH1cOHTpuQJoV/OC21/cQFUEtKgFz02crC7XRW3AbiQndtpvOYrgwyxcoBXHoXygjg40/0imD/X+D+Rj4UlAkwcLeDSFh5tcDzdJK06I3PQQyAOW1hl9v2oPeQsF8pjA4UYHi/WoUg6Qh93OYbpcoAdu84E0maLW5aH/uUC1TIy1+I9H6oASpBKC958fKQEdexUG+QF6yM4zErYzcgAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "riot-entry",
+      "name": "Riftbound Product Registration",
+      "description": "Riftbound product-registration entry: signs a saved riotgames.com account into the Riftbound XSSO client and enters it in the Riftbound T1 Signature Edition drawing. Drives the real registration page, so it handles the Riot sign-in hCaptcha, the email MFA code, the product selection and legal consent, and the opt-in confirmation, then writes the entry back to the account notes and logs it to Inventory. Accounts Riot already reports as opted in are recorded without a second submission, and the entry marker matches the requests-based riot-entry tool so the two can be mixed freely. Needs the Riot accounts saved in the Database (email, username, password) plus an email source for the MFA code, and a captcha solver configured on the profile for the Riot sign-in hCaptcha - it enters existing accounts, it does not create them.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Sete_",
+        "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
+      },
+      "downloadPath": "tasks/riot-entry.arcana-task.json",
+      "tags": [
+        "riot",
+        "riftbound",
+        "entry",
+        "drawing",
+        "raffle"
+      ],
+      "permissions": [
+        "accounts",
+        "browser",
+        "captcha",
+        "evaluate",
+        "imap",
+        "inventory"
+      ],
+      "requirements": [
+        "email",
+        "proxy"
+      ],
+      "identityMode": "none",
+      "category": "sweepstakes",
+      "status": "ready",
+      "publishedAt": "2026-08-15",
+      "minRole": "admin"
     }
   ]
 }

@@ -1,0 +1,1492 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-08-15T16:08:10.824Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "0.1.0",
+    "metadata": {
+      "id": "riot-entry",
+      "name": "Riftbound Product Registration",
+      "description": "Signs saved riotgames.com accounts into the Riftbound XSSO client and enters them in the Riftbound T1 Signature Edition product-registration drawing (campaign 31, item RB3864-00-00). Browser port of the requests-based riot-entry tool: it drives the real registration page, so it handles the login hCaptcha, email MFA, product + legal consent, and the opt-in confirmation, then writes the entry marker back to the account and logs it to Inventory. Accounts already opted in are recorded without a second submission.",
+      "tags": [
+        "riot",
+        "riftbound",
+        "entry",
+        "drawing",
+        "raffle"
+      ],
+      "inputs": []
+    },
+    "permissions": [
+      "accounts",
+      "browser",
+      "evaluate",
+      "captcha",
+      "imap",
+      "inventory"
+    ],
+    "variables": [],
+    "start": "n_start",
+    "nodes": [
+      {
+        "id": "n_start",
+        "kind": "noop",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "config": {}
+      },
+      {
+        "id": "n_pick",
+        "kind": "accounts.pick",
+        "position": {
+          "x": 0,
+          "y": 150
+        },
+        "config": {
+          "site": "riotgames.com",
+          "emailLike": "{{identity.email}}",
+          "into": "account"
+        }
+      },
+      {
+        "id": "n_br_creds",
+        "kind": "branch",
+        "position": {
+          "x": 0,
+          "y": 300
+        },
+        "config": {
+          "left": "{{account.username}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_fail_creds",
+        "kind": "fail",
+        "position": {
+          "x": 0,
+          "y": 450
+        },
+        "config": {
+          "message": "No saved riotgames.com account with a username for {{identity.email}} - generate the account first."
+        }
+      },
+      {
+        "id": "n_goto_reg",
+        "kind": "goto",
+        "position": {
+          "x": 0,
+          "y": 600
+        },
+        "config": {
+          "url": "https://playriftbound.com/en-us/preorder/registration/",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_probe_reg",
+        "kind": "evaluate",
+        "position": {
+          "x": 320,
+          "y": 0
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(pick('[data-testid=\"signin-cta\"]'))return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
+          "into": "regState"
+        }
+      },
+      {
+        "id": "n_br_reg_done",
+        "kind": "branch",
+        "position": {
+          "x": 320,
+          "y": 150
+        },
+        "config": {
+          "left": "{{regState}}",
+          "op": "==",
+          "right": "registered"
+        }
+      },
+      {
+        "id": "n_br_reg_active",
+        "kind": "branch",
+        "position": {
+          "x": 320,
+          "y": 300
+        },
+        "config": {
+          "left": "{{regState}}",
+          "op": "==",
+          "right": "active"
+        }
+      },
+      {
+        "id": "n_br_reg_unauth",
+        "kind": "branch",
+        "position": {
+          "x": 320,
+          "y": 450
+        },
+        "config": {
+          "left": "{{regState}}",
+          "op": "==",
+          "right": "unauth"
+        }
+      },
+      {
+        "id": "n_br_reg_err",
+        "kind": "branch",
+        "position": {
+          "x": 320,
+          "y": 600
+        },
+        "config": {
+          "left": "{{regState}}",
+          "op": "contains",
+          "right": "error:"
+        }
+      },
+      {
+        "id": "n_fail_reg",
+        "kind": "fail",
+        "position": {
+          "x": 320,
+          "y": 750
+        },
+        "config": {
+          "message": "Riftbound registration reported {{regState}}"
+        }
+      },
+      {
+        "id": "n_tick_reg",
+        "kind": "math.incVar",
+        "position": {
+          "x": 320,
+          "y": 900
+        },
+        "config": {
+          "name": "regTries",
+          "current": "{{regTries}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_reg_max",
+        "kind": "branch",
+        "position": {
+          "x": 320,
+          "y": 1050
+        },
+        "config": {
+          "left": "{{regTries}}",
+          "op": ">",
+          "right": 30
+        }
+      },
+      {
+        "id": "n_fail_reg_timeout",
+        "kind": "fail",
+        "position": {
+          "x": 320,
+          "y": 1200
+        },
+        "config": {
+          "message": "Riftbound registration blade never became ready"
+        }
+      },
+      {
+        "id": "n_dwell_reg",
+        "kind": "dwell",
+        "position": {
+          "x": 320,
+          "y": 1350
+        },
+        "config": {
+          "ms": 3000
+        }
+      },
+      {
+        "id": "n_tick_signin",
+        "kind": "math.incVar",
+        "position": {
+          "x": 640,
+          "y": 0
+        },
+        "config": {
+          "name": "signinTries",
+          "current": "{{signinTries}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_signin_max",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 150
+        },
+        "config": {
+          "left": "{{signinTries}}",
+          "op": ">",
+          "right": 2
+        }
+      },
+      {
+        "id": "n_goto_login",
+        "kind": "goto",
+        "position": {
+          "x": 640,
+          "y": 300
+        },
+        "config": {
+          "url": "https://xsso.playriftbound.com/login?uri=https%3A%2F%2Fplayriftbound.com%2Fen-us%2Fpreorder%2Fregistration%2F&product_id=riftbound&locale=en_US",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_click_signin",
+        "kind": "click",
+        "position": {
+          "x": 640,
+          "y": 450
+        },
+        "config": {
+          "selector": "[data-testid=\"signin-cta\"]",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_probe_auth",
+        "kind": "evaluate",
+        "position": {
+          "x": 640,
+          "y": 600
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<24;i++){\n  var host=location.hostname;\n  if(host.indexOf('playriftbound.com')!==-1&&host.indexOf('xsso.')===-1)return 'registration';\n  var err=pick('[data-testid=\"error-message\"], [data-testid=\"error-text\"]');\n  var msg=text(err);\n  if(msg)return 'error:'+msg.slice(0,160);\n  // A form that is still on screen is only actionable while it is EMPTY. Riot\n  // leaves both forms mounted with their values while the submit is in flight,\n  // so reporting 'mfa'/'login' on sight would re-submit the credentials and -\n  // worse - go wait for a second OTP email that Riot never sends.\n  var boxes=document.querySelectorAll('[data-testid=\"input-mfa\"] input, input[data-testid=\"input-mfa\"]');\n  if(boxes.length){\n    var typed=0;\n    for(var b=0;b<boxes.length;b++){if((boxes[b].value||'').length)typed++;}\n    return typed?'wait':'mfa';\n  }\n  var frames=document.querySelectorAll('iframe[src*=\"hcaptcha.com\"]');\n  for(var f=0;f<frames.length;f++){\n    if(visible(frames[f])&&/challenge/i.test(frames[f].title||''))return 'captcha';\n  }\n  var user=pick('input[data-testid=\"input-username\"], [data-testid=\"input-username\"] input, input[name=\"username\"]');\n  if(user)return (user.value||'').trim()==='{{account.username}}'?'wait':'login';\n  await sleep(500);\n}\nreturn 'wait';",
+          "into": "authState"
+        }
+      },
+      {
+        "id": "n_br_auth_reg",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 750
+        },
+        "config": {
+          "left": "{{authState}}",
+          "op": "==",
+          "right": "registration"
+        }
+      },
+      {
+        "id": "n_br_auth_login",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 900
+        },
+        "config": {
+          "left": "{{authState}}",
+          "op": "==",
+          "right": "login"
+        }
+      },
+      {
+        "id": "n_br_auth_mfa",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 1050
+        },
+        "config": {
+          "left": "{{authState}}",
+          "op": "==",
+          "right": "mfa"
+        }
+      },
+      {
+        "id": "n_br_auth_captcha",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 1200
+        },
+        "config": {
+          "left": "{{authState}}",
+          "op": "==",
+          "right": "captcha"
+        }
+      },
+      {
+        "id": "n_br_auth_err",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 1350
+        },
+        "config": {
+          "left": "{{authState}}",
+          "op": "contains",
+          "right": "error:"
+        }
+      },
+      {
+        "id": "n_fail_auth",
+        "kind": "fail",
+        "position": {
+          "x": 640,
+          "y": 1500
+        },
+        "config": {
+          "message": "Riot sign-in failed: {{authState}}"
+        }
+      },
+      {
+        "id": "n_tick_auth",
+        "kind": "math.incVar",
+        "position": {
+          "x": 640,
+          "y": 1650
+        },
+        "config": {
+          "name": "authTries",
+          "current": "{{authTries}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_auth_max",
+        "kind": "branch",
+        "position": {
+          "x": 640,
+          "y": 1800
+        },
+        "config": {
+          "left": "{{authTries}}",
+          "op": ">",
+          "right": 40
+        }
+      },
+      {
+        "id": "n_fail_auth_timeout",
+        "kind": "fail",
+        "position": {
+          "x": 640,
+          "y": 1950
+        },
+        "config": {
+          "message": "Riot sign-in never reached the registration page"
+        }
+      },
+      {
+        "id": "n_dwell_auth",
+        "kind": "dwell",
+        "position": {
+          "x": 640,
+          "y": 2100
+        },
+        "config": {
+          "ms": 3000
+        }
+      },
+      {
+        "id": "n_tick_login",
+        "kind": "math.incVar",
+        "position": {
+          "x": 960,
+          "y": 0
+        },
+        "config": {
+          "name": "loginTries",
+          "current": "{{loginTries}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_login_max",
+        "kind": "branch",
+        "position": {
+          "x": 960,
+          "y": 150
+        },
+        "config": {
+          "left": "{{loginTries}}",
+          "op": ">",
+          "right": 3
+        }
+      },
+      {
+        "id": "n_fail_login_retry",
+        "kind": "fail",
+        "position": {
+          "x": 960,
+          "y": 300
+        },
+        "config": {
+          "message": "Riot rejected the saved credentials for {{account.username}}"
+        }
+      },
+      {
+        "id": "n_fill_user",
+        "kind": "fill",
+        "position": {
+          "x": 960,
+          "y": 450
+        },
+        "config": {
+          "selector": "input[data-testid=\"input-username\"], [data-testid=\"input-username\"] input, input[name=\"username\"]:visible",
+          "value": "{{account.username}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_fill_pass",
+        "kind": "fill",
+        "position": {
+          "x": 960,
+          "y": 600
+        },
+        "config": {
+          "selector": "input[data-testid=\"input-password\"], [data-testid=\"input-password\"] input, input[type=\"password\"][name=\"password\"]:visible",
+          "value": "{{account.password}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_dwell_presubmit",
+        "kind": "dwell",
+        "position": {
+          "x": 960,
+          "y": 750
+        },
+        "config": {
+          "minMs": 900,
+          "maxMs": 2200
+        }
+      },
+      {
+        "id": "n_click_login",
+        "kind": "click",
+        "position": {
+          "x": 960,
+          "y": 900
+        },
+        "config": {
+          "selector": "[data-testid=\"btn-signin-submit\"], button[type=\"submit\"]:visible",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_dwell_postsubmit",
+        "kind": "dwell",
+        "position": {
+          "x": 960,
+          "y": 1050
+        },
+        "config": {
+          "ms": 2500
+        }
+      },
+      {
+        "id": "n_captcha",
+        "kind": "captcha.waitForSolved",
+        "position": {
+          "x": 1280,
+          "y": 0
+        },
+        "config": {
+          "captchaType": "hcaptcha",
+          "timeoutMs": 180000,
+          "intervalMs": 1500,
+          "into": "captchaToken"
+        }
+      },
+      {
+        "id": "n_dwell_captcha",
+        "kind": "dwell",
+        "position": {
+          "x": 1280,
+          "y": 150
+        },
+        "config": {
+          "ms": 2000
+        }
+      },
+      {
+        "id": "n_otp_wait",
+        "kind": "imap.waitForMessage",
+        "position": {
+          "x": 1280,
+          "y": 450
+        },
+        "config": {
+          "recipient": "{{account.email}}",
+          "fromMatch": "riotgames.com",
+          "codeOnly": true,
+          "lookbackMs": 120000,
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "riotOtp"
+        }
+      },
+      {
+        "id": "n_otp_focus",
+        "kind": "click",
+        "position": {
+          "x": 1280,
+          "y": 600
+        },
+        "config": {
+          "selector": "[data-testid=\"input-mfa\"] input, input[data-testid=\"input-mfa\"]",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_otp_type",
+        "kind": "typeText",
+        "position": {
+          "x": 1280,
+          "y": 750
+        },
+        "config": {
+          "text": "{{riotOtp}}",
+          "delayMs": 110,
+          "typos": false,
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_otp_dwell",
+        "kind": "dwell",
+        "position": {
+          "x": 1280,
+          "y": 900
+        },
+        "config": {
+          "ms": 1500
+        }
+      },
+      {
+        "id": "n_otp_btn",
+        "kind": "elementExists",
+        "position": {
+          "x": 1280,
+          "y": 1050
+        },
+        "config": {
+          "selector": "[data-testid=\"btn-mfa-submit\"]:not([disabled])",
+          "timeoutMs": 3000,
+          "into": "otpBtn"
+        }
+      },
+      {
+        "id": "n_br_otp_btn",
+        "kind": "branch",
+        "position": {
+          "x": 1280,
+          "y": 1200
+        },
+        "config": {
+          "left": "{{otpBtn}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_otp_submit",
+        "kind": "click",
+        "position": {
+          "x": 1280,
+          "y": 1350
+        },
+        "config": {
+          "selector": "[data-testid=\"btn-mfa-submit\"]",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_otp_post",
+        "kind": "dwell",
+        "position": {
+          "x": 1280,
+          "y": 1500
+        },
+        "config": {
+          "ms": 2500
+        }
+      },
+      {
+        "id": "n_click_item",
+        "kind": "click",
+        "position": {
+          "x": 1600,
+          "y": 0
+        },
+        "config": {
+          "selector": "label[for=\"RB3864-00-00\"], [data-testid=\"product-selection-card\"] label",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_dwell_item",
+        "kind": "dwell",
+        "position": {
+          "x": 1600,
+          "y": 150
+        },
+        "config": {
+          "minMs": 500,
+          "maxMs": 1400
+        }
+      },
+      {
+        "id": "n_click_legal",
+        "kind": "click",
+        "position": {
+          "x": 1600,
+          "y": 300
+        },
+        "config": {
+          "selector": "[data-testid=\"legal-agreement-checkbox\"], label[data-testid=\"legal-agreement-label\"]",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_probe_ready",
+        "kind": "evaluate",
+        "position": {
+          "x": 1600,
+          "y": 450
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<15;i++){\n  var card=document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]');\n  var box=document.querySelector('[data-testid=\"legal-agreement-checkbox\"]');\n  var checked=!box||box.checked===true||box.getAttribute('aria-checked')==='true'||box.getAttribute('data-state')==='checked';\n  var btn=document.querySelector('[data-testid=\"register-cta\"]');\n  var enabled=!!btn&&!btn.disabled&&!btn.hasAttribute('disabled')&&btn.getAttribute('aria-disabled')!=='true';\n  if(card&&checked&&enabled)return '1';\n  await sleep(400);\n}\nreturn '0';",
+          "into": "regReady"
+        }
+      },
+      {
+        "id": "n_br_ready",
+        "kind": "branch",
+        "position": {
+          "x": 1600,
+          "y": 600
+        },
+        "config": {
+          "left": "{{regReady}}",
+          "op": "==",
+          "right": "1"
+        }
+      },
+      {
+        "id": "n_tick_fix",
+        "kind": "math.incVar",
+        "position": {
+          "x": 1600,
+          "y": 750
+        },
+        "config": {
+          "name": "fixTries",
+          "current": "{{fixTries}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_fix_max",
+        "kind": "branch",
+        "position": {
+          "x": 1600,
+          "y": 900
+        },
+        "config": {
+          "left": "{{fixTries}}",
+          "op": ">",
+          "right": 2
+        }
+      },
+      {
+        "id": "n_fail_ready",
+        "kind": "fail",
+        "position": {
+          "x": 1600,
+          "y": 1050
+        },
+        "config": {
+          "message": "Could not arm the Riftbound register button (product or legal consent did not stick)"
+        }
+      },
+      {
+        "id": "n_click_register",
+        "kind": "click",
+        "position": {
+          "x": 1600,
+          "y": 1200
+        },
+        "config": {
+          "selector": "[data-testid=\"register-cta\"]",
+          "timeoutMs": 120000
+        }
+      },
+      {
+        "id": "n_dwell_register",
+        "kind": "dwell",
+        "position": {
+          "x": 1600,
+          "y": 1350
+        },
+        "config": {
+          "ms": 3000
+        }
+      },
+      {
+        "id": "n_probe_result",
+        "kind": "evaluate",
+        "position": {
+          "x": 1920,
+          "y": 0
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(pick('[data-testid=\"signin-cta\"]'))return 'unauth';\n  await sleep(500);\n}\nreturn 'wait';",
+          "into": "entryResult"
+        }
+      },
+      {
+        "id": "n_br_res_done",
+        "kind": "branch",
+        "position": {
+          "x": 1920,
+          "y": 150
+        },
+        "config": {
+          "left": "{{entryResult}}",
+          "op": "==",
+          "right": "registered"
+        }
+      },
+      {
+        "id": "n_br_res_err",
+        "kind": "branch",
+        "position": {
+          "x": 1920,
+          "y": 300
+        },
+        "config": {
+          "left": "{{entryResult}}",
+          "op": "contains",
+          "right": "error:"
+        }
+      },
+      {
+        "id": "n_fail_entry",
+        "kind": "fail",
+        "position": {
+          "x": 1920,
+          "y": 450
+        },
+        "config": {
+          "message": "Riftbound entry failed: {{entryResult}}"
+        }
+      },
+      {
+        "id": "n_tick_res",
+        "kind": "math.incVar",
+        "position": {
+          "x": 1920,
+          "y": 600
+        },
+        "config": {
+          "name": "resTries",
+          "current": "{{resTries}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_res_max",
+        "kind": "branch",
+        "position": {
+          "x": 1920,
+          "y": 750
+        },
+        "config": {
+          "left": "{{resTries}}",
+          "op": ">",
+          "right": 40
+        }
+      },
+      {
+        "id": "n_fail_res_timeout",
+        "kind": "fail",
+        "position": {
+          "x": 1920,
+          "y": 900
+        },
+        "config": {
+          "message": "Riftbound never confirmed the entry (captcha or opt-in still pending)"
+        }
+      },
+      {
+        "id": "n_dwell_res",
+        "kind": "dwell",
+        "position": {
+          "x": 1920,
+          "y": 1050
+        },
+        "config": {
+          "ms": 3000
+        }
+      },
+      {
+        "id": "n_notes_has",
+        "kind": "string.contains",
+        "position": {
+          "x": 2240,
+          "y": 0
+        },
+        "config": {
+          "string": "{{account.notes}}",
+          "substring": "riot entry campaign 31: OPTED_IN | items RB3864-00-00",
+          "from": 0,
+          "into": "notesHasMarker"
+        }
+      },
+      {
+        "id": "n_br_notes_has",
+        "kind": "branch",
+        "position": {
+          "x": 2240,
+          "y": 150
+        },
+        "config": {
+          "left": "{{notesHasMarker}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_notes_keep",
+        "kind": "setVar",
+        "position": {
+          "x": 2240,
+          "y": 300
+        },
+        "config": {
+          "name": "entryNotes",
+          "value": "{{account.notes}}"
+        }
+      },
+      {
+        "id": "n_br_notes_empty",
+        "kind": "branch",
+        "position": {
+          "x": 2240,
+          "y": 450
+        },
+        "config": {
+          "left": "{{account.notes}}",
+          "op": "falsy"
+        }
+      },
+      {
+        "id": "n_notes_new",
+        "kind": "setVar",
+        "position": {
+          "x": 2240,
+          "y": 600
+        },
+        "config": {
+          "name": "entryNotes",
+          "value": "riot entry campaign 31: OPTED_IN | items RB3864-00-00"
+        }
+      },
+      {
+        "id": "n_notes_append",
+        "kind": "setVar",
+        "position": {
+          "x": 2240,
+          "y": 750
+        },
+        "config": {
+          "name": "entryNotes",
+          "value": "{{account.notes}} | riot entry campaign 31: OPTED_IN | items RB3864-00-00"
+        }
+      },
+      {
+        "id": "n_save",
+        "kind": "accounts.save",
+        "position": {
+          "x": 2240,
+          "y": 900
+        },
+        "config": {
+          "id": "{{account.id}}",
+          "email": "{{account.email}}",
+          "password": "{{account.password}}",
+          "username": "{{account.username}}",
+          "site": "riotgames.com",
+          "label": "{{account.label}}",
+          "status": "{{account.status}}",
+          "notes": "{{entryNotes}}"
+        }
+      },
+      {
+        "id": "n_inventory",
+        "kind": "inventory.record",
+        "position": {
+          "x": 2240,
+          "y": 1050
+        },
+        "config": {
+          "site": "playriftbound.com",
+          "productLabel": "Riftbound T1 Signature Edition",
+          "status": "entered",
+          "productUrl": "https://playriftbound.com/en-us/preorder/registration/",
+          "notes": "campaign 31 | RB3864-00-00 | {{account.username}}"
+        }
+      },
+      {
+        "id": "n_result",
+        "kind": "setResult",
+        "position": {
+          "x": 2240,
+          "y": 1200
+        },
+        "config": {
+          "value": "{\"status\":\"OPTED_IN\",\"campaign\":\"31\",\"items\":[\"RB3864-00-00\"],\"username\":\"{{account.username}}\",\"email\":\"{{account.email}}\"}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_start__next",
+        "from": "n_start",
+        "fromPort": "next",
+        "to": "n_pick"
+      },
+      {
+        "id": "e_pick__next",
+        "from": "n_pick",
+        "fromPort": "next",
+        "to": "n_br_creds"
+      },
+      {
+        "id": "e_br_creds__true",
+        "from": "n_br_creds",
+        "fromPort": "true",
+        "to": "n_goto_reg"
+      },
+      {
+        "id": "e_br_creds__false",
+        "from": "n_br_creds",
+        "fromPort": "false",
+        "to": "n_fail_creds"
+      },
+      {
+        "id": "e_goto_reg__next",
+        "from": "n_goto_reg",
+        "fromPort": "next",
+        "to": "n_probe_reg"
+      },
+      {
+        "id": "e_probe_reg__next",
+        "from": "n_probe_reg",
+        "fromPort": "next",
+        "to": "n_br_reg_done"
+      },
+      {
+        "id": "e_br_reg_done__true",
+        "from": "n_br_reg_done",
+        "fromPort": "true",
+        "to": "n_notes_has"
+      },
+      {
+        "id": "e_br_reg_done__false",
+        "from": "n_br_reg_done",
+        "fromPort": "false",
+        "to": "n_br_reg_active"
+      },
+      {
+        "id": "e_br_reg_active__true",
+        "from": "n_br_reg_active",
+        "fromPort": "true",
+        "to": "n_click_item"
+      },
+      {
+        "id": "e_br_reg_active__false",
+        "from": "n_br_reg_active",
+        "fromPort": "false",
+        "to": "n_br_reg_unauth"
+      },
+      {
+        "id": "e_br_reg_unauth__true",
+        "from": "n_br_reg_unauth",
+        "fromPort": "true",
+        "to": "n_tick_signin"
+      },
+      {
+        "id": "e_br_reg_unauth__false",
+        "from": "n_br_reg_unauth",
+        "fromPort": "false",
+        "to": "n_br_reg_err"
+      },
+      {
+        "id": "e_br_reg_err__true",
+        "from": "n_br_reg_err",
+        "fromPort": "true",
+        "to": "n_fail_reg"
+      },
+      {
+        "id": "e_br_reg_err__false",
+        "from": "n_br_reg_err",
+        "fromPort": "false",
+        "to": "n_tick_reg"
+      },
+      {
+        "id": "e_tick_reg__next",
+        "from": "n_tick_reg",
+        "fromPort": "next",
+        "to": "n_br_reg_max"
+      },
+      {
+        "id": "e_br_reg_max__true",
+        "from": "n_br_reg_max",
+        "fromPort": "true",
+        "to": "n_fail_reg_timeout"
+      },
+      {
+        "id": "e_br_reg_max__false",
+        "from": "n_br_reg_max",
+        "fromPort": "false",
+        "to": "n_dwell_reg"
+      },
+      {
+        "id": "e_dwell_reg__next",
+        "from": "n_dwell_reg",
+        "fromPort": "next",
+        "to": "n_probe_reg"
+      },
+      {
+        "id": "e_tick_signin__next",
+        "from": "n_tick_signin",
+        "fromPort": "next",
+        "to": "n_br_signin_max"
+      },
+      {
+        "id": "e_br_signin_max__true",
+        "from": "n_br_signin_max",
+        "fromPort": "true",
+        "to": "n_goto_login"
+      },
+      {
+        "id": "e_br_signin_max__false",
+        "from": "n_br_signin_max",
+        "fromPort": "false",
+        "to": "n_click_signin"
+      },
+      {
+        "id": "e_goto_login__next",
+        "from": "n_goto_login",
+        "fromPort": "next",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_click_signin__next",
+        "from": "n_click_signin",
+        "fromPort": "next",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_probe_auth__next",
+        "from": "n_probe_auth",
+        "fromPort": "next",
+        "to": "n_br_auth_reg"
+      },
+      {
+        "id": "e_br_auth_reg__true",
+        "from": "n_br_auth_reg",
+        "fromPort": "true",
+        "to": "n_probe_reg"
+      },
+      {
+        "id": "e_br_auth_reg__false",
+        "from": "n_br_auth_reg",
+        "fromPort": "false",
+        "to": "n_br_auth_login"
+      },
+      {
+        "id": "e_br_auth_login__true",
+        "from": "n_br_auth_login",
+        "fromPort": "true",
+        "to": "n_tick_login"
+      },
+      {
+        "id": "e_br_auth_login__false",
+        "from": "n_br_auth_login",
+        "fromPort": "false",
+        "to": "n_br_auth_mfa"
+      },
+      {
+        "id": "e_br_auth_mfa__true",
+        "from": "n_br_auth_mfa",
+        "fromPort": "true",
+        "to": "n_otp_wait"
+      },
+      {
+        "id": "e_br_auth_mfa__false",
+        "from": "n_br_auth_mfa",
+        "fromPort": "false",
+        "to": "n_br_auth_captcha"
+      },
+      {
+        "id": "e_br_auth_captcha__true",
+        "from": "n_br_auth_captcha",
+        "fromPort": "true",
+        "to": "n_captcha"
+      },
+      {
+        "id": "e_br_auth_captcha__false",
+        "from": "n_br_auth_captcha",
+        "fromPort": "false",
+        "to": "n_br_auth_err"
+      },
+      {
+        "id": "e_br_auth_err__true",
+        "from": "n_br_auth_err",
+        "fromPort": "true",
+        "to": "n_fail_auth"
+      },
+      {
+        "id": "e_br_auth_err__false",
+        "from": "n_br_auth_err",
+        "fromPort": "false",
+        "to": "n_tick_auth"
+      },
+      {
+        "id": "e_tick_auth__next",
+        "from": "n_tick_auth",
+        "fromPort": "next",
+        "to": "n_br_auth_max"
+      },
+      {
+        "id": "e_br_auth_max__true",
+        "from": "n_br_auth_max",
+        "fromPort": "true",
+        "to": "n_fail_auth_timeout"
+      },
+      {
+        "id": "e_br_auth_max__false",
+        "from": "n_br_auth_max",
+        "fromPort": "false",
+        "to": "n_dwell_auth"
+      },
+      {
+        "id": "e_dwell_auth__next",
+        "from": "n_dwell_auth",
+        "fromPort": "next",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_tick_login__next",
+        "from": "n_tick_login",
+        "fromPort": "next",
+        "to": "n_br_login_max"
+      },
+      {
+        "id": "e_br_login_max__true",
+        "from": "n_br_login_max",
+        "fromPort": "true",
+        "to": "n_fail_login_retry"
+      },
+      {
+        "id": "e_br_login_max__false",
+        "from": "n_br_login_max",
+        "fromPort": "false",
+        "to": "n_fill_user"
+      },
+      {
+        "id": "e_fill_user__next",
+        "from": "n_fill_user",
+        "fromPort": "next",
+        "to": "n_fill_pass"
+      },
+      {
+        "id": "e_fill_pass__next",
+        "from": "n_fill_pass",
+        "fromPort": "next",
+        "to": "n_dwell_presubmit"
+      },
+      {
+        "id": "e_dwell_presubmit__next",
+        "from": "n_dwell_presubmit",
+        "fromPort": "next",
+        "to": "n_click_login"
+      },
+      {
+        "id": "e_click_login__next",
+        "from": "n_click_login",
+        "fromPort": "next",
+        "to": "n_dwell_postsubmit"
+      },
+      {
+        "id": "e_dwell_postsubmit__next",
+        "from": "n_dwell_postsubmit",
+        "fromPort": "next",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_captcha__next",
+        "from": "n_captcha",
+        "fromPort": "next",
+        "to": "n_dwell_captcha"
+      },
+      {
+        "id": "e_dwell_captcha__next",
+        "from": "n_dwell_captcha",
+        "fromPort": "next",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_otp_wait__next",
+        "from": "n_otp_wait",
+        "fromPort": "next",
+        "to": "n_otp_focus"
+      },
+      {
+        "id": "e_otp_focus__next",
+        "from": "n_otp_focus",
+        "fromPort": "next",
+        "to": "n_otp_type"
+      },
+      {
+        "id": "e_otp_type__next",
+        "from": "n_otp_type",
+        "fromPort": "next",
+        "to": "n_otp_dwell"
+      },
+      {
+        "id": "e_otp_dwell__next",
+        "from": "n_otp_dwell",
+        "fromPort": "next",
+        "to": "n_otp_btn"
+      },
+      {
+        "id": "e_otp_btn__next",
+        "from": "n_otp_btn",
+        "fromPort": "next",
+        "to": "n_br_otp_btn"
+      },
+      {
+        "id": "e_br_otp_btn__true",
+        "from": "n_br_otp_btn",
+        "fromPort": "true",
+        "to": "n_otp_submit"
+      },
+      {
+        "id": "e_br_otp_btn__false",
+        "from": "n_br_otp_btn",
+        "fromPort": "false",
+        "to": "n_otp_post"
+      },
+      {
+        "id": "e_otp_submit__next",
+        "from": "n_otp_submit",
+        "fromPort": "next",
+        "to": "n_otp_post"
+      },
+      {
+        "id": "e_otp_post__next",
+        "from": "n_otp_post",
+        "fromPort": "next",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_click_item__next",
+        "from": "n_click_item",
+        "fromPort": "next",
+        "to": "n_dwell_item"
+      },
+      {
+        "id": "e_dwell_item__next",
+        "from": "n_dwell_item",
+        "fromPort": "next",
+        "to": "n_click_legal"
+      },
+      {
+        "id": "e_click_legal__next",
+        "from": "n_click_legal",
+        "fromPort": "next",
+        "to": "n_probe_ready"
+      },
+      {
+        "id": "e_probe_ready__next",
+        "from": "n_probe_ready",
+        "fromPort": "next",
+        "to": "n_br_ready"
+      },
+      {
+        "id": "e_br_ready__true",
+        "from": "n_br_ready",
+        "fromPort": "true",
+        "to": "n_click_register"
+      },
+      {
+        "id": "e_br_ready__false",
+        "from": "n_br_ready",
+        "fromPort": "false",
+        "to": "n_tick_fix"
+      },
+      {
+        "id": "e_tick_fix__next",
+        "from": "n_tick_fix",
+        "fromPort": "next",
+        "to": "n_br_fix_max"
+      },
+      {
+        "id": "e_br_fix_max__true",
+        "from": "n_br_fix_max",
+        "fromPort": "true",
+        "to": "n_fail_ready"
+      },
+      {
+        "id": "e_br_fix_max__false",
+        "from": "n_br_fix_max",
+        "fromPort": "false",
+        "to": "n_click_item"
+      },
+      {
+        "id": "e_click_register__next",
+        "from": "n_click_register",
+        "fromPort": "next",
+        "to": "n_dwell_register"
+      },
+      {
+        "id": "e_dwell_register__next",
+        "from": "n_dwell_register",
+        "fromPort": "next",
+        "to": "n_probe_result"
+      },
+      {
+        "id": "e_probe_result__next",
+        "from": "n_probe_result",
+        "fromPort": "next",
+        "to": "n_br_res_done"
+      },
+      {
+        "id": "e_br_res_done__true",
+        "from": "n_br_res_done",
+        "fromPort": "true",
+        "to": "n_notes_has"
+      },
+      {
+        "id": "e_br_res_done__false",
+        "from": "n_br_res_done",
+        "fromPort": "false",
+        "to": "n_br_res_err"
+      },
+      {
+        "id": "e_br_res_err__true",
+        "from": "n_br_res_err",
+        "fromPort": "true",
+        "to": "n_fail_entry"
+      },
+      {
+        "id": "e_br_res_err__false",
+        "from": "n_br_res_err",
+        "fromPort": "false",
+        "to": "n_tick_res"
+      },
+      {
+        "id": "e_tick_res__next",
+        "from": "n_tick_res",
+        "fromPort": "next",
+        "to": "n_br_res_max"
+      },
+      {
+        "id": "e_br_res_max__true",
+        "from": "n_br_res_max",
+        "fromPort": "true",
+        "to": "n_fail_res_timeout"
+      },
+      {
+        "id": "e_br_res_max__false",
+        "from": "n_br_res_max",
+        "fromPort": "false",
+        "to": "n_dwell_res"
+      },
+      {
+        "id": "e_dwell_res__next",
+        "from": "n_dwell_res",
+        "fromPort": "next",
+        "to": "n_probe_result"
+      },
+      {
+        "id": "e_notes_has__next",
+        "from": "n_notes_has",
+        "fromPort": "next",
+        "to": "n_br_notes_has"
+      },
+      {
+        "id": "e_br_notes_has__true",
+        "from": "n_br_notes_has",
+        "fromPort": "true",
+        "to": "n_notes_keep"
+      },
+      {
+        "id": "e_br_notes_has__false",
+        "from": "n_br_notes_has",
+        "fromPort": "false",
+        "to": "n_br_notes_empty"
+      },
+      {
+        "id": "e_br_notes_empty__true",
+        "from": "n_br_notes_empty",
+        "fromPort": "true",
+        "to": "n_notes_new"
+      },
+      {
+        "id": "e_br_notes_empty__false",
+        "from": "n_br_notes_empty",
+        "fromPort": "false",
+        "to": "n_notes_append"
+      },
+      {
+        "id": "e_notes_keep__next",
+        "from": "n_notes_keep",
+        "fromPort": "next",
+        "to": "n_save"
+      },
+      {
+        "id": "e_notes_new__next",
+        "from": "n_notes_new",
+        "fromPort": "next",
+        "to": "n_save"
+      },
+      {
+        "id": "e_notes_append__next",
+        "from": "n_notes_append",
+        "fromPort": "next",
+        "to": "n_save"
+      },
+      {
+        "id": "e_save__next",
+        "from": "n_save",
+        "fromPort": "next",
+        "to": "n_inventory"
+      },
+      {
+        "id": "e_inventory__next",
+        "from": "n_inventory",
+        "fromPort": "next",
+        "to": "n_result"
+      }
+    ]
+  }
+}
