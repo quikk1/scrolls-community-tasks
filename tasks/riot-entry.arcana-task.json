@@ -1,12 +1,12 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T23:27:25.249Z",
+  "exportedAt": "2026-08-15T23:37:47.951Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.8",
+    "version": "0.1.9",
     "metadata": {
       "id": "riot-entry",
-      "name": "Riftbound Product Registration",
+      "name": "Riot Entry - Riftbound (Browser)",
       "description": "Signs saved riotgames.com accounts into the Riftbound XSSO client and enters them in the Riftbound T1 Signature Edition product-registration drawing (campaign 31, item RB3864-00-00). Browser port of the requests-based riot-entry tool: it drives the real registration page, so it handles the login hCaptcha, email MFA, product + legal consent, and the opt-in confirmation, then writes the entry marker back to the account and logs it to Inventory. Accounts already opted in are recorded without a second submission.",
       "tags": [
         "riot",
