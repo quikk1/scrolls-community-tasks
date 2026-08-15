@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-15T16:08:10.824Z",
+  "exportedAt": "2026-08-15T17:49:21.022Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.0",
+    "version": "0.1.1",
     "metadata": {
       "id": "riot-entry",
       "name": "Riftbound Product Registration",
@@ -15,7 +15,16 @@
         "drawing",
         "raffle"
       ],
-      "inputs": []
+      "inputs": [
+        {
+          "id": "saveFolder",
+          "label": "Save folder (optional)",
+          "type": "string",
+          "defaultValue": "Riftbound T1 Signature Edition",
+          "placeholder": "Riftbound T1 Signature Edition",
+          "hint": "Names this run's Inventory rows, the same as the native riot-entry tool's --event-name. Entered accounts keep whichever Database folder they are already in."
+        }
+      ]
     },
     "permissions": [
       "accounts",
@@ -938,15 +947,51 @@
         }
       },
       {
-        "id": "n_inventory",
-        "kind": "inventory.record",
+        "id": "n_folder_has",
+        "kind": "branch",
         "position": {
           "x": 2240,
           "y": 1050
         },
         "config": {
+          "left": "{{inputs.saveFolder}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_folder_use",
+        "kind": "setVar",
+        "position": {
+          "x": 2240,
+          "y": 1200
+        },
+        "config": {
+          "name": "entryFolder",
+          "value": "{{inputs.saveFolder}}"
+        }
+      },
+      {
+        "id": "n_folder_default",
+        "kind": "setVar",
+        "position": {
+          "x": 2240,
+          "y": 1350
+        },
+        "config": {
+          "name": "entryFolder",
+          "value": "Riftbound T1 Signature Edition"
+        }
+      },
+      {
+        "id": "n_inventory",
+        "kind": "inventory.record",
+        "position": {
+          "x": 2240,
+          "y": 1500
+        },
+        "config": {
           "site": "playriftbound.com",
-          "productLabel": "Riftbound T1 Signature Edition",
+          "productLabel": "{{entryFolder}}",
           "status": "entered",
           "productUrl": "https://playriftbound.com/en-us/preorder/registration/",
           "notes": "campaign 31 | RB3864-00-00 | {{account.username}}"
@@ -957,7 +1002,7 @@
         "kind": "setResult",
         "position": {
           "x": 2240,
-          "y": 1200
+          "y": 1650
         },
         "config": {
           "value": "{\"status\":\"OPTED_IN\",\"campaign\":\"31\",\"items\":[\"RB3864-00-00\"],\"username\":\"{{account.username}}\",\"email\":\"{{account.email}}\"}"
@@ -1478,6 +1523,30 @@
       {
         "id": "e_save__next",
         "from": "n_save",
+        "fromPort": "next",
+        "to": "n_folder_has"
+      },
+      {
+        "id": "e_folder_has__true",
+        "from": "n_folder_has",
+        "fromPort": "true",
+        "to": "n_folder_use"
+      },
+      {
+        "id": "e_folder_has__false",
+        "from": "n_folder_has",
+        "fromPort": "false",
+        "to": "n_folder_default"
+      },
+      {
+        "id": "e_folder_use__next",
+        "from": "n_folder_use",
+        "fromPort": "next",
+        "to": "n_inventory"
+      },
+      {
+        "id": "e_folder_default__next",
+        "from": "n_folder_default",
         "fromPort": "next",
         "to": "n_inventory"
       },
