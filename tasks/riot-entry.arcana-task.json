@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-15T23:37:47.951Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.1.9",
+    "version": "0.2.0",
     "metadata": {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
@@ -36,6 +36,7 @@
     "permissions": [
       "accounts",
       "browser",
+      "captcha",
       "evaluate",
       "imap",
       "inventory"
@@ -667,18 +668,52 @@
         },
         "config": {
           "level": "warn",
-          "message": "Riot showed an interactive hCaptcha challenge for {{account.username}} - skipping this attempt."
+          "message": "Riot showed an interactive hCaptcha challenge for {{account.username}} - solving it in-page with Scrolls Solver."
+        }
+      },
+      {
+        "id": "n_try_solve",
+        "kind": "tryCatch",
+        "position": {
+          "x": 1280,
+          "y": 130
+        },
+        "config": {}
+      },
+      {
+        "id": "n_solve_vision",
+        "kind": "captcha.solveVision",
+        "position": {
+          "x": 1280,
+          "y": 230
+        },
+        "config": {
+          "timeoutMs": 180000,
+          "maxRounds": 8,
+          "into": "captchaToken"
+        }
+      },
+      {
+        "id": "n_br_solve_err",
+        "kind": "branch",
+        "position": {
+          "x": 1280,
+          "y": 330
+        },
+        "config": {
+          "left": "{{WAS_ERROR}}",
+          "op": "truthy"
         }
       },
       {
         "id": "n_fail_captcha",
         "kind": "fail",
         "position": {
-          "x": 1280,
-          "y": 150
+          "x": 1460,
+          "y": 330
         },
         "config": {
-          "message": "Skipped: Riot showed an interactive hCaptcha challenge on the sign-in form. (no retry)"
+          "message": "Scrolls Solver could not clear Riot's interactive hCaptcha for {{account.username}}. (no retry)"
         }
       },
       {
@@ -1600,7 +1635,31 @@
         "id": "e_log_captcha__next",
         "from": "n_log_captcha",
         "fromPort": "next",
+        "to": "n_try_solve"
+      },
+      {
+        "id": "e_try_solve__loop",
+        "from": "n_try_solve",
+        "fromPort": "loop",
+        "to": "n_solve_vision"
+      },
+      {
+        "id": "e_try_solve__exit",
+        "from": "n_try_solve",
+        "fromPort": "exit",
+        "to": "n_br_solve_err"
+      },
+      {
+        "id": "e_br_solve_err__true",
+        "from": "n_br_solve_err",
+        "fromPort": "true",
         "to": "n_fail_captcha"
+      },
+      {
+        "id": "e_br_solve_err__false",
+        "from": "n_br_solve_err",
+        "fromPort": "false",
+        "to": "n_probe_auth"
       },
       {
         "id": "e_otp_wait__next",
