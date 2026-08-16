@@ -1262,6 +1262,17 @@
         "config": {
           "value": "{\"status\":\"{{entryStatus}}\",\"campaign\":\"31\",\"items\":[\"RB3864-00-00\"],\"username\":\"{{account.username}}\",\"email\":\"{{account.email}}\"}"
         }
+      },
+      {
+        "id": "n_dwell_prefill",
+        "kind": "dwell",
+        "position": {
+          "x": 960,
+          "y": 360
+        },
+        "config": {
+          "ms": 15000
+        }
       }
     ],
     "edges": [
@@ -1599,7 +1610,7 @@
         "id": "e_br_login_max__false",
         "from": "n_br_login_max",
         "fromPort": "false",
-        "to": "n_fill_user"
+        "to": "n_dwell_prefill"
       },
       {
         "id": "e_fill_user__next",
@@ -1960,6 +1971,12 @@
         "from": "n_inventory",
         "fromPort": "next",
         "to": "n_result"
+      },
+      {
+        "id": "e_dwell_prefill__next",
+        "from": "n_dwell_prefill",
+        "fromPort": "next",
+        "to": "n_fill_user"
       }
     ]
   }
