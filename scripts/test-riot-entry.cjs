@@ -13,16 +13,16 @@ const ok = (condition, message) => {
   console.log(`PASS  ${message}`);
 };
 
-ok(graph.version === "0.2.9" && entry?.version === graph.version, "manifest and graph publish 0.2.9");
+ok(graph.version === "0.2.10" && entry?.version === graph.version, "manifest and graph publish 0.2.10");
 ok(entry.emailMode === "account-list" && entry.accountSource?.site === "riotgames.com", "manifest enables eligible saved-account selection");
-ok(entry.accountSource?.manualCredentials === true, "manifest enables transient username:password input");
+ok(entry.accountSource?.manualCredentials !== true, "manual username:password input stays on the request module");
 ok(entry.permissions.includes("webhook") && graph.permissions.includes("webhook"), "webhook permission is declared");
 ok(node("n_consent").config.script.includes("onetrust-accept-btn-handler") && node("n_consent").config.script.includes("deny non-essential"), "cookie handler covers Riot and OneTrust controls");
 for (const id of ["n_probe_reg", "n_probe_auth", "n_probe_result"]) {
   ok(node(id).config.script.includes("rotate proxy immediately"), `${id} rotates immediately on Riot's block page`);
 }
 ok(node("n_probe_auth").config.script.includes("The CAPTCHA selection was invalid") && node("n_probe_auth").config.script.includes("(no retry)"), "invalid CAPTCHA fails immediately without a stale retry");
-ok(node("n_probe_auth").config.script.includes("Your username or password may be incorrect") && node("n_probe_auth").config.script.includes("test(pageText)") && node("n_probe_auth").config.script.includes("rotate proxy immediately"), "proxy-reputation credential page message rotates immediately");
+ok(!node("n_probe_auth").config.script.includes("Your username or password may be incorrect"), "request-only proxy-reputation message is absent from browser entry");
 ok(node("n_result_skip").config.value.suppressSuccessWebhook === true, "local already-entered skip suppresses generic success webhook");
 ok(node("n_result").config.value.suppressSuccessWebhook === true, "terminal result suppresses duplicate generic success webhook");
 ok(node("n_webhook_success").config.data.proxy === "{{proxy.label}}", "new-entry webhook includes the concrete proxy label");
