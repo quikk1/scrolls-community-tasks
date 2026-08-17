@@ -13,9 +13,9 @@ const ok = (condition, message) => {
   console.log(`PASS  ${message}`);
 };
 
-ok(graph.version === "0.2.10" && entry?.version === graph.version, "manifest and graph publish 0.2.10");
+ok(graph.version === "0.2.11" && entry?.version === graph.version, "manifest and graph publish 0.2.11");
 ok(entry.emailMode === "account-list" && entry.accountSource?.site === "riotgames.com", "manifest enables eligible saved-account selection");
-ok(entry.accountSource?.manualCredentials !== true, "manual username:password input stays on the request module");
+ok(entry.accountSource?.manualCredentials === true, "browser entry exposes transient username:password input");
 ok(entry.permissions.includes("webhook") && graph.permissions.includes("webhook"), "webhook permission is declared");
 ok(node("n_consent").config.script.includes("onetrust-accept-btn-handler") && node("n_consent").config.script.includes("deny non-essential"), "cookie handler covers Riot and OneTrust controls");
 for (const id of ["n_probe_reg", "n_probe_auth", "n_probe_result"]) {
