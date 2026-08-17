@@ -148,8 +148,8 @@
     {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
-      "description": "Signs eligible saved riotgames.com accounts into the Riftbound XSSO client and enters them in the Riftbound T1 Signature Edition product-registration drawing (campaign 31, item RB3864-00-00). The browser flow clears cookie prompts before sign-in, rotates immediately when Riot blocks a proxy, fails fast on an invalid CAPTCHA selection, handles email MFA, product + legal consent, and confirmation, then writes the shared entry marker to the account and Inventory. Only a newly submitted entry emits a success webhook, including the exact proxy used; already-entered accounts are recorded without a duplicate success notification.",
-      "version": "0.2.10",
+      "description": "Signs eligible saved or manually supplied riotgames.com accounts into the Riftbound XSSO client and enters them in the Riftbound T1 Signature Edition product-registration drawing (campaign 31, item RB3864-00-00). Users can select all eligible saved accounts, choose an email list, or paste transient username:password credentials (optionally username:password:email for MFA). The browser flow clears cookie prompts before sign-in, rotates immediately when Riot blocks a proxy, fails fast on an invalid CAPTCHA selection, handles email MFA when an address is available, product + legal consent, and confirmation, then writes the shared entry marker to the account and Inventory. Only a newly submitted entry emits a success webhook, including the exact proxy used; already-entered accounts are recorded without a duplicate success notification.",
+      "version": "0.2.11",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
@@ -183,7 +183,8 @@
       "emailMode": "account-list",
       "accountSource": {
         "site": "riotgames.com",
-        "enteredMarker": "riot entry campaign 31: OPTED_IN | items RB3864-00-00"
+        "enteredMarker": "riot entry campaign 31: OPTED_IN | items RB3864-00-00",
+        "manualCredentials": true
       }
     }
   ]
