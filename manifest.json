@@ -149,7 +149,7 @@
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
       "description": "Riftbound product-registration entry: signs a saved riotgames.com account into the Riftbound XSSO client and enters it in the Riftbound T1 Signature Edition drawing. Drives the real registration page, so it handles the Riot sign-in hCaptcha, the email MFA code, the product selection and legal consent, and the opt-in confirmation, then writes the entry back to the account notes and logs it to Inventory. Accounts Riot already reports as opted in are recorded without a second submission, and the entry marker matches the requests-based riot-entry tool so the two can be mixed freely. Needs the Riot accounts saved in the Database (email, username, password) plus an email source for the MFA code - it enters existing accounts, it does not create them. If Riot puts an interactive hCaptcha challenge on the sign-in form, Scrolls Solver clears it in-page with AI vision and humanized mouse (checkbox, grids, drag-and-drop) - needs an OpenRouter key in Key Vault -> AI.",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="

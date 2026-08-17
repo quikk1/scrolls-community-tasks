@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-15T23:37:47.951Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.2.4",
+    "version": "0.2.5",
     "metadata": {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
@@ -183,7 +183,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  // Only after the page has settled: right after a successful login the\n  // RiotBar can still show a stale Sign In for a beat, and believing it on\n  // the first pass sent the run back into the login while already signed in.\n  if(i>=4&&findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
           "into": "regState"
         }
       },
@@ -1299,6 +1299,17 @@
           "op": ">",
           "right": 2
         }
+      },
+      {
+        "id": "n_dwell_postcaptcha",
+        "kind": "dwell",
+        "position": {
+          "x": 1180,
+          "y": 1140
+        },
+        "config": {
+          "ms": 6000
+        }
       }
     ],
     "edges": [
@@ -2014,13 +2025,19 @@
         "id": "e_br_captcha_max__false",
         "from": "n_br_captcha_max",
         "fromPort": "false",
-        "to": "n_click_login"
+        "to": "n_dwell_postcaptcha"
       },
       {
         "id": "e_br_solve_err__true",
         "from": "n_br_solve_err",
         "fromPort": "true",
         "to": "n_tick_captcha"
+      },
+      {
+        "id": "e_dwell_postcaptcha__next",
+        "from": "n_dwell_postcaptcha",
+        "fromPort": "next",
+        "to": "n_probe_auth"
       }
     ]
   }
