@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-15T23:37:47.951Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.2.3",
+    "version": "0.2.4",
     "metadata": {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
@@ -183,7 +183,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\n// The drawing page's own header. When this is on screen the account IS\n// signed in and on the entry page, whatever the RiotBar still shows.\nfunction onEntryPage(){\n  var hs=document.querySelectorAll('[data-testid=\"blade-header-centered-title\"], .blade-header-centered--title');\n  for(var i=0;i<hs.length;i++){\n    if(visible(hs[i])&&/enter the preorder drawing/i.test(text(hs[i])))return true;\n  }\n  return false;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  // Only believe a sign-in control when the entry page is NOT up: right\n  // after a successful login the RiotBar can still show one for a beat, and\n  // taking that at face value looped the run back to sign in while the\n  // account was already logged in.\n  if(findSignIn()&&!onEntryPage())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
           "into": "regState"
         }
       },
@@ -713,7 +713,7 @@
           "y": 330
         },
         "config": {
-          "message": "Scrolls Solver could not clear Riot's interactive hCaptcha for {{account.username}}. (no retry)"
+          "message": "Riot kept showing a captcha for {{account.username}} after {{captchaSubmits}} sign-in submissions. (no retry)"
         }
       },
       {
@@ -1275,28 +1275,29 @@
         }
       },
       {
-        "id": "n_probe_entry_page",
-        "kind": "evaluate",
+        "id": "n_tick_captcha",
+        "kind": "math.incVar",
         "position": {
-          "x": 1240,
-          "y": 450
+          "x": 1260,
+          "y": 270
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// The solver can clear the captcha and still report a failure: a sign-in form\n// that binds the captcha to its submit button has no checkbox to tick and the\n// site consumes the token through its own callback, so there is nothing left to\n// read afterwards. The PAGE is the honest witness - if the drawing page\n// rendered, the login went through and the entry can carry on.\n// Give the post-submit navigation a moment to land before deciding.\nfor (var i=0;i<12;i++){\n  var hs=document.querySelectorAll('[data-testid=\"blade-header-centered-title\"], .blade-header-centered--title');\n  for (var j=0;j<hs.length;j++){\n    if (visible(hs[j]) && /enter the preorder drawing/i.test(text(hs[j]))) return 'entered';\n  }\n  // A challenge still on screen means the solve really did fail.\n  if (document.querySelector('iframe[src*=\"hcaptcha.com\"][src*=\"frame=challenge\"]')) return 'challenge';\n  await sleep(500);\n}\nreturn 'unknown';\n",
-          "into": "entryPageState"
+          "name": "captchaSubmits",
+          "current": "{{captchaSubmits}}",
+          "by": 1
         }
       },
       {
-        "id": "n_br_entry_page",
+        "id": "n_br_captcha_max",
         "kind": "branch",
         "position": {
-          "x": 1240,
-          "y": 550
+          "x": 1260,
+          "y": 370
         },
         "config": {
-          "left": "{{entryPageState}}",
-          "op": "==",
-          "right": "entered"
+          "left": "{{captchaSubmits}}",
+          "op": ">",
+          "right": 2
         }
       }
     ],
@@ -1686,16 +1687,10 @@
         "to": "n_br_solve_err"
       },
       {
-        "id": "e_br_solve_err__true",
-        "from": "n_br_solve_err",
-        "fromPort": "true",
-        "to": "n_probe_entry_page"
-      },
-      {
         "id": "e_br_solve_err__false",
         "from": "n_br_solve_err",
         "fromPort": "false",
-        "to": "n_probe_auth"
+        "to": "n_tick_captcha"
       },
       {
         "id": "e_otp_wait__next",
@@ -2004,22 +1999,28 @@
         "to": "n_fill_user"
       },
       {
-        "id": "e_probe_entry_page__next",
-        "from": "n_probe_entry_page",
+        "id": "e_tick_captcha__next",
+        "from": "n_tick_captcha",
         "fromPort": "next",
-        "to": "n_br_entry_page"
+        "to": "n_br_captcha_max"
       },
       {
-        "id": "e_br_entry_page__true",
-        "from": "n_br_entry_page",
+        "id": "e_br_captcha_max__true",
+        "from": "n_br_captcha_max",
         "fromPort": "true",
-        "to": "n_probe_auth"
+        "to": "n_fail_captcha"
       },
       {
-        "id": "e_br_entry_page__false",
-        "from": "n_br_entry_page",
+        "id": "e_br_captcha_max__false",
+        "from": "n_br_captcha_max",
         "fromPort": "false",
-        "to": "n_fail_captcha"
+        "to": "n_click_login"
+      },
+      {
+        "id": "e_br_solve_err__true",
+        "from": "n_br_solve_err",
+        "fromPort": "true",
+        "to": "n_tick_captcha"
       }
     ]
   }
