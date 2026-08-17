@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-15T23:37:47.951Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.2.1",
+    "version": "0.2.2",
     "metadata": {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
@@ -1273,6 +1273,31 @@
         "config": {
           "ms": 15000
         }
+      },
+      {
+        "id": "n_probe_entry_page",
+        "kind": "evaluate",
+        "position": {
+          "x": 1240,
+          "y": 450
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// The solver can clear the captcha and still report a failure: a sign-in form\n// that binds the captcha to its submit button has no checkbox to tick and the\n// site consumes the token through its own callback, so there is nothing left to\n// read afterwards. The PAGE is the honest witness - if the drawing page\n// rendered, the login went through and the entry can carry on.\n// Give the post-submit navigation a moment to land before deciding.\nfor (var i=0;i<12;i++){\n  var hs=document.querySelectorAll('[data-testid=\"blade-header-centered-title\"], .blade-header-centered--title');\n  for (var j=0;j<hs.length;j++){\n    if (visible(hs[j]) && /enter the preorder drawing/i.test(text(hs[j]))) return 'entered';\n  }\n  // A challenge still on screen means the solve really did fail.\n  if (document.querySelector('iframe[src*=\"hcaptcha.com\"][src*=\"frame=challenge\"]')) return 'challenge';\n  await sleep(500);\n}\nreturn 'unknown';\n",
+          "into": "entryPageState"
+        }
+      },
+      {
+        "id": "n_br_entry_page",
+        "kind": "branch",
+        "position": {
+          "x": 1240,
+          "y": 550
+        },
+        "config": {
+          "left": "{{entryPageState}}",
+          "op": "==",
+          "right": "entered"
+        }
       }
     ],
     "edges": [
@@ -1664,7 +1689,7 @@
         "id": "e_br_solve_err__true",
         "from": "n_br_solve_err",
         "fromPort": "true",
-        "to": "n_fail_captcha"
+        "to": "n_probe_entry_page"
       },
       {
         "id": "e_br_solve_err__false",
@@ -1977,6 +2002,24 @@
         "from": "n_dwell_prefill",
         "fromPort": "next",
         "to": "n_fill_user"
+      },
+      {
+        "id": "e_probe_entry_page__next",
+        "from": "n_probe_entry_page",
+        "fromPort": "next",
+        "to": "n_br_entry_page"
+      },
+      {
+        "id": "e_br_entry_page__true",
+        "from": "n_br_entry_page",
+        "fromPort": "true",
+        "to": "n_probe_auth"
+      },
+      {
+        "id": "e_br_entry_page__false",
+        "from": "n_br_entry_page",
+        "fromPort": "false",
+        "to": "n_fail_captcha"
       }
     ]
   }
