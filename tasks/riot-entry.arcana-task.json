@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-15T23:37:47.951Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.2.5",
+    "version": "0.2.6",
     "metadata": {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
@@ -826,7 +826,7 @@
           "y": 0
         },
         "config": {
-          "selector": "label[for=\"RB3864-00-00\"], [data-testid=\"product-selection-card\"] label",
+          "selector": "label[for=\"RB3864-00-00\"], [data-testid=\"product-selection-card\"] label, [data-testid=\"product-selection-card\"] button:text-is(\"SELECT\"), button:text-is(\"SELECT\")",
           "timeoutMs": 30000
         }
       },
@@ -851,7 +851,7 @@
         },
         "config": {
           "into": "productSelected",
-          "script": "/* card state after the product click */\nfor(var i=0;i<10;i++){\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]'))return '1';\n  await new Promise(function(r){setTimeout(r,300);});\n}\nreturn '0';"
+          "script": "/* Did the product selection take?\n *\n *  The card's data-state is one way Riot expresses it, but not the only one, and\n *  guessing its exact shape is what kept this flow stuck. The honest signal is\n *  the one the page itself gates on: REGISTER SELECTION goes from disabled to\n *  enabled once a product is chosen. Accept any of the three. */\nfunction enabled(el){\n  return !!el && !el.disabled && !el.hasAttribute('disabled') && el.getAttribute('aria-disabled') !== 'true';\n}\nfunction ticked(el){\n  if (!el) return false;\n  return el.checked === true\n    || el.getAttribute('aria-checked') === 'true'\n    || el.getAttribute('aria-pressed') === 'true'\n    || el.getAttribute('data-state') === 'checked'\n    || el.getAttribute('data-state') === 'selected';\n}\nfor (var i = 0; i < 12; i++) {\n  if (document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]')) return '1';\n  var card = document.querySelector('[data-testid=\"product-selection-card\"]');\n  if (card) {\n    var controls = card.querySelectorAll('button, input[type=\"checkbox\"], [role=\"checkbox\"]');\n    for (var c = 0; c < controls.length; c++) if (ticked(controls[c])) return '1';\n  }\n  if (enabled(document.querySelector('[data-testid=\"register-cta\"]'))) return '1';\n  await new Promise(function (r) { setTimeout(r, 300); });\n}\nreturn '0';\n"
         }
       },
       {
@@ -875,7 +875,7 @@
           "y": 600
         },
         "config": {
-          "selector": "[data-testid=\"legal-agreement-checkbox\"], label[data-testid=\"legal-agreement-label\"]",
+          "selector": "#legal_checkbox, [data-testid=\"legal-agreement-checkbox\"], label[data-testid=\"legal-agreement-label\"]",
           "timeoutMs": 30000
         }
       },
@@ -887,7 +887,7 @@
           "y": 750
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<15;i++){\n  var card=document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]');\n  var box=document.querySelector('[data-testid=\"legal-agreement-checkbox\"]');\n  var checked=!box||box.checked===true||box.getAttribute('aria-checked')==='true'||box.getAttribute('data-state')==='checked';\n  var btn=document.querySelector('[data-testid=\"register-cta\"]');\n  var enabled=!!btn&&!btn.disabled&&!btn.hasAttribute('disabled')&&btn.getAttribute('aria-disabled')!=='true';\n  if(card&&checked&&enabled)return '1';\n  await sleep(400);\n}\nreturn '0';",
+          "script": "/* Ready to submit the entry?\n *\n *  Riot gates REGISTER SELECTION itself: it stays disabled until a product is\n *  selected AND the terms are accepted. So that button's enabled state is the\n *  whole answer, and it does not depend on guessing how the card or the terms\n *  control express their own state.\n *\n *  The terms control is <button id=\"legal_checkbox\">, not an input, so a\n *  .checked read never worked on it. */\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction enabled(el){\n  return !!el && !el.disabled && !el.hasAttribute('disabled') && el.getAttribute('aria-disabled') !== 'true';\n}\nfor (var i = 0; i < 15; i++) {\n  if (enabled(document.querySelector('[data-testid=\"register-cta\"]'))) return '1';\n  await sleep(400);\n}\n// Not ready. Say WHICH half is missing so the retry has something to act on\n// instead of just counting attempts.\nvar legal = document.querySelector('#legal_checkbox, [data-testid=\"legal-agreement-checkbox\"]');\nvar legalOn = !!legal && (legal.checked === true\n  || legal.getAttribute('aria-checked') === 'true'\n  || legal.getAttribute('aria-pressed') === 'true'\n  || legal.getAttribute('data-state') === 'checked');\nvar card = !!document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"selected\"]');\nreturn '0:product=' + (card ? 'selected' : 'no') + ',terms=' + (legalOn ? 'accepted' : 'no');\n",
           "into": "regReady"
         }
       },
@@ -949,7 +949,7 @@
           "y": 1500
         },
         "config": {
-          "selector": "[data-testid=\"register-cta\"]",
+          "selector": "a[data-testid=\"register-cta\"], [data-testid=\"register-cta\"]",
           "timeoutMs": 30000
         }
       },
