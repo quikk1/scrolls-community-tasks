@@ -1,18 +1,18 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-17T06:15:00.000Z",
+  "exportedAt": "2026-08-18T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.2.11",
+    "version": "0.3.0",
     "metadata": {
       "id": "riot-entry",
-      "name": "Riot Entry - Riftbound (Browser)",
-      "description": "Signs eligible saved or manually supplied riotgames.com accounts into the Riftbound XSSO client and enters them in the Riftbound T1 Signature Edition product-registration drawing (campaign 31, item RB3864-00-00). Users can select all eligible saved accounts, choose an email list, or paste transient username:password credentials (optionally username:password:email for MFA). The browser flow clears cookie prompts before sign-in, rotates immediately when Riot blocks a proxy, fails fast on an invalid CAPTCHA selection, handles email MFA when an address is available, product + legal consent, and confirmation, then writes the shared entry marker to the account and Inventory. Only a newly submitted entry emits a success webhook, including the exact proxy used; already-entered accounts are recorded without a duplicate success notification.",
+      "name": "Riot Entry - Convergence Fest (Browser)",
+      "description": "Signs eligible saved or manually supplied riotgames.com accounts into Riot and registers them for Convergence Fest Attendee Pass Fan First Access (campaign 30, item TICKET001). Users can select all eligible saved accounts, choose an email list, or paste transient username:password credentials (optionally username:password:email for MFA). The browser flow clears Riot and Osano cookie prompts before sign-in, handles Convergence Fest's two-step Riot sign-in modal, rotates immediately when Riot blocks a proxy, fails fast on an invalid CAPTCHA selection, handles email MFA and interactive login or registration CAPTCHA challenges, selects the 3-Day Attendee Pass, accepts the legal acknowledgment, and records the confirmed entry. Only a newly submitted entry emits a success webhook, including the exact proxy used; already-entered accounts are recorded without a duplicate success notification.",
       "tags": [
         "riot",
-        "riftbound",
+        "convergence-fest",
+        "tickets",
         "entry",
-        "drawing",
         "raffle"
       ],
       "inputs": [
@@ -20,16 +20,16 @@
           "id": "saveFolder",
           "label": "Save folder (optional)",
           "type": "string",
-          "defaultValue": "Riftbound T1 Signature Edition",
-          "placeholder": "Riftbound T1 Signature Edition",
-          "hint": "Names this run's Inventory rows, the same as the native riot-entry tool's --event-name. Entered accounts keep whichever Database folder they are already in."
+          "defaultValue": "Convergence Fest Fan First Access",
+          "placeholder": "Convergence Fest Fan First Access",
+          "hint": "Names this run's Inventory rows. Entered accounts keep whichever Database folder they are already in."
         },
         {
           "id": "recheckEntered",
           "label": "Re-check entered accounts",
           "type": "boolean",
           "defaultValue": false,
-          "hint": "Off: an account already marked as entered for this campaign is skipped without opening a browser - including entries made by the requests-based riot-entry tool, which writes the same marker. On: open the page and confirm with Riot instead."
+          "hint": "Off: an account already marked as entered for this campaign is skipped without opening a browser. On: open the page and confirm with Riot instead."
         }
       ]
     },
@@ -76,7 +76,7 @@
         },
         "config": {
           "string": "{{account.notes}}",
-          "substring": "riot entry campaign 31: OPTED_IN | items RB3864-00-00",
+          "substring": "riot entry campaign 30: OPTED_IN | items TICKET001",
           "from": 0,
           "into": "alreadyEntered"
         }
@@ -114,7 +114,7 @@
         },
         "config": {
           "level": "info",
-          "message": "Skipping {{account.username}}: already recorded as entered in campaign 31 (RB3864-00-00). Tick \"Re-check entered accounts\" to verify it on the page instead."
+          "message": "Skipping {{account.username}}: already recorded as entered in campaign 30 (TICKET001). Tick \"Re-check entered accounts\" to verify it on the page instead."
         }
       },
       {
@@ -140,9 +140,9 @@
           "value": {
             "status": "already_opted_in",
             "source": "account notes",
-            "campaign": "31",
+            "campaign": "30",
             "items": [
-              "RB3864-00-00"
+              "TICKET001"
             ],
             "username": "{{account.username}}",
             "email": "{{account.email}}",
@@ -181,7 +181,7 @@
           "y": 1500
         },
         "config": {
-          "url": "https://playriftbound.com/en-us/preorder/registration/",
+          "url": "https://convergencefest.riotgames.com/en-us/tickets/",
           "waitUntil": "domcontentloaded",
           "timeoutMs": 120000
         }
@@ -194,7 +194,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var pageText=text(document.body);\n  if(/sorry,?\\s+you have been blocked/i.test(pageText))\n    throw new Error('Riot blocked this proxy: Sorry, you have been blocked - rotate proxy immediately.');\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  // Only after the page has settled: right after a successful login the\n  // RiotBar can still show a stale Sign In for a beat, and believing it on\n  // the first pass sent the run back into the login while already signed in.\n  if(i>=4&&findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var pageText=text(document.body);\n  if(/sorry,?\\s+you have been blocked/i.test(pageText))\n    throw new Error('Riot blocked this proxy: Sorry, you have been blocked - rotate proxy immediately.');\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]')||\n     /registration successful|thanks for registering for the convergence fest/i.test(text(document.querySelector('[data-testid=\"product-registration\"]'))))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  // Only after the page has settled: right after a successful login the\n  // RiotBar can still show a stale Sign In for a beat, and believing it on\n  // the first pass sent the run back into the login while already signed in.\n  if(i>=4&&findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
           "into": "regState"
         }
       },
@@ -258,7 +258,7 @@
           "y": 750
         },
         "config": {
-          "message": "Riftbound registration reported {{regState}}"
+          "message": "Convergence Fest registration reported {{regState}}"
         }
       },
       {
@@ -295,7 +295,7 @@
           "y": 1200
         },
         "config": {
-          "message": "Riftbound registration never offered a way in - blade reported: {{regState}}"
+          "message": "Convergence Fest registration never offered a way in - blade reported: {{regState}}"
         }
       },
       {
@@ -317,7 +317,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction label(el){return ((el&&((el.innerText||el.textContent)||el.getAttribute('aria-label')||el.title))||'').replace(/\\s+/g,' ').trim();}\nfunction bannerVisible(){\n  var sels=['#onetrust-banner-sdk','#consent_blackbar','[data-testid*=\"cookie\" i]','[id*=\"cookie\" i][role=\"dialog\"]','[class*=\"cookie\" i][role=\"dialog\"]'];\n  for(var i=0;i<sels.length;i++){\n    var list=document.querySelectorAll(sels[i]);\n    for(var j=0;j<list.length;j++){if(visible(list[j]))return true;}\n  }\n  return false;\n}\nfunction findChoice(){\n  var exact=/^(deny non-essential|reject non-essential|reject all|only necessary|necessary only|continue without accepting|accept all|allow all|accept cookies|accept|agree|close)$/i;\n  var preferred=['#onetrust-reject-all-handler','#onetrust-accept-btn-handler','button[aria-label*=\"cookie\" i]','button[aria-label=\"close\" i]'];\n  for(var p=0;p<preferred.length;p++){\n    var preferredList=document.querySelectorAll(preferred[p]);\n    for(var q=0;q<preferredList.length;q++){if(visible(preferredList[q]))return preferredList[q];}\n  }\n  var controls=document.querySelectorAll('button,[role=\"button\"],a');\n  for(var i=0;i<controls.length;i++){\n    if(visible(controls[i])&&exact.test(label(controls[i])))return controls[i];\n  }\n  return null;\n}\nfor(var attempt=0;attempt<4;attempt++){\n  var choice=findChoice();\n  if(!choice)return bannerVisible()?'blocked':'none';\n  try{choice.scrollIntoView({block:'center',inline:'center'});}catch(e){}\n  try{HTMLElement.prototype.click.call(choice);}catch(e){try{choice.click();}catch(ignore){}}\n  await sleep(400);\n  if(!bannerVisible())return 'cleared';\n}\nreturn bannerVisible()?'blocked':'cleared';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction label(el){return ((el&&((el.innerText||el.textContent)||el.getAttribute('aria-label')||el.title))||'').replace(/\\s+/g,' ').trim();}\nfunction bannerVisible(){\n  var sels=['#onetrust-banner-sdk','#consent_blackbar','.osano-cm-dialog:not(.osano-cm-dialog--hidden)','[data-testid*=\"cookie\" i]','[id*=\"cookie\" i][role=\"dialog\"]','[class*=\"cookie\" i][role=\"dialog\"]'];\n  for(var i=0;i<sels.length;i++){\n    var list=document.querySelectorAll(sels[i]);\n    for(var j=0;j<list.length;j++){if(visible(list[j]))return true;}\n  }\n  return false;\n}\nfunction findChoice(){\n  var exact=/^(deny non-essential|reject non-essential|reject all|only necessary|necessary only|continue without accepting|accept all|allow all|accept cookies|accept|agree|close)$/i;\n  var preferred=['button[aria-label=\"Close this consent banner\"]','.osano-cm-button--type_deny','.osano-cm-button--type_accept','#onetrust-reject-all-handler','#onetrust-accept-btn-handler','button[aria-label*=\"cookie\" i]','button[aria-label=\"close\" i]'];\n  for(var p=0;p<preferred.length;p++){\n    var preferredList=document.querySelectorAll(preferred[p]);\n    for(var q=0;q<preferredList.length;q++){if(visible(preferredList[q]))return preferredList[q];}\n  }\n  var controls=document.querySelectorAll('button,[role=\"button\"],a');\n  for(var i=0;i<controls.length;i++){\n    if(visible(controls[i])&&exact.test(label(controls[i])))return controls[i];\n  }\n  return null;\n}\nfor(var attempt=0;attempt<4;attempt++){\n  var choice=findChoice();\n  if(!choice)return bannerVisible()?'blocked':'none';\n  try{choice.scrollIntoView({block:'center',inline:'center'});}catch(e){}\n  try{HTMLElement.prototype.click.call(choice);}catch(e){try{choice.click();}catch(ignore){}}\n  await sleep(400);\n  if(!bannerVisible())return 'cleared';\n}\nreturn bannerVisible()?'blocked':'cleared';",
           "into": "consentCleared"
         }
       },
@@ -380,7 +380,7 @@
           "y": 750
         },
         "config": {
-          "url": "https://xsso.playriftbound.com/login?uri=https%3A%2F%2Fplayriftbound.com%2Fen-us%2Fpreorder%2Fregistration%2F&product_id=riftbound&locale=en_US",
+          "url": "https://xsso.riotgames.com/login?uri=https%3A%2F%2Fconvergencefest.riotgames.com%2Fen-us%2Ftickets%2F&product_id=convergencefest&locale=en_US",
           "waitUntil": "domcontentloaded",
           "timeoutMs": 120000
         }
@@ -438,7 +438,7 @@
           "y": 1500
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var pageText=text(document.body);\n  if(/sorry,?\\s+you have been blocked/i.test(pageText))\n    throw new Error('Riot blocked this proxy: Sorry, you have been blocked - rotate proxy immediately.');\n  if(/the captcha selection was invalid\\.?\\s*please try again\\.?/i.test(pageText))\n    throw new Error('The CAPTCHA selection was invalid. Please try again. (no retry)');\n  var host=location.hostname;\n  if(host.indexOf('playriftbound.com')!==-1&&host.indexOf('xsso.')===-1)return 'registration';\n  var err=pick('[data-testid=\"error-message\"], [data-testid=\"error-text\"]');\n  var msg=text(err);\n  if(msg)return 'error:'+msg.slice(0,160);\n  // A form that is still on screen is only actionable while it is EMPTY. Riot\n  // leaves both forms mounted with their values while the submit is in flight,\n  // so reporting 'mfa'/'login' on sight would re-submit the credentials and -\n  // worse - go wait for a second OTP email that Riot never sends.\n  var boxes=document.querySelectorAll('[data-testid=\"input-mfa\"] input, input[data-testid=\"input-mfa\"]');\n  if(boxes.length){\n    var typed=0;\n    for(var b=0;b<boxes.length;b++){if((boxes[b].value||'').length)typed++;}\n    return typed?'wait':'mfa';\n  }\n  var frames=document.querySelectorAll('iframe[src*=\"hcaptcha.com\"]');\n  for(var f=0;f<frames.length;f++){\n    if(visible(frames[f])&&/challenge/i.test(frames[f].title||''))return 'captcha';\n  }\n  var user=pick('input[data-testid=\"input-username\"], [data-testid=\"input-username\"] input, input[name=\"username\"]');\n  if(user)return (user.value||'').trim()==='{{account.username}}'?'wait':'login';\n  await sleep(500);\n}\nreturn 'wait';",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var pageText=text(document.body);\n  if(/sorry,?\\s+you have been blocked/i.test(pageText))\n    throw new Error('Riot blocked this proxy: Sorry, you have been blocked - rotate proxy immediately.');\n  if(/the captcha selection was invalid\\.?\\s*please try again\\.?/i.test(pageText))\n    throw new Error('The CAPTCHA selection was invalid. Please try again. (no retry)');\n  var host=location.hostname;\n  // Convergence Fest opens RiotBar's RSO chooser first. Click its exact primary\n  // Sign In control, then let the normal auth probe observe the redirected page.\n  if(host==='convergencefest.riotgames.com'){\n    var modal=document.querySelector('[data-testid=\"RiotBar-RsoModal\"], [data-testid=\"lightbox\"]');\n    var modalSignIn=modal&&modal.querySelector('[data-testid=\"cta-primary\"]');\n    if(visible(modal)&&visible(modalSignIn)&&/^sign[ -]?in$/i.test(text(modalSignIn))){\n      try{HTMLElement.prototype.click.call(modalSignIn);}catch(clickError){modalSignIn.click();}\n      return 'wait';\n    }\n    return 'registration';\n  }\n  var err=pick('[data-testid=\"error-message\"], [data-testid=\"error-text\"]');\n  var msg=text(err);\n  if(msg)return 'error:'+msg.slice(0,160);\n  // A form that is still on screen is only actionable while it is EMPTY. Riot\n  // leaves both forms mounted with their values while the submit is in flight,\n  // so reporting 'mfa'/'login' on sight would re-submit the credentials and -\n  // worse - go wait for a second OTP email that Riot never sends.\n  var boxes=document.querySelectorAll('[data-testid=\"input-mfa\"] input, input[data-testid=\"input-mfa\"]');\n  if(boxes.length){\n    var typed=0;\n    for(var b=0;b<boxes.length;b++){if((boxes[b].value||'').length)typed++;}\n    return typed?'wait':'mfa';\n  }\n  var frames=document.querySelectorAll('iframe[src*=\"hcaptcha.com\"]');\n  for(var f=0;f<frames.length;f++){\n    if(visible(frames[f])&&/challenge/i.test(frames[f].title||''))return 'captcha';\n  }\n  var user=pick('input[data-testid=\"input-username\"], [data-testid=\"input-username\"] input, input[name=\"username\"]');\n  if(user)return (user.value||'').trim()==='{{account.username}}'?'wait':'login';\n  await sleep(500);\n}\nreturn 'wait';",
           "into": "authState"
         }
       },
@@ -837,7 +837,7 @@
           "y": 0
         },
         "config": {
-          "selector": "label[for=\"RB3864-00-00\"], [data-testid=\"product-selection-card\"] label, [data-testid=\"product-selection-card\"] button:text-is(\"SELECT\"), button:text-is(\"SELECT\")",
+          "selector": "label[for=\"TICKET001\"], [data-testid=\"product-selection-card\"] label, [data-testid=\"product-selection-card\"] button:text-is(\"SELECT\"), button:text-is(\"SELECT\")",
           "timeoutMs": 30000
         }
       },
@@ -949,7 +949,7 @@
           "y": 1350
         },
         "config": {
-          "message": "Could not arm the Riftbound register button (product or legal consent did not stick)"
+          "message": "Could not arm the Convergence Fest register button (product or legal consent did not stick)"
         }
       },
       {
@@ -983,7 +983,7 @@
           "y": 0
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var pageText=text(document.body);\n  if(/sorry,?\\s+you have been blocked/i.test(pageText))\n    throw new Error('Riot blocked this proxy: Sorry, you have been blocked - rotate proxy immediately.');\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]'))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction visible(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<=0||r.height<=0)return false;\n  var s=getComputedStyle(el);\n  return s.visibility!=='hidden'&&s.display!=='none'&&s.opacity!=='0';\n}\nfunction pick(sel){\n  var list=document.querySelectorAll(sel);\n  for(var i=0;i<list.length;i++){if(visible(list[i]))return list[i];}\n  return null;\n}\nfunction text(el){return el?(el.innerText||'').replace(/\\s+/g,' ').trim():'';}\n// Riot has already renamed this control once (data-testid signin-cta ->\n// cta-primary), so match it by ROLE + LABEL instead of trusting a testid, and\n// look inside the product-registration blade FIRST so the RiotBar's own global\n// \"Sign In\" (which opens an RSO modal, not this flow) can never win.\nfunction findSignIn(){\n  var scopes=[document.querySelector('[data-testid=\"product-registration\"]'),document.body];\n  var sels=['[data-testid=\"signin-cta\"]','[data-testid=\"cta-primary\"]','a[role=\"button\"]','button','[role=\"button\"]'];\n  for(var s=0;s<scopes.length;s++){\n    if(!scopes[s])continue;\n    for(var q=0;q<sels.length;q++){\n      var list=scopes[s].querySelectorAll(sels[q]);\n      for(var i=0;i<list.length;i++){\n        var el=list[i];\n        if(!visible(el))continue;\n        // SUBSTRING, not an exact match: the blade's control reads\n        // \"SIGN IN TO REGISTER\", while the RiotBar's says just \"Sign In\".\n        if(/(sign|log)[ -]?in/i.test(text(el)))return el;\n      }\n    }\n  }\n  return null;\n}\nfor(var i=0;i<24;i++){\n  var pageText=text(document.body);\n  if(/sorry,?\\s+you have been blocked/i.test(pageText))\n    throw new Error('Riot blocked this proxy: Sorry, you have been blocked - rotate proxy immediately.');\n  if(/the captcha selection was invalid\\.?\\s*please try again\\.?/i.test(pageText))\n    return 'error:The CAPTCHA selection was invalid. Please try again.';\n  var frames=document.querySelectorAll('iframe[src*=\"hcaptcha.com\"]');\n  for(var f=0;f<frames.length;f++){\n    if(visible(frames[f])&&/challenge/i.test(frames[f].title||''))return 'captcha';\n  }\n  if(document.querySelector('[data-testid=\"product-selection-card\"][data-state=\"registered\"]')||\n     pick('[data-testid=\"success-primary-cta\"]')||\n     /registration successful|thanks for registering for the convergence fest/i.test(text(document.querySelector('[data-testid=\"product-registration\"]'))))return 'registered';\n  var et=text(pick('[data-testid=\"register-error-type\"]'));\n  if(et)return 'error:'+et.slice(0,160);\n  var ec=text(pick('[data-testid=\"registration-error-container\"]'));\n  if(ec)return 'error:'+ec.slice(0,160);\n  if(pick('[data-testid=\"register-cta\"]'))return 'active';\n  if(findSignIn())return 'unauth';\n  // Outside its window the blade renders REGISTRATION_CLOSED / _PENDING: prose,\n  // no register CTA, no sign-in. Checked AFTER the working states so a healthy\n  // page can never reach it. Fail fast instead of polling for 90s.\n  var blade=text(document.querySelector('[data-testid=\"product-registration\"]'));\n  if(/registration is closed|no longer accepting|has (now )?ended|closed for entries|check back/i.test(blade))\n    return 'error:'+blade.slice(0,160);\n  await sleep(500);\n}\n// Nothing recognisable. Carry what the blade actually says so the failure names\n// the real state (closed, pending, geo-blocked) instead of \"never became ready\".\nreturn 'idle:'+text(document.querySelector('[data-testid=\"product-registration\"]')).slice(0,160);",
           "into": "entryResult"
         }
       },
@@ -1021,7 +1021,7 @@
           "y": 450
         },
         "config": {
-          "message": "Riftbound entry failed: {{entryResult}}"
+          "message": "Convergence Fest entry failed: {{entryResult}}"
         }
       },
       {
@@ -1058,7 +1058,7 @@
           "y": 900
         },
         "config": {
-          "message": "Riftbound never confirmed the entry (captcha or opt-in still pending)"
+          "message": "Convergence Fest never confirmed the entry (captcha or opt-in still pending)"
         }
       },
       {
@@ -1081,7 +1081,7 @@
         },
         "config": {
           "level": "info",
-          "message": "Riot already reports {{account.username}} as entered in campaign 31 - recording the existing entry, not submitting again."
+          "message": "Riot already reports {{account.username}} as entered in campaign 30 - recording the existing entry, not submitting again."
         }
       },
       {
@@ -1105,7 +1105,7 @@
         },
         "config": {
           "level": "info",
-          "message": "Entered {{account.username}} into campaign 31 (RB3864-00-00) - recording."
+          "message": "Entered {{account.username}} into campaign 30 (TICKET001) - recording."
         }
       },
       {
@@ -1129,7 +1129,7 @@
         },
         "config": {
           "string": "{{account.notes}}",
-          "substring": "riot entry campaign 31: OPTED_IN | items RB3864-00-00",
+          "substring": "riot entry campaign 30: OPTED_IN | items TICKET001",
           "from": 0,
           "into": "notesHasMarker"
         }
@@ -1179,7 +1179,7 @@
         },
         "config": {
           "name": "entryNotes",
-          "value": "riot entry campaign 31: OPTED_IN | items RB3864-00-00"
+          "value": "riot entry campaign 30: OPTED_IN | items TICKET001"
         }
       },
       {
@@ -1191,7 +1191,7 @@
         },
         "config": {
           "name": "entryNotes",
-          "value": "{{account.notes}} | riot entry campaign 31: OPTED_IN | items RB3864-00-00"
+          "value": "{{account.notes}} | riot entry campaign 30: OPTED_IN | items TICKET001"
         }
       },
       {
@@ -1245,7 +1245,7 @@
         },
         "config": {
           "name": "entryFolder",
-          "value": "Riftbound T1 Signature Edition"
+          "value": "Convergence Fest Fan First Access"
         }
       },
       {
@@ -1256,11 +1256,11 @@
           "y": 1500
         },
         "config": {
-          "site": "playriftbound.com",
+          "site": "convergencefest.riotgames.com",
           "productLabel": "{{entryFolder}}",
           "status": "entered",
-          "productUrl": "https://playriftbound.com/en-us/preorder/registration/",
-          "notes": "campaign 31 | RB3864-00-00 | {{account.username}}"
+          "productUrl": "https://convergencefest.riotgames.com/en-us/tickets/",
+          "notes": "campaign 30 | TICKET001 | {{account.username}}"
         }
       },
       {
@@ -1273,9 +1273,9 @@
         "config": {
           "value": {
             "status": "{{entryStatus}}",
-            "campaign": "31",
+            "campaign": "30",
             "items": [
-              "RB3864-00-00"
+              "TICKET001"
             ],
             "username": "{{account.username}}",
             "email": "{{account.email}}",
@@ -1357,14 +1357,121 @@
           "data": {
             "tool": "riot-entry",
             "status": "success",
-            "campaign": "31",
+            "campaign": "30",
             "items": [
-              "RB3864-00-00"
+              "TICKET001"
             ],
             "username": "{{account.username}}",
             "email": "{{account.email}}",
             "proxy": "{{proxy.label}}"
           }
+        }
+      },
+      {
+        "id": "n_br_res_captcha",
+        "kind": "branch",
+        "position": {
+          "x": 1800,
+          "y": 2100
+        },
+        "config": {
+          "left": "{{entryResult}}",
+          "op": "==",
+          "right": "captcha"
+        }
+      },
+      {
+        "id": "n_log_entry_captcha",
+        "kind": "log",
+        "position": {
+          "x": 2000,
+          "y": 2100
+        },
+        "config": {
+          "level": "warn",
+          "message": "Convergence Fest showed an interactive registration hCaptcha for {{account.username}} - solving it in-page with Scrolls Solver."
+        }
+      },
+      {
+        "id": "n_try_entry_solve",
+        "kind": "tryCatch",
+        "position": {
+          "x": 2200,
+          "y": 2100
+        },
+        "config": {}
+      },
+      {
+        "id": "n_solve_entry_vision",
+        "kind": "captcha.solveVision",
+        "position": {
+          "x": 2400,
+          "y": 2100
+        },
+        "config": {
+          "timeoutMs": 180000,
+          "maxRounds": 8,
+          "into": "entryCaptchaToken"
+        }
+      },
+      {
+        "id": "n_br_entry_solve_err",
+        "kind": "branch",
+        "position": {
+          "x": 2600,
+          "y": 2100
+        },
+        "config": {
+          "left": "{{WAS_ERROR}}",
+          "op": "truthy"
+        }
+      },
+      {
+        "id": "n_tick_entry_captcha",
+        "kind": "math.incVar",
+        "position": {
+          "x": 2800,
+          "y": 2100
+        },
+        "config": {
+          "name": "entryCaptchaRounds",
+          "current": "{{entryCaptchaRounds}}",
+          "by": 1
+        }
+      },
+      {
+        "id": "n_br_entry_captcha_max",
+        "kind": "branch",
+        "position": {
+          "x": 3000,
+          "y": 2100
+        },
+        "config": {
+          "left": "{{entryCaptchaRounds}}",
+          "op": ">",
+          "right": 2
+        }
+      },
+      {
+        "id": "n_fail_entry_captcha",
+        "kind": "fail",
+        "position": {
+          "x": 3200,
+          "y": 2000
+        },
+        "config": {
+          "message": "Convergence Fest kept showing a registration captcha for {{account.username}}. (no retry)"
+        }
+      },
+      {
+        "id": "n_dwell_entry_captcha",
+        "kind": "dwell",
+        "position": {
+          "x": 3200,
+          "y": 2200
+        },
+        "config": {
+          "ms": 6000
         }
       }
     ],
@@ -1910,10 +2017,10 @@
         "to": "n_log_entered"
       },
       {
-        "id": "e_br_res_done__false",
+        "id": "e_br_res_done__captcha",
         "from": "n_br_res_done",
         "fromPort": "false",
-        "to": "n_br_res_err"
+        "to": "n_br_res_captcha"
       },
       {
         "id": "e_br_res_err__true",
@@ -2112,6 +2219,72 @@
         "from": "n_webhook_success",
         "fromPort": "next",
         "to": "n_result"
+      },
+      {
+        "id": "e_br_res_captcha__true",
+        "from": "n_br_res_captcha",
+        "fromPort": "true",
+        "to": "n_log_entry_captcha"
+      },
+      {
+        "id": "e_br_res_captcha__false",
+        "from": "n_br_res_captcha",
+        "fromPort": "false",
+        "to": "n_br_res_err"
+      },
+      {
+        "id": "e_log_entry_captcha__next",
+        "from": "n_log_entry_captcha",
+        "fromPort": "next",
+        "to": "n_try_entry_solve"
+      },
+      {
+        "id": "e_try_entry_solve__loop",
+        "from": "n_try_entry_solve",
+        "fromPort": "loop",
+        "to": "n_solve_entry_vision"
+      },
+      {
+        "id": "e_try_entry_solve__exit",
+        "from": "n_try_entry_solve",
+        "fromPort": "exit",
+        "to": "n_br_entry_solve_err"
+      },
+      {
+        "id": "e_br_entry_solve_err__true",
+        "from": "n_br_entry_solve_err",
+        "fromPort": "true",
+        "to": "n_tick_entry_captcha"
+      },
+      {
+        "id": "e_br_entry_solve_err__false",
+        "from": "n_br_entry_solve_err",
+        "fromPort": "false",
+        "to": "n_tick_entry_captcha"
+      },
+      {
+        "id": "e_tick_entry_captcha__next",
+        "from": "n_tick_entry_captcha",
+        "fromPort": "next",
+        "to": "n_br_entry_captcha_max"
+      },
+      {
+        "id": "e_br_entry_captcha_max__true",
+        "from": "n_br_entry_captcha_max",
+        "fromPort": "true",
+        "to": "n_fail_entry_captcha"
+      },
+      {
+        "id": "e_br_entry_captcha_max__false",
+        "from": "n_br_entry_captcha_max",
+        "fromPort": "false",
+        "to": "n_dwell_entry_captcha"
+      },
+      {
+        "id": "e_dwell_entry_captcha__next",
+        "from": "n_dwell_entry_captcha",
+        "fromPort": "next",
+        "to": "n_probe_result"
       }
     ]
   }
