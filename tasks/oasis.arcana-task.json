@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-26T05:10:59.708Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.3",
+    "version": "1.3.4",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -172,7 +172,7 @@
           "y": 1680
         },
         "config": {
-          "script": "// OASIS location autocomplete is a controlled Vuetify component.\n// It is not valid until a prediction object is selected from the menu.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction norm(s){return String(s||'').trim().toLowerCase();}\nvar input=Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).filter(vis)[0];\nif(!input) return 'no-location-field';\nvar city=String(\"{{vars.geo.city}}\"||'').trim();\nif(!city) throw new Error('OASIS City/Town cannot be filled because proxy geo returned an empty city.');\n// OASIS_NATIVE_CITY_INPUT_V3\n// OASIS_NATIVE_CITY_FOCUS_V4\n// OASIS_NATIVE_CITY_INSERT_V5\n// OASIS_ACTIVE_CITY_CLICK_V6\n// Oasis renders predictions without a reliable aria-owns/controls link. The\n// stable-result wait above makes the first enabled row in the active menu safe.\n// Input.insertText maps to the bridge's verified native char-event path.\n// clearField physically clicks the input. Keep that native focus: calling the\n// shim's script-based page.focus() again can detach Chromium's input target.\n// The preceding typeText node sends CDP keyboard input. Oasis ignores value\n// setters and synthetic DOM events for autocomplete lookup initiation.\nif(norm(input.value)!==norm(city)) throw new Error('OASIS City/Town native typing did not reach the input.');\n// OASIS_CITY_PREDICTIONS_READY_V2\n// Vuetify opens the menu before its async location results arrive. Wait for\n// this input's own listbox, a selectable result, and a stable result label.\nvar deadline=Date.now()+25000;\nvar stableLabel='';\nvar stablePolls=0;\nwhile(Date.now()<deadline){\n  // OASIS_NO_ARIA_CITY_WAIT_V7\n  // This Oasis build can show the menu while aria-expanded remains absent.\n  // OASIS_GEOMETRIC_CITY_CLICK_V8\n  // OASIS_LIVE_DOM_CITY_CLICK_V9\n  // OASIS_ROLE_OPTION_CITY_CLICK_V10\n  // Live inspection confirms every rendered Oasis prediction is role=option.\n  // The popup may flip above or below the input, so do not filter by geometry.\n  var items=Array.from(document.querySelectorAll('[role=\"option\"]')).filter(function(el){\n    var disabled=el.getAttribute('aria-disabled')==='true';\n    var label=String(el.textContent||'').trim();\n    return vis(el)&&!disabled&&!!label;\n  });\n  if(items.length){\n    var exact=items.find(function(el){return norm(el.textContent).includes(norm(city));});\n    // If aria-owns/controls identified the city list, its first selectable\n    // result is valid even when the provider formats the city differently.\n    var target=exact||items[0];\n    if(target){\n      var label=String(target.textContent||'').trim();\n      if(label===stableLabel) stablePolls++; else {stableLabel=label;stablePolls=1;}\n      if(stablePolls>=3) return 'predictions-ready:'+label;\n    }\n  } else {\n    stableLabel=''; stablePolls=0;\n  }\n  var serviceError=Array.from(document.querySelectorAll('.location-error, .v-messages__message')).filter(vis).map(function(el){return String(el.textContent||'').trim();}).filter(Boolean)[0];\n  if(serviceError && !/start typing/i.test(serviceError)) throw new Error('OASIS location service: '+serviceError);\n  await sleep(250);\n}\nthrow new Error('OASIS City/Town predictions did not appear for \"'+city+'\".');",
+          "script": "// OASIS location autocomplete is a controlled Vuetify component.\n// It is not valid until a prediction object is selected from the menu.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction norm(s){return String(s||'').trim().toLowerCase();}\nvar input=Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).filter(vis)[0];\nif(!input) return 'no-location-field';\nvar city=String(\"{{vars.geo.city}}\"||'').trim();\nif(!city) throw new Error('OASIS City/Town cannot be filled because proxy geo returned an empty city.');\n// OASIS_NATIVE_CITY_INPUT_V3\n// OASIS_NATIVE_CITY_FOCUS_V4\n// OASIS_NATIVE_CITY_INSERT_V5\n// OASIS_NATIVE_CITY_REFOCUS_V11\n// OASIS_ACTIVE_CITY_CLICK_V6\n// Oasis renders predictions without a reliable aria-owns/controls link. The\n// stable-result wait above makes the first enabled row in the active menu safe.\n// Input.insertText maps to the bridge's verified native char-event path.\n// Clearing this controlled Vuetify field can replace the focused input. Click\n// the live replacement immediately before native insertion instead. Keep that\n// native focus: page.focus() can detach Chromium's input target.\n// The preceding typeText node sends CDP keyboard input. Oasis ignores value\n// setters and synthetic DOM events for autocomplete lookup initiation.\nif(norm(input.value)!==norm(city)) throw new Error('OASIS City/Town native typing did not reach the input.');\n// OASIS_CITY_PREDICTIONS_READY_V2\n// Vuetify opens the menu before its async location results arrive. Wait for\n// this input's own listbox, a selectable result, and a stable result label.\nvar deadline=Date.now()+25000;\nvar stableLabel='';\nvar stablePolls=0;\nwhile(Date.now()<deadline){\n  // OASIS_NO_ARIA_CITY_WAIT_V7\n  // This Oasis build can show the menu while aria-expanded remains absent.\n  // OASIS_GEOMETRIC_CITY_CLICK_V8\n  // OASIS_LIVE_DOM_CITY_CLICK_V9\n  // OASIS_ROLE_OPTION_CITY_CLICK_V10\n  // Live inspection confirms every rendered Oasis prediction is role=option.\n  // The popup may flip above or below the input, so do not filter by geometry.\n  var items=Array.from(document.querySelectorAll('[role=\"option\"]')).filter(function(el){\n    var disabled=el.getAttribute('aria-disabled')==='true';\n    var label=String(el.textContent||'').trim();\n    return vis(el)&&!disabled&&!!label;\n  });\n  if(items.length){\n    var exact=items.find(function(el){return norm(el.textContent).includes(norm(city));});\n    // If aria-owns/controls identified the city list, its first selectable\n    // result is valid even when the provider formats the city differently.\n    var target=exact||items[0];\n    if(target){\n      var label=String(target.textContent||'').trim();\n      if(label===stableLabel) stablePolls++; else {stableLabel=label;stablePolls=1;}\n      if(stablePolls>=3) return 'predictions-ready:'+label;\n    }\n  } else {\n    stableLabel=''; stablePolls=0;\n  }\n  var serviceError=Array.from(document.querySelectorAll('.location-error, .v-messages__message')).filter(vis).map(function(el){return String(el.textContent||'').trim();}).filter(Boolean)[0];\n  if(serviceError && !/start typing/i.test(serviceError)) throw new Error('OASIS location service: '+serviceError);\n  await sleep(250);\n}\nthrow new Error('OASIS City/Town predictions did not appear for \"'+city+'\".');",
           "into": "oasisLocation"
         }
       },
@@ -360,14 +360,15 @@
       },
       {
         "id": "n_addrclear",
-        "kind": "clearField",
+        "kind": "click",
         "position": {
           "x": 0,
           "y": 1560
         },
         "config": {
           "selector": "input[autocomplete=\"no-thanks\"]:visible",
-          "timeoutMs": 30000
+          "timeoutMs": 30000,
+          "instant": true
         }
       },
       {
@@ -574,7 +575,7 @@
     "author": {
       "name": "Scrolls",
       "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "tOp7tYOxsIs34mpZQkSJjN10GmvNlhlmEtgOMj3kooE1dwKLPV4ARptlU80ZUJbOYYQSVPc0tHaJKUsan+A/Bg=="
+      "signature": "3ag5WkqAJiPVZjySn2BBvyaOJn0wLVrNF8RuVStg9fRk99sxVXfb+K3b9P5SQM4It7VEXgmXG7TDMgE7O+qjAg=="
     }
   }
 }
