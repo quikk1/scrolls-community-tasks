@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-21T11:36:33.180Z",
+  "exportedAt": "2026-08-26T05:10:59.708Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.3",
+    "version": "1.3.4",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -49,7 +49,7 @@
           "y": 240
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction pageText(){var t=(document.title||'').toLowerCase();var b=(document.body?document.body.innerText:'')||'';return t+' '+b.toLowerCase();}\nfunction networkErr(){var s=pageText();return s.includes(\"this site can't be reached\")||s.includes(\"this site can’t be reached\")||s.includes('err_connection')||s.includes('err_tunnel')||s.includes('err_proxy')||s.includes('err_timed_out')||s.includes('dns_probe_finished')||s.includes('check if there is a typo');}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction emailReady(){var sels=['input[name=\"Email\"]','#input-54','input[type=\"email\"]','form input'];for(var i=0;i<sels.length;i++){var el=document.querySelector(sels[i]);if(vis(el))return true;}return false;}\nvar start=Date.now();\nwhile(document.readyState!=='complete'&&Date.now()-start<45000){await sleep(200);}\nvar deadline=Date.now()+25000;\nwhile(Date.now()<deadline){\n  if(networkErr()) throw new Error('OASIS unreachable (proxy/network) - rotate proxy.');\n  if(emailReady()) return (document.title||'').trim();\n  await sleep(500);\n}\nif(networkErr()) throw new Error('OASIS unreachable (proxy/network) - rotate proxy.');\nthrow new Error('OASIS signup page did not load an email field in time.');",
+          "script": "// Browser-native fill is the readiness authority. Playwright's CSS locator\n// pierces open shadow roots, while document.querySelector here does not.\n// Keep this step only for an immediately observable Chromium network error.\nfunction pageText(){var t=(document.title||'').toLowerCase();var b=(document.body?document.body.innerText:'')||'';return t+' '+b.toLowerCase();}\nfunction networkErr(){var s=pageText();return s.includes(\"this site can't be reached\")||s.includes(\"this site can’t be reached\")||s.includes('err_connection')||s.includes('err_tunnel')||s.includes('err_proxy')||s.includes('err_timed_out')||s.includes('dns_probe_finished')||s.includes('check if there is a typo');}\nif(networkErr()) throw new Error('OASIS unreachable (proxy/network) - rotate proxy.');\nreturn (document.title||'').trim();",
           "into": "oasisAccess"
         }
       },
@@ -61,7 +61,7 @@
           "y": 360
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nasync function tryGet(u,map){try{var r=await fetch(u,{cache:'no-store'});if(!r.ok)return null;var j=await r.json();var g=map(j);return (g&&g.cc)?g:null;}catch(e){return null;}}\nvar g = await tryGet('https://ipapi.co/json/',function(j){return {city:j.city,region:j.region,cc:(j.country_code||'').toUpperCase(),calling:String(j.country_calling_code||'').replace('+','')};})\n     || await tryGet('https://ipwho.is/',function(j){return {city:j.city,region:j.region,cc:(j.country_code||'').toUpperCase(),calling:String(j.calling_code||'').replace('+','')};})\n     || await tryGet('https://get.geojs.io/v1/ip/geo.json',function(j){return {city:j.city,region:j.region,cc:(j.country_code||'').toUpperCase(),calling:''};});\nif(!g||!g.cc) throw new Error('Could not resolve the proxy geo (IP geolocation failed) - check/rotate the proxy.');\nif(!g.city) g.city=g.region||'';\nreturn g;",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nasync function tryGet(u,map){try{var r=await fetch(u,{cache:'no-store'});if(!r.ok)return null;var j=await r.json();var g=map(j);// Do not accept country-only responses: an empty city later becomes :has-text(\"\").\nreturn (g&&g.cc&&String(g.city||'').trim())?g:null;}catch(e){return null;}}\nvar g = await tryGet('https://ipapi.co/json/',function(j){return {city:j.city,region:j.region,cc:(j.country_code||'').toUpperCase(),calling:String(j.country_calling_code||'').replace('+','')};})\n     || await tryGet('https://ipwho.is/',function(j){return {city:j.city,region:j.region,cc:(j.country_code||'').toUpperCase(),calling:String(j.calling_code||'').replace('+','')};})\n     || await tryGet('https://get.geojs.io/v1/ip/geo.json',function(j){return {city:j.city,region:j.region,cc:(j.country_code||'').toUpperCase(),calling:''};});\nif(!g||!g.cc||!String(g.city||'').trim()) throw new Error('Could not resolve the proxy city (IP geolocation failed) - check/rotate the proxy.');\ng.city=String(g.city).trim();\nreturn g;",
           "into": "geo"
         }
       },
@@ -73,9 +73,10 @@
           "y": 480
         },
         "config": {
-          "selector": "input[name=\"Email\"], input[type=\"email\"]",
+          "selector": "input[name=\"Email\" i]:visible, input[type=\"email\"]:visible, input[autocomplete=\"email\" i]:visible, input[placeholder*=\"email\" i]:visible, input[aria-label*=\"email\" i]:visible",
           "value": "{{identity.email}}",
-          "timeoutMs": 60000
+          "timeoutMs": 60000,
+          "instant": true
         }
       },
       {
@@ -159,60 +160,20 @@
           "y": 1320
         },
         "config": {
-          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction d(n){var s='';for(var i=0;i<n;i++)s+=Math.floor(Math.random()*10);return s;}\nfunction pick(a){return a[Math.floor(Math.random()*a.length)];}\n// Reduced (location-only) form has no phone field - skip instead of failing.\nvar el=document.querySelector('input[type=\"tel\"]');\nif(!el) return 'no-phone';\nvar cc=String(\"{{vars.geo.cc}}\"||\"\").toUpperCase();\nvar gens={\n  US:function(){return pick('23456789'.split(''))+d(2)+pick('23456789'.split(''))+d(6);},\n  GB:function(){return '7'+pick(['4','7','8','9'])+d(8);},\n  IE:function(){return '8'+pick(['3','5','6','7','9'])+d(7);},\n  ES:function(){return pick(['6','7'])+d(8);},\n  FR:function(){return pick(['6','7'])+d(8);},\n  DE:function(){return '15'+d(9);},\n  IT:function(){return '3'+pick(['1','2','3','4','5','6','8'])+d(8);},\n  NL:function(){return '6'+d(8);},\n  AU:function(){return '4'+d(8);},\n  PT:function(){return '9'+pick(['1','2','3','6'])+d(7);},\n  BE:function(){return '4'+pick(['5','6','7','8','9'])+d(7);},\n  PL:function(){return pick(['5','6','7','8'])+d(8);},\n  SE:function(){return '7'+pick(['0','2','3','6','9'])+d(7);},\n  CH:function(){return '7'+pick(['5','6','7','8','9'])+d(7);},\n  AT:function(){return '6'+pick(['5','6','7','8','9'])+d(8);},\n  BR:function(){return pick(['11','21','31','41','51','61','71','81'])+'9'+d(8);},\n  MX:function(){return '1'+d(9);}\n};\ngens.CA=gens.US;\nvar num=(gens[cc]?gens[cc]():d(9));\nsetVal(el,num);\nawait sleep(150);\nreturn {cc:cc,num:num};",
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction d(n){var s='';for(var i=0;i<n;i++)s+=Math.floor(Math.random()*10);return s;}\nfunction pick(a){return a[Math.floor(Math.random()*a.length)];}\n// NANP numbers use assigned geographic area codes. N11 area/exchange\n// codes (including 911) are reserved and are rejected by libphonenumber.\nfunction nxx(){var v;do{v=pick('23456789'.split(''))+d(2);}while(v.slice(1)==='11');return v;}\n// Reduced (location-only) form has no phone field - skip instead of failing.\nvar el=document.querySelector('input[type=\"tel\"]');\nif(!el) return 'no-phone';\nvar cc=String(\"{{vars.geo.cc}}\"||\"\").toUpperCase();\nvar gens={\n  US:function(){var area=pick(['202','212','213','305','312','415','480','602','617','646','702','713','720','801','917','928']);return area+nxx()+d(4);},\n  GB:function(){return '7'+pick(['4','7','8','9'])+d(8);},\n  IE:function(){return '8'+pick(['3','5','6','7','9'])+d(7);},\n  ES:function(){return pick(['6','7'])+d(8);},\n  FR:function(){return pick(['6','7'])+d(8);},\n  DE:function(){return '15'+d(9);},\n  IT:function(){return '3'+pick(['1','2','3','4','5','6','8'])+d(8);},\n  NL:function(){return '6'+d(8);},\n  AU:function(){return '4'+d(8);},\n  PT:function(){return '9'+pick(['1','2','3','6'])+d(7);},\n  BE:function(){return '4'+pick(['5','6','7','8','9'])+d(7);},\n  PL:function(){return pick(['5','6','7','8'])+d(8);},\n  SE:function(){return '7'+pick(['0','2','3','6','9'])+d(7);},\n  CH:function(){return '7'+pick(['5','6','7','8','9'])+d(7);},\n  AT:function(){return '6'+pick(['5','6','7','8','9'])+d(8);},\n  BR:function(){return pick(['11','21','31','41','51','61','71','81'])+'9'+d(8);},\n  MX:function(){return '1'+d(9);}\n};\ngens.CA=function(){var area=pick(['416','438','514','604','647','778']);return area+nxx()+d(4);};\nvar num=(gens[cc]?gens[cc]():d(9));\nsetVal(el,num);\nawait sleep(150);\nreturn {cc:cc,num:num};",
           "into": "oasisPhone"
         }
       },
       {
-        "id": "n_hasloc",
-        "kind": "elementExists",
-        "position": {
-          "x": 0,
-          "y": 1440
-        },
-        "config": {
-          "selector": "input[autocomplete=\"no-thanks\"]",
-          "timeoutMs": 5000,
-          "into": "hasLoc"
-        }
-      },
-      {
-        "id": "n_locbranch",
-        "kind": "branch",
-        "position": {
-          "x": 0,
-          "y": 1560
-        },
-        "config": {
-          "left": "{{vars.hasLoc}}",
-          "op": "truthy",
-          "right": ""
-        }
-      },
-      {
         "id": "n_address",
-        "kind": "typeText",
+        "kind": "evaluate",
         "position": {
           "x": 0,
           "y": 1680
         },
         "config": {
-          "selector": "input[autocomplete=\"no-thanks\"]",
-          "text": "{{vars.geo.city}}",
-          "delayMs": 60,
-          "timeoutMs": 40000
-        }
-      },
-      {
-        "id": "n_addrpick",
-        "kind": "click",
-        "position": {
-          "x": 0,
-          "y": 1800
-        },
-        "config": {
-          "selector": ".v-list-item:has-text(\"{{vars.geo.city}}\")",
-          "timeoutMs": 40000
+          "script": "// OASIS location autocomplete is a controlled Vuetify component.\n// It is not valid until a prediction object is selected from the menu.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction norm(s){return String(s||'').trim().toLowerCase();}\nvar input=Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).filter(vis)[0];\nif(!input) return 'no-location-field';\nvar city=String(\"{{vars.geo.city}}\"||'').trim();\nif(!city) throw new Error('OASIS City/Town cannot be filled because proxy geo returned an empty city.');\n// OASIS_NATIVE_CITY_INPUT_V3\n// OASIS_NATIVE_CITY_FOCUS_V4\n// OASIS_NATIVE_CITY_INSERT_V5\n// OASIS_NATIVE_CITY_REFOCUS_V11\n// OASIS_ACTIVE_CITY_CLICK_V6\n// Oasis renders predictions without a reliable aria-owns/controls link. The\n// stable-result wait above makes the first enabled row in the active menu safe.\n// Input.insertText maps to the bridge's verified native char-event path.\n// Clearing this controlled Vuetify field can replace the focused input. Click\n// the live replacement immediately before native insertion instead. Keep that\n// native focus: page.focus() can detach Chromium's input target.\n// The preceding typeText node sends CDP keyboard input. Oasis ignores value\n// setters and synthetic DOM events for autocomplete lookup initiation.\nif(norm(input.value)!==norm(city)) throw new Error('OASIS City/Town native typing did not reach the input.');\n// OASIS_CITY_PREDICTIONS_READY_V2\n// Vuetify opens the menu before its async location results arrive. Wait for\n// this input's own listbox, a selectable result, and a stable result label.\nvar deadline=Date.now()+25000;\nvar stableLabel='';\nvar stablePolls=0;\nwhile(Date.now()<deadline){\n  // OASIS_NO_ARIA_CITY_WAIT_V7\n  // This Oasis build can show the menu while aria-expanded remains absent.\n  // OASIS_GEOMETRIC_CITY_CLICK_V8\n  // OASIS_LIVE_DOM_CITY_CLICK_V9\n  // OASIS_ROLE_OPTION_CITY_CLICK_V10\n  // Live inspection confirms every rendered Oasis prediction is role=option.\n  // The popup may flip above or below the input, so do not filter by geometry.\n  var items=Array.from(document.querySelectorAll('[role=\"option\"]')).filter(function(el){\n    var disabled=el.getAttribute('aria-disabled')==='true';\n    var label=String(el.textContent||'').trim();\n    return vis(el)&&!disabled&&!!label;\n  });\n  if(items.length){\n    var exact=items.find(function(el){return norm(el.textContent).includes(norm(city));});\n    // If aria-owns/controls identified the city list, its first selectable\n    // result is valid even when the provider formats the city differently.\n    var target=exact||items[0];\n    if(target){\n      var label=String(target.textContent||'').trim();\n      if(label===stableLabel) stablePolls++; else {stableLabel=label;stablePolls=1;}\n      if(stablePolls>=3) return 'predictions-ready:'+label;\n    }\n  } else {\n    stableLabel=''; stablePolls=0;\n  }\n  var serviceError=Array.from(document.querySelectorAll('.location-error, .v-messages__message')).filter(vis).map(function(el){return String(el.textContent||'').trim();}).filter(Boolean)[0];\n  if(serviceError && !/start typing/i.test(serviceError)) throw new Error('OASIS location service: '+serviceError);\n  await sleep(250);\n}\nthrow new Error('OASIS City/Town predictions did not appear for \"'+city+'\".');",
+          "into": "oasisLocation"
         }
       },
       {
@@ -371,6 +332,61 @@
         "config": {
           "label": "Already in database"
         }
+      },
+      {
+        "id": "n_addrpick",
+        "kind": "click",
+        "position": {
+          "x": 0,
+          "y": 1800
+        },
+        "config": {
+          "selector": "[role=\"option\"]:not([aria-disabled=\"true\"]):visible",
+          "timeoutMs": 25000,
+          "instant": true
+        }
+      },
+      {
+        "id": "n_addrverify",
+        "kind": "evaluate",
+        "position": {
+          "x": 0,
+          "y": 1860
+        },
+        "config": {
+          "script": "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline=Date.now()+10000;\nwhile(Date.now()<deadline){\n  var input=Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).filter(vis)[0];\n  var prompts=Array.from(document.querySelectorAll('.custom-location-input .v-messages__message, .custom-location-input .v-messages')).filter(vis).map(function(el){return String(el.textContent||'').trim();});\n  var stillUnselected=prompts.some(function(s){return /start typing.*select/i.test(s);});\n  if(input&&String(input.value||'').trim()&&!stillUnselected) return 'location-selected:'+String(input.value).trim();\n  await sleep(250);\n}\nthrow new Error('OASIS City/Town suggestion was clicked but the location was not selected.');",
+          "into": "oasisLocationSelected"
+        }
+      },
+      {
+        "id": "n_addrclear",
+        "kind": "click",
+        "position": {
+          "x": 0,
+          "y": 1560
+        },
+        "config": {
+          "selector": "input[autocomplete=\"no-thanks\"]:visible",
+          "timeoutMs": 30000,
+          "instant": true
+        }
+      },
+      {
+        "id": "n_addrtype",
+        "kind": "typeText",
+        "position": {
+          "x": 0,
+          "y": 1620
+        },
+        "config": {
+          "selector": "",
+          "text": "{{vars.geo.city}}",
+          "delayMs": 90,
+          "typos": false,
+          "instant": true,
+          "timeoutMs": 30000,
+          "nativeInsert": true
+        }
       }
     ],
     "edges": [
@@ -447,42 +463,6 @@
         "to": "n_phone"
       },
       {
-        "id": "e_12",
-        "from": "n_phone",
-        "fromPort": "next",
-        "to": "n_hasloc"
-      },
-      {
-        "id": "e_13",
-        "from": "n_hasloc",
-        "fromPort": "next",
-        "to": "n_locbranch"
-      },
-      {
-        "id": "e_14",
-        "from": "n_locbranch",
-        "fromPort": "true",
-        "to": "n_address"
-      },
-      {
-        "id": "e_15",
-        "from": "n_locbranch",
-        "fromPort": "false",
-        "to": "n_dobopen"
-      },
-      {
-        "id": "e_16",
-        "from": "n_address",
-        "fromPort": "next",
-        "to": "n_addrpick"
-      },
-      {
-        "id": "e_17",
-        "from": "n_addrpick",
-        "fromPort": "next",
-        "to": "n_dobopen"
-      },
-      {
         "id": "e_18",
         "from": "n_dobopen",
         "fromPort": "next",
@@ -553,13 +533,49 @@
         "from": "n_savebranch",
         "fromPort": "false",
         "to": "n_dup_end"
+      },
+      {
+        "id": "e_16",
+        "from": "n_address",
+        "fromPort": "next",
+        "to": "n_addrpick"
+      },
+      {
+        "id": "e_17",
+        "from": "n_addrpick",
+        "fromPort": "next",
+        "to": "n_addrverify"
+      },
+      {
+        "id": "e_addrverify",
+        "from": "n_addrverify",
+        "fromPort": "next",
+        "to": "n_dobopen"
+      },
+      {
+        "id": "e_12",
+        "from": "n_phone",
+        "fromPort": "next",
+        "to": "n_addrclear"
+      },
+      {
+        "id": "e_addrclear",
+        "from": "n_addrclear",
+        "fromPort": "next",
+        "to": "n_addrtype"
+      },
+      {
+        "id": "e_addrtype",
+        "from": "n_addrtype",
+        "fromPort": "next",
+        "to": "n_address"
       }
     ],
     "start": "n_start",
     "author": {
-      "name": "Sete_",
-      "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "gsZ7H5QUExXCHV3AlQvRndmN9tCm39wxkMG+xY0owzhlPNvGQxA+dw8T7do446t5rMszrISKGZfoU8a2hWAAAQ=="
+      "name": "Scrolls",
+      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
+      "signature": "3ag5WkqAJiPVZjySn2BBvyaOJn0wLVrNF8RuVStg9fRk99sxVXfb+K3b9P5SQM4It7VEXgmXG7TDMgE7O+qjAg=="
     }
   }
 }
