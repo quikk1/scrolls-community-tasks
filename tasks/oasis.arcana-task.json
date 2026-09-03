@@ -3,16 +3,16 @@
   "exportedAt": "2026-07-21T11:36:33.180Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.2",
+    "version": "1.3.3",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
-      "description": "OASIS (oasis.os.fan) signup - native module. LOCALE-INDEPENDENT selectors (page renders in the proxy's language). ADAPTIVE details form: fills only the fields the page actually renders - location only, names without a location, or the full form. If the email is already joined the site skips straight to the skip-step page; the module clicks through and still records the account, without duplicating a row that already exists. City/country/phone from the proxy geo; DOB random 18+; names/email from the profile identity.",
+      "description": "OASIS (oasis.os.fan) signup - native module. LOCALE-INDEPENDENT selectors (page renders in the proxy's language). ADAPTIVE details form: fills only the fields the page actually renders - location only, names without a location, or the full form. If the email is already joined the site skips straight to the skip-step page; the module clicks through and still records the entry, without duplicating a row that already exists. City/country/phone from the proxy geo; DOB random 18+; names/email from the profile identity.",
       "tags": [],
       "inputs": []
     },
     "permissions": [
-      "accounts",
+      "inventory",
       "browser",
       "evaluate"
     ],
@@ -321,15 +321,15 @@
       },
       {
         "id": "n_pick",
-        "kind": "accounts.pick",
+        "kind": "inventory.pick",
         "position": {
           "x": 0,
           "y": 3000
         },
         "config": {
           "site": "oasis.os.fan",
-          "emailLike": "{{identity.email}}",
-          "into": "existingAcct"
+          "email": "{{identity.email}}",
+          "into": "existingEntry"
         }
       },
       {
@@ -347,18 +347,18 @@
       },
       {
         "id": "n_save",
-        "kind": "accounts.save",
+        "kind": "inventory.record",
         "position": {
           "x": 0,
           "y": 3240
         },
         "config": {
-          "email": "{{identity.email}}",
           "site": "oasis.os.fan",
+          "productLabel": "OASIS",
+          "status": "entered",
+          "email": "{{identity.email}}",
           "username": "{{identity.firstName}} {{identity.lastName}}",
-          "status": "active",
-          "label": "OASIS",
-          "into": "SAVED_ACCOUNT"
+          "into": "SAVED_ENTRY"
         }
       },
       {

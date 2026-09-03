@@ -19,9 +19,10 @@
       "accounts",
       "browser",
       "imap",
-      "sms"
+      "sms",
+      "inventory"
     ],
-    "version": "0.1.3",
+    "version": "0.1.4",
     "variables": [],
     "nodes": [
       {
@@ -531,14 +532,14 @@
       },
       {
         "id": "n_pre_pick",
-        "kind": "accounts.pick",
+        "kind": "inventory.pick",
         "position": {
           "x": 432,
           "y": 170
         },
         "config": {
           "site": "ticketmaster.com",
-          "emailLike": "{{identity.email}}",
+          "email": "{{identity.email}}",
           "into": "dbHit"
         }
       },
@@ -642,17 +643,16 @@
       },
       {
         "id": "n_ar_save",
-        "kind": "accounts.save",
+        "kind": "inventory.record",
         "position": {
           "x": 520,
           "y": 820
         },
         "config": {
-          "email": "{{identity.email}}",
-          "password": "",
           "site": "ticketmaster.com",
-          "status": "active",
-          "label": "Ticketmaster.com",
+          "productLabel": "Ticketmaster",
+          "status": "entered",
+          "email": "{{identity.email}}",
           "notes": "Already registered (detected at signup)"
         }
       },
