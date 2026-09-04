@@ -3,7 +3,7 @@
   "exportedAt": "2026-08-26T05:10:59.708Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.4",
+    "version": "1.3.5",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -38,8 +38,21 @@
           "y": 120
         },
         "config": {
-          "url": "https://oasis.os.fan/signupwb",
-          "waitUntil": "domcontentloaded"
+          "url": "https://oasismusic.lnk.to/SignUpForNews",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_landed",
+        "kind": "waitForUrl",
+        "position": {
+          "x": 240,
+          "y": 120
+        },
+        "config": {
+          "url": "https://oasis.os.fan/**",
+          "timeoutMs": 60000
         }
       },
       {
@@ -433,6 +446,12 @@
       {
         "id": "e_1",
         "from": "n_goto",
+        "fromPort": "next",
+        "to": "n_landed"
+      },
+      {
+        "id": "e_landed",
+        "from": "n_landed",
         "fromPort": "next",
         "to": "n_access"
       },
