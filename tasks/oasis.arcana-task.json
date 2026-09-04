@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-09-04T19:28:12.902Z",
+  "exportedAt": "2026-09-04T21:11:37.031Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.7",
+    "version": "1.3.8",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -321,6 +321,18 @@
         }
       },
       {
+        "id": "n_survey",
+        "kind": "evaluate",
+        "position": {
+          "x": 260,
+          "y": 2640
+        },
+        "config": {
+          "script": "// Post-signup survey (\"Your favourite Oasis singles?\" etc). Appears after the\n// streaming-service skip; one or more pages of checkbox questions ending on\n// /signup/thankyou. Optional for the signup itself (the account already exists\n// by now), so this step never throws: answer what shows up, stop on the\n// thank-you page or when nothing survey-like renders.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction boxes(){return Array.from(document.querySelectorAll('.questions-form__checkbox input[type=\"checkbox\"], input[type=\"checkbox\"]')).filter(vis);}\nfunction continueBtn(){return Array.from(document.querySelectorAll('.button--primary, button')).filter(function(b){return vis(b)&&/continue|next|submit/i.test(b.innerText||'');})[0]||null;}\nfunction tick(box){var wrap=box.closest('.v-input--selection-controls')||box.closest('.v-input')||box.parentElement;var t=(wrap&&wrap.querySelector('.v-input--selection-controls__ripple'))||wrap||box;t.scrollIntoView({block:'center'});t.click();}\nvar answered=[];var deadline=Date.now()+45000;var idle=0;\nwhile(Date.now()<deadline){\n  if(location.pathname.indexOf('thankyou')>-1) return {pages:answered,end:'thankyou'};\n  var b=boxes();var btn=continueBtn();\n  if(b.length>=3&&btn){\n    var want=1+Math.floor(Math.random()*3);var picked=0;var order=b.slice().sort(function(){return Math.random()-0.5;});\n    for(var i=0;i<order.length&&picked<want;i++){var box=order[i];if(box.checked){picked++;continue;}tick(box);await sleep(250);if(!box.checked){box.click();await sleep(250);}if(box.checked)picked++;}\n    if(picked===0){tick(b[0]);await sleep(300);}\n    answered.push(picked);\n    btn.scrollIntoView({block:'center'});btn.click();\n    await sleep(2500);idle=0;continue;\n  }\n  idle+=1;\n  if(idle>=12) return {pages:answered,end:'no-survey'};\n  await sleep(500);\n}\nreturn {pages:answered,end:'timeout'};",
+          "into": "oasisSurvey"
+        }
+      },
+      {
         "id": "n_wait",
         "kind": "dwell",
         "position": {
@@ -631,6 +643,12 @@
         "id": "e_24",
         "from": "n_skipstep",
         "fromPort": "next",
+        "to": "n_survey"
+      },
+      {
+        "id": "e_survey",
+        "from": "n_survey",
+        "fromPort": "next",
         "to": "n_wait"
       },
       {
@@ -716,7 +734,7 @@
     "author": {
       "name": "Scrolls",
       "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "U3CZnKhchan1wmSmK9ewdw1JriGNTyCDS3r6F5bVMnDkDgqaat6c57HilZNpx4AzrNDDup/nXr/AuAUl2/YtDw=="
+      "signature": "1GKjjpP+zmOiL5VMX1WC4Z5nTDaTLKrir/gXo52LT2QVMs0GbPlBwt01UR0FehEwMz3KeT6reANIjPazz6Y5Bg=="
     }
   }
 }
