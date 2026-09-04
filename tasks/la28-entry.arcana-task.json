@@ -16,7 +16,8 @@
       "browser",
       "captcha",
       "evaluate",
-      "imap"
+      "imap",
+      "webhook"
     ],
     "variables": [],
     "start": "n_9081ea46",
@@ -752,6 +753,38 @@
           "timeoutMs": 120000,
           "selector": "section.profile-section.c-inner > div.container > div.row > div.col-xs-12.col-md-offset-2 > app-sports-profile-lotteries > section.ng-star-inserted.profile-field-section > div.styled-checkbox.no-padding-right > label.label.fullwidth"
         }
+      },
+      {
+        "id": "n_entry_webhook",
+        "kind": "webhook.fire",
+        "position": {
+          "x": 800,
+          "y": 1500
+        },
+        "config": {
+          "event": "raffle.entry.succeeded",
+          "data": {
+            "tool": "la28-entry",
+            "email": "{{identity.email}}",
+            "site": "tickets.la28.org"
+          }
+        }
+      },
+      {
+        "id": "n_entry_result",
+        "kind": "setResult",
+        "position": {
+          "x": 800,
+          "y": 1620
+        },
+        "config": {
+          "value": {
+            "status": "entered",
+            "email": "{{identity.email}}",
+            "suppressSuccessWebhook": true,
+            "site": "tickets.la28.org"
+          }
+        }
       }
     ],
     "edges": [
@@ -1132,6 +1165,18 @@
         "from": "n_la28authwait",
         "fromPort": "next",
         "to": "n_la28authstate"
+      },
+      {
+        "id": "e_n_la28saveacct_next",
+        "from": "n_la28saveacct",
+        "fromPort": "next",
+        "to": "n_entry_webhook"
+      },
+      {
+        "id": "e_n_entry_webhook_next",
+        "from": "n_entry_webhook",
+        "fromPort": "next",
+        "to": "n_entry_result"
       }
     ],
     "author": {

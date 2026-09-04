@@ -14,7 +14,8 @@
     "permissions": [
       "inventory",
       "browser",
-      "evaluate"
+      "evaluate",
+      "webhook"
     ],
     "variables": [],
     "nodes": [
@@ -387,6 +388,39 @@
           "timeoutMs": 30000,
           "nativeInsert": true
         }
+      },
+      {
+        "id": "n_entry_webhook",
+        "kind": "webhook.fire",
+        "position": {
+          "x": 0,
+          "y": 3360
+        },
+        "config": {
+          "event": "raffle.entry.succeeded",
+          "data": {
+            "tool": "oasis",
+            "email": "{{identity.email}}",
+            "site": "oasis.os.fan",
+            "username": "{{identity.firstName}} {{identity.lastName}}"
+          }
+        }
+      },
+      {
+        "id": "n_entry_result",
+        "kind": "setResult",
+        "position": {
+          "x": 0,
+          "y": 3480
+        },
+        "config": {
+          "value": {
+            "status": "entered",
+            "email": "{{identity.email}}",
+            "suppressSuccessWebhook": true,
+            "site": "oasis.os.fan"
+          }
+        }
       }
     ],
     "edges": [
@@ -569,6 +603,18 @@
         "from": "n_addrtype",
         "fromPort": "next",
         "to": "n_address"
+      },
+      {
+        "id": "e_n_save_next",
+        "from": "n_save",
+        "fromPort": "next",
+        "to": "n_entry_webhook"
+      },
+      {
+        "id": "e_n_entry_webhook_next",
+        "from": "n_entry_webhook",
+        "fromPort": "next",
+        "to": "n_entry_result"
       }
     ],
     "start": "n_start",

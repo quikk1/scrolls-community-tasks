@@ -20,7 +20,8 @@
       "browser",
       "imap",
       "sms",
-      "inventory"
+      "inventory",
+      "webhook"
     ],
     "version": "0.1.4",
     "variables": [],
@@ -666,6 +667,38 @@
         "config": {
           "message": "Already registered - email already used"
         }
+      },
+      {
+        "id": "n_entry_webhook",
+        "kind": "webhook.fire",
+        "position": {
+          "x": 1325.7955208014423,
+          "y": 809.4825665587598
+        },
+        "config": {
+          "event": "raffle.entry.succeeded",
+          "data": {
+            "tool": "tm",
+            "email": "{{identity.email}}",
+            "site": "ticketmaster.com"
+          }
+        }
+      },
+      {
+        "id": "n_entry_result",
+        "kind": "setResult",
+        "position": {
+          "x": 1325.7955208014423,
+          "y": 929.4825665587598
+        },
+        "config": {
+          "value": {
+            "status": "entered",
+            "email": "{{identity.email}}",
+            "suppressSuccessWebhook": true,
+            "site": "ticketmaster.com"
+          }
+        }
       }
     ],
     "edges": [
@@ -962,6 +995,18 @@
         "from": "n_ar_save",
         "fromPort": "next",
         "to": "n_ar_fail"
+      },
+      {
+        "id": "e_n_gpectape_next",
+        "from": "n_gpectape",
+        "fromPort": "next",
+        "to": "n_entry_webhook"
+      },
+      {
+        "id": "e_n_entry_webhook_next",
+        "from": "n_entry_webhook",
+        "fromPort": "next",
+        "to": "n_entry_result"
       }
     ],
     "start": "n_1",

@@ -1353,7 +1353,7 @@
           "y": 4240
         },
         "config": {
-          "event": "task.succeeded",
+          "event": "raffle.entry.succeeded",
           "data": {
             "tool": "riot-entry",
             "status": "success",

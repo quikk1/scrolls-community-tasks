@@ -15,7 +15,8 @@
       "accounts",
       "browser",
       "evaluate",
-      "imap"
+      "imap",
+      "webhook"
     ],
     "variables": [],
     "start": "n_9081ea46",
@@ -619,6 +620,36 @@
           "script": "// After the email is entered, give Gigya time to run its server-side check and\n// flag an already-registered address (error 400003: \"An account from a prior\n// Olympic & Paralympic Games exists for this email address. Click here to log\n// in.\"). That case - and only that case - puts a login <a> inside the email\n// error span. If it shows, fail fast so this email counts as used.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){\n  if(!el)return false;\n  var r=el.getBoundingClientRect();\n  if(r.width<1&&r.height<1)return false;\n  var s=getComputedStyle(el);\n  if(s.visibility==='hidden'||s.display==='none'||parseFloat(s.opacity||'1')<0.05)return false;\n  return true;\n}\n// Blur the email field so Gigya fires its on-blur server validation.\ntry{\n  var em=document.querySelector('#register-site-login input[name=\"email\"]')||document.querySelector('input[name=\"email\"]');\n  if(em){em.blur();em.dispatchEvent(new Event('blur',{bubbles:true}));em.dispatchEvent(new Event('change',{bubbles:true}));}\n}catch(e){}\n// Human wait 6-10s for the async check to come back.\nawait sleep(6000+Math.floor(Math.random()*4001));\nvar link=document.querySelector('#gigya-error-msg-gigya-register-form-email > a');\nif(link&&vis(link)){\n  throw new Error('email already used');\n}\nreturn 'email-ok';",
           "into": "la28EmailCheck"
         }
+      },
+      {
+        "id": "n_entry_webhook",
+        "kind": "webhook.fire",
+        "position": {
+          "x": 775.1134147774546,
+          "y": 399.8896886684515
+        },
+        "config": {
+          "event": "raffle.entry.succeeded",
+          "data": {
+            "tool": "la28",
+            "email": "{{identity.email}}"
+          }
+        }
+      },
+      {
+        "id": "n_entry_result",
+        "kind": "setResult",
+        "position": {
+          "x": 775.1134147774546,
+          "y": 519.8896886684515
+        },
+        "config": {
+          "value": {
+            "status": "entered",
+            "email": "{{identity.email}}",
+            "suppressSuccessWebhook": true
+          }
+        }
       }
     ],
     "edges": [
@@ -915,6 +946,18 @@
         "from": "n_la28emailcheck",
         "fromPort": "next",
         "to": "n_f4w1h4rc"
+      },
+      {
+        "id": "e_n_chlvu159_next",
+        "from": "n_chlvu159",
+        "fromPort": "next",
+        "to": "n_entry_webhook"
+      },
+      {
+        "id": "e_n_entry_webhook_next",
+        "from": "n_entry_webhook",
+        "fromPort": "next",
+        "to": "n_entry_result"
       }
     ],
     "author": {

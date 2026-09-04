@@ -319,7 +319,7 @@
         "id": "n_webhook",
         "kind": "webhook.fire",
         "config": {
-          "event": "task.succeeded",
+          "event": "raffle.entry.succeeded",
           "data": {
             "tool": "target-signup",
             "email": "{{identity.email}}",
@@ -366,6 +366,22 @@
         "position": {
           "x": 380,
           "y": 1056
+        }
+      },
+      {
+        "id": "n_entry_result",
+        "kind": "setResult",
+        "position": {
+          "x": 0,
+          "y": 2232
+        },
+        "config": {
+          "value": {
+            "status": "entered",
+            "site": "target.com",
+            "email": "{{identity.email}}",
+            "suppressSuccessWebhook": true
+          }
         }
       }
     ],
@@ -525,6 +541,12 @@
         "from": "n_save",
         "fromPort": "next",
         "to": "n_webhook"
+      },
+      {
+        "id": "e_n_webhook_next",
+        "from": "n_webhook",
+        "fromPort": "next",
+        "to": "n_entry_result"
       }
     ]
   }
