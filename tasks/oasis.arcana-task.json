@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-08-26T05:10:59.708Z",
+  "exportedAt": "2026-09-04T19:26:16.893Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.5",
+    "version": "1.3.6",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
@@ -640,7 +640,7 @@
     "author": {
       "name": "Scrolls",
       "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "3ag5WkqAJiPVZjySn2BBvyaOJn0wLVrNF8RuVStg9fRk99sxVXfb+K3b9P5SQM4It7VEXgmXG7TDMgE7O+qjAg=="
+      "signature": "VQrrb3HbNWn5HjYTyn1GjhuZhb9Tj2S+F9oEnVT/kZUW9fGUJgjEe1QA+Zt3zZ3oFn2Qe4hQft7GXZw3R0SBBw=="
     }
   }
 }
