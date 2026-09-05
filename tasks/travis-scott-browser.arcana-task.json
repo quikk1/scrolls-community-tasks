@@ -1,0 +1,1286 @@
+{
+  "format": "arcana-task/v1",
+  "exportedAt": "2026-09-04T00:00:00.000Z",
+  "graph": {
+    "schemaVersion": 1,
+    "version": "0.3.3",
+    "metadata": {
+      "id": "travis-scott-browser",
+      "name": "Travis Scott — Browser Entry",
+      "class": "raffle",
+      "description": "Oasis-style browser flow for SuperSwipe no-payment draws. Selects your size, accepts the cookie banner, checks five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer.",
+      "tags": [
+        "travis-scott",
+        "superswipe",
+        "browser",
+        "raffle"
+      ],
+      "inputs": [
+        {
+          "id": "url",
+          "label": "Store / product URL",
+          "type": "url",
+          "required": true,
+          "defaultValue": "https://shop.travisscott.com/"
+        },
+        {
+          "id": "product",
+          "label": "Exact product title",
+          "type": "string",
+          "required": true,
+          "defaultValue": "AIR FORCE 1 '07 LOW CACTUS JACK"
+        },
+        {
+          "id": "sizeMode",
+          "label": "Size selection",
+          "type": "select",
+          "defaultValue": "Single size",
+          "options": [
+            "Single size",
+            "Size range",
+            "Random"
+          ],
+          "hint": "Random chooses from available supported sizes. Size range chooses randomly within your inclusive bounds."
+        },
+        {
+          "id": "size",
+          "label": "Size",
+          "type": "select",
+          "required": true,
+          "defaultValue": "10.5",
+          "options": [
+            "3.5",
+            "4",
+            "4.5",
+            "5",
+            "5.5",
+            "6",
+            "6.5",
+            "7",
+            "7.5",
+            "8",
+            "8.5",
+            "9",
+            "9.5",
+            "10",
+            "10.5",
+            "11",
+            "11.5",
+            "12",
+            "12.5",
+            "13",
+            "14",
+            "15"
+          ],
+          "visibleWhen": {
+            "input": "sizeMode",
+            "equals": "Single size"
+          }
+        },
+        {
+          "id": "sizeMinimum",
+          "label": "Minimum size",
+          "type": "select",
+          "required": true,
+          "defaultValue": "8",
+          "options": [
+            "3.5",
+            "4",
+            "4.5",
+            "5",
+            "5.5",
+            "6",
+            "6.5",
+            "7",
+            "7.5",
+            "8",
+            "8.5",
+            "9",
+            "9.5",
+            "10",
+            "10.5",
+            "11",
+            "11.5",
+            "12",
+            "12.5",
+            "13",
+            "14",
+            "15"
+          ],
+          "visibleWhen": {
+            "input": "sizeMode",
+            "equals": "Size range"
+          }
+        },
+        {
+          "id": "sizeMaximum",
+          "label": "Maximum size",
+          "type": "select",
+          "required": true,
+          "defaultValue": "12",
+          "options": [
+            "3.5",
+            "4",
+            "4.5",
+            "5",
+            "5.5",
+            "6",
+            "6.5",
+            "7",
+            "7.5",
+            "8",
+            "8.5",
+            "9",
+            "9.5",
+            "10",
+            "10.5",
+            "11",
+            "11.5",
+            "12",
+            "12.5",
+            "13",
+            "14",
+            "15"
+          ],
+          "visibleWhen": {
+            "input": "sizeMode",
+            "equals": "Size range"
+          }
+        }
+      ]
+    },
+    "permissions": [
+      "browser",
+      "evaluate",
+      "captcha",
+      "inventory"
+    ],
+    "variables": [],
+    "start": "n_start",
+    "nodes": [
+      {
+        "id": "n_start",
+        "kind": "noop",
+        "position": {
+          "x": 160,
+          "y": 0
+        },
+        "config": {}
+      },
+      {
+        "id": "n_settings",
+        "kind": "setVar",
+        "position": {
+          "x": 160,
+          "y": 140
+        },
+        "config": {
+          "name": "travisSettings",
+          "value": {
+            "url": "{{inputs.url}}",
+            "product": "{{inputs.product}}",
+            "size": "{{inputs.size}}",
+            "sizeMode": "{{inputs.sizeMode}}",
+            "sizeMinimum": "{{inputs.sizeMinimum}}",
+            "sizeMaximum": "{{inputs.sizeMaximum}}",
+            "identity": {
+              "firstName": "{{profile.identity.firstName}}",
+              "lastName": "{{profile.identity.lastName}}",
+              "email": "{{profile.identity.email}}",
+              "phone": "{{profile.identity.phone}}"
+            },
+            "addresses": "{{addresses}}"
+          }
+        }
+      },
+      {
+        "id": "n_preflight",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 280
+        },
+        "config": {
+          "script": "\nconst settings = {{vars.travisSettings}};\nconst url = new URL(settings.url);\nif (url.protocol !== 'https:' || url.hostname !== 'shop.travisscott.com' || url.username || url.password)\n  throw new Error('Use an HTTPS URL on shop.travisscott.com.');\nif (!String(settings.product || '').trim()) throw new Error('Enter the exact product title before running.');\nconst allowedSizes = [\"3.5\",\"4\",\"4.5\",\"5\",\"5.5\",\"6\",\"6.5\",\"7\",\"7.5\",\"8\",\"8.5\",\"9\",\"9.5\",\"10\",\"10.5\",\"11\",\"11.5\",\"12\",\"12.5\",\"13\",\"14\",\"15\"];\nconst mode = settings.sizeMode || 'Single size';\nif (!['Single size', 'Size range', 'Random'].includes(mode)) throw new Error('Choose Single size, Size range or Random.');\nif (mode === 'Single size' && !allowedSizes.includes(String(settings.size))) throw new Error('Choose a size from the supported size list.');\nif (mode === 'Size range' && (!allowedSizes.includes(String(settings.sizeMinimum)) || !allowedSizes.includes(String(settings.sizeMaximum)) || Number(settings.sizeMinimum) > Number(settings.sizeMaximum)))\n  throw new Error('Choose a valid size range with minimum no greater than maximum.');\nconst addresses = Array.isArray(settings.addresses) ? settings.addresses : [];\nconst address = addresses.find(a => a.isDefault) || addresses[0];\nif (!address) throw new Error('Add a shipping address to this profile before running.');\nconst identity = settings.identity || {};\nconst fields = {\n  first_name: address.firstName || identity.firstName, last_name: address.lastName || identity.lastName,\n  email: identity.email, phone: address.phone || identity.phone,\n  address1: address.street1, address2: address.street2 || '', city: address.city,\n  state: address.state || '', zip: address.postalCode || '', country: String(address.country || '').toUpperCase(),\n};\nfor (const key of ['first_name', 'last_name', 'email', 'phone', 'address1', 'city', 'country']) {\n  if (!String(fields[key] || '').trim()) throw new Error('Profile shipping/contact field missing: ' + key);\n}\nif (!/^[A-Z]{2}$/.test(fields.country)) throw new Error('Shipping country must be a two-letter country code.');\nreturn fields;\n",
+          "into": "travisFields"
+        }
+      },
+      {
+        "id": "n_goto",
+        "kind": "goto",
+        "position": {
+          "x": 160,
+          "y": 420
+        },
+        "config": {
+          "url": "{{inputs.url}}",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_wait_products",
+        "kind": "waitFor",
+        "position": {
+          "x": 160,
+          "y": 560
+        },
+        "config": {
+          "selector": ".superswipe-block .superswipe-button",
+          "state": "attached",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_find_product",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 700
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst settings = {{vars.travisSettings}};\nconst matches = [...document.querySelectorAll('.superswipe-block')].filter(block => {\n  try { return norm(JSON.parse(block.querySelector('[data-superswipe-config]').textContent).title) === norm(settings.product); }\n  catch { return false; }\n});\nif (matches.length !== 1) throw new Error('Expected one exact product match; found ' + matches.length + '. Check the product title.');\nconst block = matches[0];\nif (block.dataset.releaseMode !== 'pay_after') throw new Error('This module supports no-payment entry draws only.');\nconst variants = JSON.parse(block.querySelector('[data-superswipe-variants]').textContent);\nconst allowedSizes = [\"3.5\",\"4\",\"4.5\",\"5\",\"5.5\",\"6\",\"6.5\",\"7\",\"7.5\",\"8\",\"8.5\",\"9\",\"9.5\",\"10\",\"10.5\",\"11\",\"11.5\",\"12\",\"12.5\",\"13\",\"14\",\"15\"];\nconst mode = settings.sizeMode || 'Single size';\nconst sizes = variants.filter(v => v.available !== false && allowedSizes.includes(String(v.title)) && (\n  mode === 'Single size' ? String(v.title) === String(settings.size) :\n  mode === 'Size range' ? Number(v.title) >= Number(settings.sizeMinimum) && Number(v.title) <= Number(settings.sizeMaximum) : true\n));\nif (!sizes.length || (mode === 'Single size' && sizes.length !== 1)) throw new Error('Requested size is missing or unavailable; no sizes match the selection.');\nconst variant = sizes[mode === 'Single size' ? 0 : Math.floor(Math.random() * sizes.length)];\nif (!/^\\d+$/.test(String(variant.id))) throw new Error('Invalid product variant.');\ndocument.querySelectorAll('[data-scrolls-travis-product]').forEach(el => el.removeAttribute('data-scrolls-travis-product'));\nblock.setAttribute('data-scrolls-travis-product', 'active');\nreturn { title: JSON.parse(block.querySelector('[data-superswipe-config]').textContent).title,\n  releaseId: block.dataset.superswipeLaunchId, variantId: String(variant.id), size: variant.title };\n",
+          "into": "travisProduct"
+        }
+      },
+      {
+        "id": "n_draw_status_notice",
+        "kind": "log",
+        "position": {
+          "x": 160,
+          "y": 840
+        },
+        "config": {
+          "level": "info",
+          "message": "Waiting up to 60 seconds for the site to enable Enter Draw for the selected product."
+        }
+      },
+      {
+        "id": "n_wait_draw_ready",
+        "kind": "waitFor",
+        "position": {
+          "x": 160,
+          "y": 980
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-product=\"active\"] .superswipe-button:not([disabled])",
+          "state": "visible",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_cookies_before_draw",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 1120
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 4500;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_open_draw",
+        "kind": "click",
+        "position": {
+          "x": 160,
+          "y": 1260
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-product=\"active\"] .superswipe-button",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_wait_dialog",
+        "kind": "waitFor",
+        "position": {
+          "x": 160,
+          "y": 1400
+        },
+        "config": {
+          "selector": ".superswipe-modal[aria-hidden=\"false\"]",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_bind_dialog",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 1540
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst product = {{vars.travisProduct}};\nconst matches = [...document.querySelectorAll('.superswipe-modal')].filter(el => visible(el) && norm(el.querySelector('.superswipe-product')?.textContent) === norm(product.title));\nif (matches.length !== 1) throw new Error('Could not identify the selected product dialog.');\ndocument.querySelectorAll('[data-scrolls-travis-dialog]').forEach(el => el.removeAttribute('data-scrolls-travis-dialog'));\nconst modal = matches[0];\nif (visible(modal.querySelector('.superswipe-entry-success'))) throw new Error('This browser already shows an entry for this draw; no new entry was recorded.');\nmodal.setAttribute('data-scrolls-travis-dialog', 'active');\nreturn true;\n",
+          "into": "travisDialogReady"
+        }
+      },
+      {
+        "id": "n_cookies_before_size",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 1680
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_size",
+        "kind": "click",
+        "position": {
+          "x": 160,
+          "y": 1820
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-size-chip[data-variant-id=\"{{vars.travisProduct.variantId}}\"]",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_verify_size",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 1960
+        },
+        "config": {
+          "script": "\nconst selected = document.querySelector('[data-scrolls-travis-dialog=\"active\"] .superswipe-size-chip[aria-checked=\"true\"]');\nconst product = {{vars.travisProduct}};\nif (!selected || selected.dataset.variantId !== product.variantId) throw new Error('The requested size was not selected.');\nreturn true;\n",
+          "into": "travisSizeReady"
+        }
+      },
+      {
+        "id": "n_terms_notice",
+        "kind": "log",
+        "position": {
+          "x": 160,
+          "y": 2100
+        },
+        "config": {
+          "level": "info",
+          "message": "Checking all five draw acknowledgments, including terms, privacy and Email/SMS communications."
+        }
+      },
+      {
+        "id": "n_accept_terms",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 2240
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nif (!visible(modal)) throw new Error('The selected draw dialog is no longer visible.');\nconst boxes = [...modal.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]')];\nif (boxes.length !== 5) throw new Error('Expected five draw acknowledgment boxes; found ' + boxes.length + '.');\nif (boxes.some(box => box.disabled)) throw new Error('The site has disabled the draw acknowledgment boxes.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_term_pause_0",
+        "kind": "dwell",
+        "position": {
+          "x": 160,
+          "y": 2380
+        },
+        "config": {
+          "minMs": 350,
+          "maxMs": 900
+        }
+      },
+      {
+        "id": "n_term_0",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 2520
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nif (!visible(modal)) throw new Error('The selected draw dialog is no longer visible.');\nconst boxes = modal.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]');\nif (boxes.length !== 5) throw new Error('Expected five draw acknowledgment boxes; found ' + boxes.length + '.');\nconst box = boxes[0];\nif (box.disabled) throw new Error('The site has disabled the draw acknowledgment boxes.');\nif (!box.checked) box.click();\nif (!box.checked) throw new Error('The site did not keep all draw acknowledgment boxes checked.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_term_pause_1",
+        "kind": "dwell",
+        "position": {
+          "x": 160,
+          "y": 2660
+        },
+        "config": {
+          "minMs": 350,
+          "maxMs": 900
+        }
+      },
+      {
+        "id": "n_term_1",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 2800
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nif (!visible(modal)) throw new Error('The selected draw dialog is no longer visible.');\nconst boxes = modal.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]');\nif (boxes.length !== 5) throw new Error('Expected five draw acknowledgment boxes; found ' + boxes.length + '.');\nconst box = boxes[1];\nif (box.disabled) throw new Error('The site has disabled the draw acknowledgment boxes.');\nif (!box.checked) box.click();\nif (!box.checked) throw new Error('The site did not keep all draw acknowledgment boxes checked.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_term_pause_2",
+        "kind": "dwell",
+        "position": {
+          "x": 160,
+          "y": 2940
+        },
+        "config": {
+          "minMs": 350,
+          "maxMs": 900
+        }
+      },
+      {
+        "id": "n_term_2",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 3080
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nif (!visible(modal)) throw new Error('The selected draw dialog is no longer visible.');\nconst boxes = modal.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]');\nif (boxes.length !== 5) throw new Error('Expected five draw acknowledgment boxes; found ' + boxes.length + '.');\nconst box = boxes[2];\nif (box.disabled) throw new Error('The site has disabled the draw acknowledgment boxes.');\nif (!box.checked) box.click();\nif (!box.checked) throw new Error('The site did not keep all draw acknowledgment boxes checked.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_term_pause_3",
+        "kind": "dwell",
+        "position": {
+          "x": 160,
+          "y": 3220
+        },
+        "config": {
+          "minMs": 350,
+          "maxMs": 900
+        }
+      },
+      {
+        "id": "n_term_3",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 3360
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nif (!visible(modal)) throw new Error('The selected draw dialog is no longer visible.');\nconst boxes = modal.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]');\nif (boxes.length !== 5) throw new Error('Expected five draw acknowledgment boxes; found ' + boxes.length + '.');\nconst box = boxes[3];\nif (box.disabled) throw new Error('The site has disabled the draw acknowledgment boxes.');\nif (!box.checked) box.click();\nif (!box.checked) throw new Error('The site did not keep all draw acknowledgment boxes checked.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_term_pause_4",
+        "kind": "dwell",
+        "position": {
+          "x": 160,
+          "y": 3500
+        },
+        "config": {
+          "minMs": 350,
+          "maxMs": 900
+        }
+      },
+      {
+        "id": "n_term_4",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 3640
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nif (!visible(modal)) throw new Error('The selected draw dialog is no longer visible.');\nconst boxes = modal.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]');\nif (boxes.length !== 5) throw new Error('Expected five draw acknowledgment boxes; found ' + boxes.length + '.');\nconst box = boxes[4];\nif (box.disabled) throw new Error('The site has disabled the draw acknowledgment boxes.');\nif (!box.checked) box.click();\nif (!box.checked) throw new Error('The site did not keep all draw acknowledgment boxes checked.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_verify_terms",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 3780
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst boxes = dialog()?.querySelectorAll('.superswipe-terms-accept input.superswipe-checkbox[type=\"checkbox\"]');\nif (!boxes || boxes.length !== 5 || [...boxes].some(box => !box.checked)) throw new Error('The site did not keep all draw acknowledgment boxes checked.');\nreturn true;\n",
+          "into": "travisTermsReady"
+        }
+      },
+      {
+        "id": "n_wait_terms",
+        "kind": "waitFor",
+        "position": {
+          "x": 160,
+          "y": 3920
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-continue-button:not([disabled])",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_continue",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 4060
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_continue",
+        "kind": "click",
+        "position": {
+          "x": 160,
+          "y": 4200
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-continue-button",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_wait_form",
+        "kind": "waitFor",
+        "position": {
+          "x": 160,
+          "y": 4340
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-entry-form:not([hidden]) input[name=\"first_name\"]",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_form",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 4480
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_fill_notice",
+        "kind": "log",
+        "position": {
+          "x": 160,
+          "y": 4620
+        },
+        "config": {
+          "level": "info",
+          "message": "Filling the selected shipping address and contact details."
+        }
+      },
+      {
+        "id": "n_country",
+        "kind": "select",
+        "position": {
+          "x": 160,
+          "y": 4760
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] select[name=\"country\"]",
+          "value": "{{vars.travisFields.country}}",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_phone_format",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 4900
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst fields = {{vars.travisFields}};\nconst prefix = dialog()?.querySelector('[data-pa-phone-prefix]')?.textContent?.replace(/\\D/g, '') || '';\nconst digits = String(fields.phone).replace(/\\D/g, '');\nif (prefix && String(fields.phone).trim().startsWith('+') && digits.startsWith(prefix)) fields.phone = digits.slice(prefix.length);\nreturn fields;\n",
+          "into": "travisFields"
+        }
+      },
+      {
+        "id": "n_cookies_before_first_name",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 5040
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_first_name",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 5180
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"first_name\"]",
+          "value": "{{vars.travisFields.first_name}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_last_name",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 5320
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_last_name",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 5460
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"last_name\"]",
+          "value": "{{vars.travisFields.last_name}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_email",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 5600
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_email",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 5740
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"email\"]",
+          "value": "{{vars.travisFields.email}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_phone",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 5880
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_phone",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 6020
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"phone\"]",
+          "value": "{{vars.travisFields.phone}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_address1",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 6160
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_address1",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 6300
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"address1\"]",
+          "value": "{{vars.travisFields.address1}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_address2",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 6440
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_address2",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 6580
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"address2\"]",
+          "value": "{{vars.travisFields.address2}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_cookies_before_city",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 6720
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_city",
+        "kind": "fill",
+        "position": {
+          "x": 160,
+          "y": 6860
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] input[name=\"city\"]",
+          "value": "{{vars.travisFields.city}}",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_regional_fields",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 7000
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst fields = {{vars.travisFields}};\nfor (const name of ['state', 'zip']) {\n  const el = dialog()?.querySelector('[name=\"' + name + '\"]');\n  if (!visible(el)) continue;\n  if (!String(fields[name]).trim()) throw new Error('Fill the profile shipping field: ' + name);\n  if (el.tagName === 'SELECT') {\n    const option = [...el.options].find(o => !o.disabled && o.value && (norm(o.value) === norm(fields[name]) || norm(o.textContent) === norm(fields[name])));\n    if (!option) throw new Error('Shipping ' + name + ' does not match an available option.');\n    el.value = option.value;\n  } else el.value = fields[name];\n  el.dispatchEvent(new Event('input', { bubbles: true }));\n  el.dispatchEvent(new Event('change', { bubbles: true }));\n}\nreturn true;\n",
+          "into": "travisRegionalReady"
+        }
+      },
+      {
+        "id": "n_verify_fields",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 7140
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst fields = {{vars.travisFields}};\nfor (const name of ['first_name', 'last_name', 'email', 'phone', 'address1', 'address2', 'city', 'country', 'state', 'zip']) {\n  const el = dialog()?.querySelector('[name=\"' + name + '\"]');\n  if (['state', 'zip'].includes(name) && el && !visible(el)) continue;\n  if (!el || !visible(el)) throw new Error('Shipping form field is missing or hidden: ' + name);\n  const actual = name === 'phone' ? el.value.replace(/\\D/g, '') : norm(el.value);\n  const expected = name === 'phone' ? String(fields[name]).replace(/\\D/g, '') : norm(fields[name]);\n  const selectedText = el.tagName === 'SELECT' ? norm(el.selectedOptions[0]?.textContent) : '';\n  if (actual !== expected && !(el.tagName === 'SELECT' && el.value && selectedText === expected)) throw new Error('Shipping form field was not filled correctly: ' + name);\n}\nreturn true;\n",
+          "into": "travisFieldsReady"
+        }
+      },
+      {
+        "id": "n_submit_notice",
+        "kind": "log",
+        "position": {
+          "x": 160,
+          "y": 7280
+        },
+        "config": {
+          "level": "info",
+          "message": "Solving Turnstile with the configured Key Vault provider, then submitting the draw entry."
+        }
+      },
+      {
+        "id": "n_solve_turnstile",
+        "kind": "captcha.solveTurnstile",
+        "position": {
+          "x": 160,
+          "y": 7420
+        },
+        "config": {
+          "frameSelector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-turnstile iframe",
+          "provider": "auto",
+          "timeoutMs": 180000,
+          "into": "travisTurnstile"
+        }
+      },
+      {
+        "id": "n_cookies_before_submit",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 7560
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst timeoutMs = 0;\nconst deadline = Date.now() + timeoutMs;\ndo {\n  const button = document.querySelector('#cookiebanner a.c-button');\n  if (visible(button) && norm(button.textContent) === 'ok') { button.click(); return true; }\n  if (Date.now() >= deadline) return false;\n  await new Promise(resolve => setTimeout(resolve, 100));\n} while (true);\n",
+          "into": "travisCookiesAccepted"
+        }
+      },
+      {
+        "id": "n_submit",
+        "kind": "click",
+        "position": {
+          "x": 160,
+          "y": 7700
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-entry-submit",
+          "instant": true,
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "n_wait_success",
+        "kind": "waitFor",
+        "position": {
+          "x": 160,
+          "y": 7840
+        },
+        "config": {
+          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-entry-success:not([hidden]), [data-scrolls-travis-dialog=\"active\"] .superswipe-message.is-visible.is-error",
+          "state": "visible",
+          "timeoutMs": 45000
+        }
+      },
+      {
+        "id": "n_confirm",
+        "kind": "evaluate",
+        "position": {
+          "x": 160,
+          "y": 7980
+        },
+        "config": {
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst modal = dialog();\nconst product = {{vars.travisProduct}};\nif (!visible(modal) || norm(modal.querySelector('.superswipe-product')?.textContent) !== norm(product.title)) throw new Error('Entry confirmation belongs to an unexpected dialog.');\nconst error = modal.querySelector('.superswipe-message.is-visible.is-error');\nif (visible(error)) throw new Error('Entry rejected by the site: ' + error.textContent.trim());\nconst success = modal.querySelector('.superswipe-entry-success');\nif (!visible(success) || !/you['’]re entered/i.test(success.textContent || '')) throw new Error('The site has not confirmed entry.');\nconst fields = {{vars.travisFields}};\nconst actual = modal.querySelector('input[name=\"email\"]')?.value?.trim();\nif (!actual) throw new Error('The confirmed entry has no email address.');\nconst selected = modal.querySelector('.superswipe-size-chip[aria-checked=\"true\"]');\nif (!selected || selected.dataset.variantId !== product.variantId) throw new Error('Size changed during entry; review the confirmation manually.');\nreturn { email: actual, status: 'entered', releaseId: product.releaseId, variantId: product.variantId, size: product.size };\n",
+          "into": "travisOutcome"
+        }
+      },
+      {
+        "id": "n_save_entry",
+        "kind": "inventory.record",
+        "position": {
+          "x": 160,
+          "y": 8120
+        },
+        "config": {
+          "site": "shop.travisscott.com",
+          "productLabel": "{{vars.travisProduct.title}}",
+          "status": "entered",
+          "email": "{{vars.travisOutcome.email}}",
+          "productUrl": "{{inputs.url}}",
+          "cost": 0,
+          "currency": "USD",
+          "metadata": "{{vars.travisOutcome}}",
+          "into": "travisEntry"
+        }
+      },
+      {
+        "id": "n_result",
+        "kind": "setResult",
+        "position": {
+          "x": 160,
+          "y": 8260
+        },
+        "config": {
+          "value": "{{vars.travisOutcome}}"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_0",
+        "from": "n_start",
+        "fromPort": "next",
+        "to": "n_settings"
+      },
+      {
+        "id": "e_1",
+        "from": "n_settings",
+        "fromPort": "next",
+        "to": "n_preflight"
+      },
+      {
+        "id": "e_2",
+        "from": "n_preflight",
+        "fromPort": "next",
+        "to": "n_goto"
+      },
+      {
+        "id": "e_3",
+        "from": "n_goto",
+        "fromPort": "next",
+        "to": "n_wait_products"
+      },
+      {
+        "id": "e_4",
+        "from": "n_wait_products",
+        "fromPort": "next",
+        "to": "n_find_product"
+      },
+      {
+        "id": "e_5",
+        "from": "n_find_product",
+        "fromPort": "next",
+        "to": "n_draw_status_notice"
+      },
+      {
+        "id": "e_6",
+        "from": "n_draw_status_notice",
+        "fromPort": "next",
+        "to": "n_wait_draw_ready"
+      },
+      {
+        "id": "e_7",
+        "from": "n_wait_draw_ready",
+        "fromPort": "next",
+        "to": "n_cookies_before_draw"
+      },
+      {
+        "id": "e_8",
+        "from": "n_cookies_before_draw",
+        "fromPort": "next",
+        "to": "n_open_draw"
+      },
+      {
+        "id": "e_9",
+        "from": "n_open_draw",
+        "fromPort": "next",
+        "to": "n_wait_dialog"
+      },
+      {
+        "id": "e_10",
+        "from": "n_wait_dialog",
+        "fromPort": "next",
+        "to": "n_bind_dialog"
+      },
+      {
+        "id": "e_11",
+        "from": "n_bind_dialog",
+        "fromPort": "next",
+        "to": "n_cookies_before_size"
+      },
+      {
+        "id": "e_12",
+        "from": "n_cookies_before_size",
+        "fromPort": "next",
+        "to": "n_size"
+      },
+      {
+        "id": "e_13",
+        "from": "n_size",
+        "fromPort": "next",
+        "to": "n_verify_size"
+      },
+      {
+        "id": "e_14",
+        "from": "n_verify_size",
+        "fromPort": "next",
+        "to": "n_terms_notice"
+      },
+      {
+        "id": "e_15",
+        "from": "n_terms_notice",
+        "fromPort": "next",
+        "to": "n_accept_terms"
+      },
+      {
+        "id": "e_16",
+        "from": "n_accept_terms",
+        "fromPort": "next",
+        "to": "n_term_pause_0"
+      },
+      {
+        "id": "e_17",
+        "from": "n_term_pause_0",
+        "fromPort": "next",
+        "to": "n_term_0"
+      },
+      {
+        "id": "e_18",
+        "from": "n_term_0",
+        "fromPort": "next",
+        "to": "n_term_pause_1"
+      },
+      {
+        "id": "e_19",
+        "from": "n_term_pause_1",
+        "fromPort": "next",
+        "to": "n_term_1"
+      },
+      {
+        "id": "e_20",
+        "from": "n_term_1",
+        "fromPort": "next",
+        "to": "n_term_pause_2"
+      },
+      {
+        "id": "e_21",
+        "from": "n_term_pause_2",
+        "fromPort": "next",
+        "to": "n_term_2"
+      },
+      {
+        "id": "e_22",
+        "from": "n_term_2",
+        "fromPort": "next",
+        "to": "n_term_pause_3"
+      },
+      {
+        "id": "e_23",
+        "from": "n_term_pause_3",
+        "fromPort": "next",
+        "to": "n_term_3"
+      },
+      {
+        "id": "e_24",
+        "from": "n_term_3",
+        "fromPort": "next",
+        "to": "n_term_pause_4"
+      },
+      {
+        "id": "e_25",
+        "from": "n_term_pause_4",
+        "fromPort": "next",
+        "to": "n_term_4"
+      },
+      {
+        "id": "e_26",
+        "from": "n_term_4",
+        "fromPort": "next",
+        "to": "n_verify_terms"
+      },
+      {
+        "id": "e_27",
+        "from": "n_verify_terms",
+        "fromPort": "next",
+        "to": "n_wait_terms"
+      },
+      {
+        "id": "e_28",
+        "from": "n_wait_terms",
+        "fromPort": "next",
+        "to": "n_cookies_before_continue"
+      },
+      {
+        "id": "e_29",
+        "from": "n_cookies_before_continue",
+        "fromPort": "next",
+        "to": "n_continue"
+      },
+      {
+        "id": "e_30",
+        "from": "n_continue",
+        "fromPort": "next",
+        "to": "n_wait_form"
+      },
+      {
+        "id": "e_31",
+        "from": "n_wait_form",
+        "fromPort": "next",
+        "to": "n_cookies_before_form"
+      },
+      {
+        "id": "e_32",
+        "from": "n_cookies_before_form",
+        "fromPort": "next",
+        "to": "n_fill_notice"
+      },
+      {
+        "id": "e_33",
+        "from": "n_fill_notice",
+        "fromPort": "next",
+        "to": "n_country"
+      },
+      {
+        "id": "e_34",
+        "from": "n_country",
+        "fromPort": "next",
+        "to": "n_phone_format"
+      },
+      {
+        "id": "e_35",
+        "from": "n_phone_format",
+        "fromPort": "next",
+        "to": "n_cookies_before_first_name"
+      },
+      {
+        "id": "e_36",
+        "from": "n_cookies_before_first_name",
+        "fromPort": "next",
+        "to": "n_first_name"
+      },
+      {
+        "id": "e_37",
+        "from": "n_first_name",
+        "fromPort": "next",
+        "to": "n_cookies_before_last_name"
+      },
+      {
+        "id": "e_38",
+        "from": "n_cookies_before_last_name",
+        "fromPort": "next",
+        "to": "n_last_name"
+      },
+      {
+        "id": "e_39",
+        "from": "n_last_name",
+        "fromPort": "next",
+        "to": "n_cookies_before_email"
+      },
+      {
+        "id": "e_40",
+        "from": "n_cookies_before_email",
+        "fromPort": "next",
+        "to": "n_email"
+      },
+      {
+        "id": "e_41",
+        "from": "n_email",
+        "fromPort": "next",
+        "to": "n_cookies_before_phone"
+      },
+      {
+        "id": "e_42",
+        "from": "n_cookies_before_phone",
+        "fromPort": "next",
+        "to": "n_phone"
+      },
+      {
+        "id": "e_43",
+        "from": "n_phone",
+        "fromPort": "next",
+        "to": "n_cookies_before_address1"
+      },
+      {
+        "id": "e_44",
+        "from": "n_cookies_before_address1",
+        "fromPort": "next",
+        "to": "n_address1"
+      },
+      {
+        "id": "e_45",
+        "from": "n_address1",
+        "fromPort": "next",
+        "to": "n_cookies_before_address2"
+      },
+      {
+        "id": "e_46",
+        "from": "n_cookies_before_address2",
+        "fromPort": "next",
+        "to": "n_address2"
+      },
+      {
+        "id": "e_47",
+        "from": "n_address2",
+        "fromPort": "next",
+        "to": "n_cookies_before_city"
+      },
+      {
+        "id": "e_48",
+        "from": "n_cookies_before_city",
+        "fromPort": "next",
+        "to": "n_city"
+      },
+      {
+        "id": "e_49",
+        "from": "n_city",
+        "fromPort": "next",
+        "to": "n_regional_fields"
+      },
+      {
+        "id": "e_50",
+        "from": "n_regional_fields",
+        "fromPort": "next",
+        "to": "n_verify_fields"
+      },
+      {
+        "id": "e_51",
+        "from": "n_verify_fields",
+        "fromPort": "next",
+        "to": "n_submit_notice"
+      },
+      {
+        "id": "e_52",
+        "from": "n_submit_notice",
+        "fromPort": "next",
+        "to": "n_solve_turnstile"
+      },
+      {
+        "id": "e_53",
+        "from": "n_solve_turnstile",
+        "fromPort": "next",
+        "to": "n_cookies_before_submit"
+      },
+      {
+        "id": "e_54",
+        "from": "n_cookies_before_submit",
+        "fromPort": "next",
+        "to": "n_submit"
+      },
+      {
+        "id": "e_55",
+        "from": "n_submit",
+        "fromPort": "next",
+        "to": "n_wait_success"
+      },
+      {
+        "id": "e_56",
+        "from": "n_wait_success",
+        "fromPort": "next",
+        "to": "n_confirm"
+      },
+      {
+        "id": "e_57",
+        "from": "n_confirm",
+        "fromPort": "next",
+        "to": "n_save_entry"
+      },
+      {
+        "id": "e_58",
+        "from": "n_save_entry",
+        "fromPort": "next",
+        "to": "n_result"
+      }
+    ],
+    "author": {
+      "name": "Scrolls",
+      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
+      "signature": "ipyKJb7HqCDhX4SQTG8PrMB/qJhrpCYjvLsoESsNl2P8HSnKyedy1fXwJEIIgUASExBmyHDWlbVWgNveaPc0BA=="
+    }
+  }
+}

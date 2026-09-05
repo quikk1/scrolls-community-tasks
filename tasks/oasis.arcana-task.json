@@ -1,13 +1,13 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-09-04T21:11:37.031Z",
+  "exportedAt": "2026-09-04T23:53:53.776Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.3.8",
+    "version": "1.3.11",
     "metadata": {
       "id": "oasis",
       "name": "OASIS",
-      "description": "OASIS (oasis.os.fan) signup - native module. LOCALE-INDEPENDENT selectors (page renders in the proxy's language). ADAPTIVE details form: fills only the fields the page actually renders - location only, names without a location, or the full form. If the email is already joined the site skips straight to the skip-step page; the module clicks through and still records the entry, without duplicating a row that already exists. City/country/phone from the proxy geo; DOB random 18+; names/email from the profile identity.",
+      "description": "OASIS signup with shared address/email selection. Uses the selected record for delivery address and City/Town, including pages that ask for both. Selects the town autocomplete suggestion and keeps shipping fields separate from names. Records confirmed signups only.",
       "tags": [],
       "inputs": []
     },
@@ -196,7 +196,7 @@
           "y": 1080
         },
         "config": {
-          "script": "// ADAPTIVE name step. The details form has two shapes: the full one (first\n// name, last name, country, phone, location, DOB) and a reduced one that asks\n// for LOCATION ONLY. The old build filled inputs by POSITION\n// ((//input[@type='text'])[1] / [2]), so on the reduced form it typed the first\n// name straight into the location box and then stalled looking for [2].\n//\n// Locale-independent anchor: the location field is the one carrying\n// autocomplete=\"no-thanks\" (a site attribute, not translated text). Real name\n// fields are the visible text inputs that come BEFORE it in document order.\n// Zero of those => location-only => fill nothing here and let n_address do it.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction locField(){return document.querySelector('input[autocomplete=\"no-thanks\"]');}\nfunction cands(){\n  var loc=locField();\n  return Array.from(document.querySelectorAll('input')).filter(function(i){\n    var t=(i.type||'').toLowerCase();\n    if(!vis(i)) return false;\n    if(t!==''&&t!=='text') return false;              // skips tel / email / checkbox\n    if(i.name==='Email') return false;\n    if(i.getAttribute('autocomplete')==='no-thanks') return false;  // the location box\n    if(i.closest('.vue-country-select')) return false;              // country search box\n    if(i.readOnly) return false;                      // DOB picker box, never a name\n    if(loc&&!after(i,loc)) return false;              // anything after location = DOB\n    return true;\n  });\n}\nvar first=String(\"{{identity.firstName}}\"||'').trim();\nvar last=String(\"{{identity.lastName}}\"||'').trim();\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(vis(locField())||vis(document.querySelector('input[type=\"tel\"]'))) break;\n  await sleep(300);\n}\nawait sleep(400);\nvar loc=locField();\nvar f=cands();\n// Location-only: the page asks for nothing but the location.\nif(loc&&f.length===0) return 'location-only';\n// No location anchor AND not the familiar two-field layout - refuse to guess\n// rather than risk typing a name into whatever box happens to be first.\nif(!loc&&f.length<2) return 'ambiguous-skip';\nif(loc&&f.length===1){ setVal(f[0],(first+' '+last).trim()); return 'single-name-field'; }\nsetVal(f[0],first);\nawait sleep(120);\nsetVal(f[1],last);\nreturn 'names-filled-'+f.length;",
+          "script": "// ADAPTIVE name step. The details form has two shapes: the full one (first\n// name, last name, country, phone, location, DOB) and a reduced one that asks\n// for LOCATION ONLY. The old build filled inputs by POSITION\n// ((//input[@type='text'])[1] / [2]), so on the reduced form it typed the first\n// name straight into the location box and then stalled looking for [2].\n//\n// Locale-independent anchor: the location field is the one carrying\n// autocomplete=\"no-thanks\" (a site attribute, not translated text). Real name\n// fields are the visible text inputs that come BEFORE it in document order.\n// Zero of those => location-only => fill nothing here and let n_address do it.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();var s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('blur',{bubbles:true}));}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction locField(){return document.querySelector('input[autocomplete=\"no-thanks\"]');}\nfunction cands(){\n  var loc=locField();\n  return Array.from(document.querySelectorAll('input')).filter(function(i){\n    var t=(i.type||'').toLowerCase();\n    if(!vis(i)) return false;\n    if(t!==''&&t!=='text') return false;              // skips tel / email / checkbox\n    if(i.name==='Email') return false;\n    // Delivery fields carry the site's truck icon in every locale. Never use them as names.\n    if(i.closest('.v-input')?.querySelector('.mdi-truck-delivery')) return false;\n    if(['address-line1','address-line2','address-level2','country','postal-code'].includes(i.autocomplete)) return false;\n  \n    if(i.getAttribute('autocomplete')==='no-thanks') return false;  // the location box\n    if(i.closest('.vue-country-select')) return false;              // country search box\n    if(i.readOnly) return false;                      // DOB picker box, never a name\n    if(loc&&!after(i,loc)) return false;              // anything after location = DOB\n    return true;\n  });\n}\nvar details={{vars.oasisDetails}};\nvar first=String(details.identity.firstName||'').trim();\nvar last=String(details.identity.lastName||'').trim();\nvar deadline=Date.now()+20000;\nwhile(Date.now()<deadline){\n  if(vis(locField())||vis(document.querySelector('input[type=\"tel\"]'))) break;\n  await sleep(300);\n}\nawait sleep(400);\nvar loc=locField();\nvar f=cands();\n// Location-only: the page asks for nothing but the location.\nif(loc&&f.length===0) return 'location-only';\n// No location anchor AND not the familiar two-field layout - refuse to guess\n// rather than risk typing a name into whatever box happens to be first.\nif(!loc&&f.length!==2) return 'ambiguous-skip';\nif(loc&&f.length===1){ setVal(f[0],(first+' '+last).trim()); return 'single-name-field'; }\nsetVal(f[0],first);\nawait sleep(120);\nsetVal(f[1],last);\nreturn 'names-filled-'+f.length;",
           "into": "oasisNames"
         }
       },
@@ -232,7 +232,7 @@
           "y": 1680
         },
         "config": {
-          "script": "// OASIS location autocomplete is a controlled Vuetify component.\n// It is not valid until a prediction object is selected from the menu.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction norm(s){return String(s||'').trim().toLowerCase();}\nvar input=Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).filter(vis)[0];\nif(!input) return 'no-location-field';\nvar city=String(\"{{vars.geo.city}}\"||'').trim();\nif(!city) throw new Error('OASIS City/Town cannot be filled because proxy geo returned an empty city.');\n// OASIS_NATIVE_CITY_INPUT_V3\n// OASIS_NATIVE_CITY_FOCUS_V4\n// OASIS_NATIVE_CITY_INSERT_V5\n// OASIS_NATIVE_CITY_REFOCUS_V11\n// OASIS_ACTIVE_CITY_CLICK_V6\n// Oasis renders predictions without a reliable aria-owns/controls link. The\n// stable-result wait above makes the first enabled row in the active menu safe.\n// Input.insertText maps to the bridge's verified native char-event path.\n// Clearing this controlled Vuetify field can replace the focused input. Click\n// the live replacement immediately before native insertion instead. Keep that\n// native focus: page.focus() can detach Chromium's input target.\n// The preceding typeText node sends CDP keyboard input. Oasis ignores value\n// setters and synthetic DOM events for autocomplete lookup initiation.\nif(norm(input.value)!==norm(city)) throw new Error('OASIS City/Town native typing did not reach the input.');\n// OASIS_CITY_PREDICTIONS_READY_V2\n// Vuetify opens the menu before its async location results arrive. Wait for\n// this input's own listbox, a selectable result, and a stable result label.\nvar deadline=Date.now()+25000;\nvar stableLabel='';\nvar stablePolls=0;\nwhile(Date.now()<deadline){\n  // OASIS_NO_ARIA_CITY_WAIT_V7\n  // This Oasis build can show the menu while aria-expanded remains absent.\n  // OASIS_GEOMETRIC_CITY_CLICK_V8\n  // OASIS_LIVE_DOM_CITY_CLICK_V9\n  // OASIS_ROLE_OPTION_CITY_CLICK_V10\n  // Live inspection confirms every rendered Oasis prediction is role=option.\n  // The popup may flip above or below the input, so do not filter by geometry.\n  var items=Array.from(document.querySelectorAll('[role=\"option\"]')).filter(function(el){\n    var disabled=el.getAttribute('aria-disabled')==='true';\n    var label=String(el.textContent||'').trim();\n    return vis(el)&&!disabled&&!!label;\n  });\n  if(items.length){\n    var exact=items.find(function(el){return norm(el.textContent).includes(norm(city));});\n    // If aria-owns/controls identified the city list, its first selectable\n    // result is valid even when the provider formats the city differently.\n    var target=exact||items[0];\n    if(target){\n      var label=String(target.textContent||'').trim();\n      if(label===stableLabel) stablePolls++; else {stableLabel=label;stablePolls=1;}\n      if(stablePolls>=3) return 'predictions-ready:'+label;\n    }\n  } else {\n    stableLabel=''; stablePolls=0;\n  }\n  var serviceError=Array.from(document.querySelectorAll('.location-error, .v-messages__message')).filter(vis).map(function(el){return String(el.textContent||'').trim();}).filter(Boolean)[0];\n  if(serviceError && !/start typing/i.test(serviceError)) throw new Error('OASIS location service: '+serviceError);\n  await sleep(250);\n}\nthrow new Error('OASIS City/Town predictions did not appear for \"'+city+'\".');",
+          "script": "// OASIS location autocomplete is a controlled Vuetify component.\n// It is not valid until a prediction object is selected from the menu.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction norm(s){return String(s||'').trim().toLowerCase();}\nvar input=Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).filter(vis)[0];\nif(!input) return 'no-location-field';\nvar selectedCity={{vars.oasisSelectedCity}};\nvar city=String(selectedCity.city||'').trim();\nif(!city) throw new Error('OASIS City/Town cannot be filled because proxy geo returned an empty city.');\n// OASIS_NATIVE_CITY_INPUT_V3\n// OASIS_NATIVE_CITY_FOCUS_V4\n// OASIS_NATIVE_CITY_INSERT_V5\n// OASIS_NATIVE_CITY_REFOCUS_V11\n// OASIS_ACTIVE_CITY_CLICK_V6\n// Oasis renders predictions without a reliable aria-owns/controls link. The\n// stable-result wait above makes the first enabled row in the active menu safe.\n// Input.insertText maps to the bridge's verified native char-event path.\n// Clearing this controlled Vuetify field can replace the focused input. Click\n// the live replacement immediately before native insertion instead. Keep that\n// native focus: page.focus() can detach Chromium's input target.\n// The preceding typeText node sends CDP keyboard input. Oasis ignores value\n// setters and synthetic DOM events for autocomplete lookup initiation.\nif(norm(input.value)!==norm(city)) throw new Error('OASIS City/Town native typing did not reach the input.');\n// OASIS_CITY_PREDICTIONS_READY_V2\n// Vuetify opens the menu before its async location results arrive. Wait for\n// this input's own listbox, a selectable result, and a stable result label.\nvar deadline=Date.now()+25000;\nvar stableLabel='';\nvar stablePolls=0;\nwhile(Date.now()<deadline){\n  // OASIS_NO_ARIA_CITY_WAIT_V7\n  // This Oasis build can show the menu while aria-expanded remains absent.\n  // OASIS_GEOMETRIC_CITY_CLICK_V8\n  // OASIS_LIVE_DOM_CITY_CLICK_V9\n  // OASIS_ROLE_OPTION_CITY_CLICK_V10\n  // Live inspection confirms every rendered Oasis prediction is role=option.\n  // The popup may flip above or below the input, so do not filter by geometry.\n  var items=Array.from(document.querySelectorAll('[role=\"option\"]')).filter(function(el){\n    var disabled=el.getAttribute('aria-disabled')==='true';\n    var label=String(el.textContent||'').trim();\n    return vis(el)&&!disabled&&!!label;\n  });\n  if(items.length){\n    var exact=items.find(function(el){return norm(el.textContent).includes(norm(city));});\n    // If aria-owns/controls identified the city list, its first selectable\n    // result is valid even when the provider formats the city differently.\n    var target=exact||items[0];\n    if(target){\n      var label=String(target.textContent||'').trim();\n      if(label===stableLabel) stablePolls++; else {stableLabel=label;stablePolls=1;}\n      if(stablePolls>=3) return 'predictions-ready:'+label;\n    }\n  } else {\n    stableLabel=''; stablePolls=0;\n  }\n  var serviceError=Array.from(document.querySelectorAll('.location-error, .v-messages__message')).filter(vis).map(function(el){return String(el.textContent||'').trim();}).filter(Boolean)[0];\n  if(serviceError && !/start typing/i.test(serviceError)) throw new Error('OASIS location service: '+serviceError);\n  await sleep(250);\n}\nthrow new Error('OASIS City/Town predictions did not appear for \"'+city+'\".');",
           "into": "oasisLocation"
         }
       },
@@ -244,7 +244,7 @@
           "y": 1920
         },
         "config": {
-          "script": "// The DOB field sits right after the location box when there is one. On the\n// variant that has names but NO location, fall back to probing the trailing\n// text inputs and only accept one that actually opens a date picker.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction pickerUp(){return !!document.querySelector('.v-date-picker-years, .v-date-picker-table, .v-picker__body');}\nvar city=document.querySelector('input[autocomplete=\"no-thanks\"]');\nvar texts=textInputs();\nvar cands = city ? texts.filter(function(i){return after(city,i);})\n                 : texts.slice().reverse().slice(0,3);\nfor(var k=0;k<cands.length;k++){\n  cands[k].scrollIntoView({block:'center'});\n  cands[k].click();\n  await sleep(500);\n  if(pickerUp()) return 'dob-opened';\n}\nreturn 'no-dob';",
+          "script": "// The DOB field sits right after the location box when there is one. On the\n// variant that has names but NO location, fall back to probing the trailing\n// text inputs and only accept one that actually opens a date picker.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction textInputs(){return Array.from(document.querySelectorAll('input')).filter(function(i){var t=(i.type||'').toLowerCase();return vis(i)&&(t===''||t==='text');});}\nfunction after(ref,el){return !!ref && !!(ref.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);}\nfunction pickerUp(){return !!document.querySelector('.v-date-picker-years, .v-date-picker-table, .v-picker__body');}\nvar city=document.querySelector('input[autocomplete=\"no-thanks\"]');\nvar texts=textInputs().filter(function(i){return !i.closest('.v-input')?.querySelector('.mdi-truck-delivery');});\nvar cands = city ? texts.filter(function(i){return after(city,i);})\n                 : texts.slice().reverse().slice(0,3);\nfor(var k=0;k<cands.length;k++){\n  cands[k].scrollIntoView({block:'center'});\n  cands[k].click();\n  await sleep(500);\n  if(pickerUp()) return 'dob-opened';\n}\nreturn 'no-dob';",
           "into": "oasisDobOpen"
         }
       },
@@ -396,13 +396,18 @@
       },
       {
         "id": "n_dup_end",
-        "kind": "noop",
+        "kind": "setResult",
         "position": {
           "x": 0,
           "y": 3360
         },
         "config": {
-          "label": "Already in database"
+          "value": {
+            "status": "entered",
+            "email": "{{identity.email}}",
+            "suppressSuccessWebhook": true,
+            "site": "oasis.os.fan"
+          }
         }
       },
       {
@@ -452,7 +457,7 @@
         },
         "config": {
           "selector": "",
-          "text": "{{vars.geo.city}}",
+          "text": "{{vars.oasisSelectedCity.city}}",
           "delayMs": 90,
           "typos": false,
           "instant": true,
@@ -491,6 +496,98 @@
             "suppressSuccessWebhook": true,
             "site": "oasis.os.fan"
           }
+        }
+      },
+      {
+        "id": "n_details_data",
+        "kind": "setVar",
+        "config": {
+          "name": "oasisDetails",
+          "value": {
+            "addresses": "{{addresses}}",
+            "identity": {
+              "firstName": "{{identity.firstName}}",
+              "lastName": "{{identity.lastName}}"
+            }
+          }
+        },
+        "position": {
+          "x": 360,
+          "y": 4560
+        }
+      },
+      {
+        "id": "n_location_mode",
+        "kind": "evaluate",
+        "config": {
+          "into": "oasisLocationMode",
+          "script": "\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\n\nfunction deliveryInputs() {\n  return Array.from(document.querySelectorAll('.v-input')).filter(function(wrap) {\n    return !!wrap.querySelector('.mdi-truck-delivery');\n  }).flatMap(function(wrap) { return Array.from(wrap.querySelectorAll('input')); })\n    .filter(function(el, i, all) { return all.indexOf(el) === i && vis(el) && !el.readOnly && el.type !== 'hidden'; });\n}\n\nconst delivery=deliveryInputs();\nif(delivery.length && delivery.length!==5) throw new Error('OASIS delivery form changed: expected five address fields.');\nif(delivery.length===5) return 'delivery';\nif(Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).some(vis)) return 'autocomplete';\nreturn 'none';\n"
+        },
+        "position": {
+          "x": 360,
+          "y": 4680
+        }
+      },
+      {
+        "id": "n_delivery_branch",
+        "kind": "branch",
+        "config": {
+          "left": "{{vars.oasisLocationMode}}",
+          "op": "==",
+          "right": "delivery"
+        },
+        "position": {
+          "x": 360,
+          "y": 4800
+        }
+      },
+      {
+        "id": "n_autocomplete_branch",
+        "kind": "branch",
+        "config": {
+          "left": "{{vars.oasisLocationMode}}",
+          "op": "==",
+          "right": "autocomplete"
+        },
+        "position": {
+          "x": 360,
+          "y": 4920
+        }
+      },
+      {
+        "id": "n_selected_city",
+        "kind": "evaluate",
+        "config": {
+          "into": "oasisSelectedCity",
+          "script": "\nconst details={{vars.oasisDetails}};\nconst addresses=Array.isArray(details.addresses)?details.addresses:[];\nconst address=addresses.find(a=>a.isDefault)||addresses[0];\nconst city=String(address?.city||'').trim();\nif(!city) throw new Error('Choose an address with a city in the Addresses tab.');\nreturn {city};\n"
+        },
+        "position": {
+          "x": 360,
+          "y": 5040
+        }
+      },
+      {
+        "id": "n_delivery_fill",
+        "kind": "evaluate",
+        "config": {
+          "into": "oasisDeliveryReady",
+          "script": "\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\n\nfunction deliveryInputs() {\n  return Array.from(document.querySelectorAll('.v-input')).filter(function(wrap) {\n    return !!wrap.querySelector('.mdi-truck-delivery');\n  }).flatMap(function(wrap) { return Array.from(wrap.querySelectorAll('input')); })\n    .filter(function(el, i, all) { return all.indexOf(el) === i && vis(el) && !el.readOnly && el.type !== 'hidden'; });\n}\n\nconst details={{vars.oasisDetails}};\nconst addresses=Array.isArray(details.addresses)?details.addresses:[];\nconst address=addresses.find(a=>a.isDefault)||addresses[0];\nif(!address) throw new Error('Choose a delivery address in the Addresses tab.');\nconst line=String(address.street1||'').trim();\n// Split the saved street line into the two fields the site requires.\nconst first=line.match(/^(\\d[\\w/-]*(?:\\s*[-/]\\s*\\d[\\w/-]*)?)\\s+(.+)$/);\nconst last=line.match(/^(.+?)\\s+(\\d[\\w/-]*)$/);\nconst house=first?first[1]:last?last[2]:'';\nconst street=first?first[2]:last?last[1]:'';\nif(!house||!street) throw new Error('The selected address needs a house number and street in Address line 1.');\nconst country=String(address.country||'').trim().toUpperCase();\nif(!/^[A-Z]{2}$/.test(country)) throw new Error('The selected address needs a two-letter country code.');\nconst countryName=new Intl.DisplayNames(['en'],{type:'region'}).of(country);\nconst values=[ [house,String(address.street2||'').trim()].filter(Boolean).join(', '),street,String(address.city||'').trim(),countryName,String(address.postalCode||'').trim() ];\nconst labels=['House','Street','City','Country','ZIP'];\nfor(let i=0;i<values.length;i++) if(!values[i]) throw new Error('Selected delivery address is missing '+labels[i]+'.');\nfor(let i=0;i<values.length;i++) {\n  const inputs=deliveryInputs();\n  if(inputs.length!==5) throw new Error('OASIS delivery form changed while filling.');\n  const el=inputs[i];\n  if(el.disabled) throw new Error('OASIS delivery field is disabled: '+labels[i]);\n  el.focus();\n  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,values[i]);\n  el.dispatchEvent(new Event('input',{bubbles:true}));\n  el.dispatchEvent(new Event('change',{bubbles:true}));\n  el.blur();\n  await new Promise(resolve=>setTimeout(resolve,120));\n}\nconst inputs=deliveryInputs();\nif(inputs.length!==5 || values.some((value,i)=>inputs[i].value.trim()!==value)) throw new Error('OASIS did not retain the selected delivery address.');\nreturn 'delivery-address-verified';\n"
+        },
+        "position": {
+          "x": 360,
+          "y": 5160
+        }
+      },
+      {
+        "id": "n_remaining_location",
+        "kind": "evaluate",
+        "config": {
+          "into": "oasisLocationMode",
+          "script": "\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}\nreturn Array.from(document.querySelectorAll('input[autocomplete=\"no-thanks\"]')).some(vis) ? 'autocomplete' : 'none';\n"
+        },
+        "position": {
+          "x": 360,
+          "y": 5280
         }
       }
     ],
@@ -589,7 +686,7 @@
         "id": "e_9",
         "from": "n_stepbranch",
         "fromPort": "false",
-        "to": "n_names"
+        "to": "n_details_data"
       },
       {
         "id": "e_10",
@@ -703,7 +800,7 @@
         "id": "e_12",
         "from": "n_phone",
         "fromPort": "next",
-        "to": "n_addrclear"
+        "to": "n_location_mode"
       },
       {
         "id": "e_addrclear",
@@ -728,13 +825,67 @@
         "from": "n_entry_webhook",
         "fromPort": "next",
         "to": "n_entry_result"
+      },
+      {
+        "id": "e_n_details_data_next_details",
+        "from": "n_details_data",
+        "fromPort": "next",
+        "to": "n_names"
+      },
+      {
+        "id": "e_n_location_mode_next_details",
+        "from": "n_location_mode",
+        "fromPort": "next",
+        "to": "n_delivery_branch"
+      },
+      {
+        "id": "e_n_delivery_branch_true_details",
+        "from": "n_delivery_branch",
+        "fromPort": "true",
+        "to": "n_delivery_fill"
+      },
+      {
+        "id": "e_n_delivery_branch_false_details",
+        "from": "n_delivery_branch",
+        "fromPort": "false",
+        "to": "n_autocomplete_branch"
+      },
+      {
+        "id": "e_n_autocomplete_branch_true_details",
+        "from": "n_autocomplete_branch",
+        "fromPort": "true",
+        "to": "n_selected_city"
+      },
+      {
+        "id": "e_n_autocomplete_branch_false_details",
+        "from": "n_autocomplete_branch",
+        "fromPort": "false",
+        "to": "n_dobopen"
+      },
+      {
+        "id": "e_n_selected_city_next_details",
+        "from": "n_selected_city",
+        "fromPort": "next",
+        "to": "n_addrclear"
+      },
+      {
+        "id": "e_n_delivery_fill_next_details",
+        "from": "n_delivery_fill",
+        "fromPort": "next",
+        "to": "n_remaining_location"
+      },
+      {
+        "id": "e_n_remaining_location_next_details",
+        "from": "n_remaining_location",
+        "fromPort": "next",
+        "to": "n_autocomplete_branch"
       }
     ],
     "start": "n_start",
     "author": {
       "name": "Scrolls",
       "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "1GKjjpP+zmOiL5VMX1WC4Z5nTDaTLKrir/gXo52LT2QVMs0GbPlBwt01UR0FehEwMz3KeT6reANIjPazz6Y5Bg=="
+      "signature": "63JwVmUlRp2ULS+rdNRYTTx8Q3r5R+Bf3kCF9DB3ba1eX12n1HaRvuup95lSnC0aRBAZooM8N8FoMRoj2Yv6Bw=="
     }
   }
 }
