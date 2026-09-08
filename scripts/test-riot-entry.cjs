@@ -13,7 +13,7 @@ const ok = (condition, message) => {
   console.log(`PASS  ${message}`);
 };
 
-ok(graph.version === "0.3.1" && entry?.version === graph.version, "manifest and graph publish 0.3.1");
+ok(graph.version === "0.3.3" && entry?.version === graph.version, "manifest and graph publish 0.3.3");
 ok(graph.metadata.name === "Riot Entry - Riftbound (Browser)" && entry.name === graph.metadata.name, "task is branded for Riftbound");
 ok(entry.emailMode === "account-list" && entry.accountSource?.site === "riotgames.com", "manifest enables eligible saved-account selection");
 ok(entry.accountSource?.manualCredentials === true, "browser entry exposes transient username:password input");
@@ -25,7 +25,7 @@ ok(node("n_consent").config.script.includes("onetrust-accept-btn-handler") && no
 for (const id of ["n_probe_reg", "n_probe_auth", "n_probe_result"]) {
   ok(node(id).config.script.includes("rotate proxy immediately"), `${id} rotates immediately on Riot's block page`);
 }
-ok(!node("n_probe_auth").config.script.includes("RiotBar-RsoModal") && node("n_probe_auth").config.script.includes("host.indexOf('playriftbound.com')!==-1"), "authentication treats the Riftbound page as the registration host without the Convergence RSO modal step");
+ok(node("n_probe_auth").config.script.includes("RiotBar-RsoModal") && node("n_probe_auth").config.script.includes("host.indexOf('playriftbound.com')!==-1"), "authentication clicks RiotBar's Sign In chooser on the Riftbound page");
 ok(node("n_probe_auth").config.script.includes("The CAPTCHA selection was invalid") && node("n_probe_auth").config.script.includes("(no retry)"), "invalid CAPTCHA fails immediately without a stale retry");
 ok(!node("n_probe_auth").config.script.includes("Your username or password may be incorrect"), "request-only proxy-reputation message is absent from browser entry");
 ok(node("n_click_item").config.selector.includes('label[for="810155275785"]'), "entry selects the Vendetta Booster Display card");
