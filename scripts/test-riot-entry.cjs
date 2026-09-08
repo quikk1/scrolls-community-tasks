@@ -13,7 +13,7 @@ const ok = (condition, message) => {
   console.log(`PASS  ${message}`);
 };
 
-ok(graph.version === "0.3.4" && entry?.version === graph.version, "manifest and graph publish 0.3.4");
+ok(graph.version === "0.3.5" && entry?.version === graph.version, "manifest and graph publish 0.3.5");
 ok(graph.metadata.name === "Riot Entry - Riftbound (Browser)" && entry.name === graph.metadata.name, "task is branded for Riftbound");
 ok(entry.emailMode === "account-list" && entry.accountSource?.site === "riotgames.com", "manifest enables eligible saved-account selection");
 ok(entry.accountSource?.manualCredentials === true, "browser entry exposes transient username:password input");

@@ -153,7 +153,7 @@
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
       "description": "Signs eligible saved or manually supplied riotgames.com accounts into the Riftbound XSSO client and registers them for the Riftbound: League of Legends Vendetta Booster Display preorder drawing on playriftbound.com (campaign 32, item 810155275785). Users can select all eligible saved accounts, choose an email list, or paste transient username:password credentials (optionally username:password:email for MFA). The browser flow clears Riot and Osano cookie prompts before sign-in, rotates immediately when Riot blocks a proxy, fails fast on an invalid CAPTCHA selection, handles email MFA and interactive login or registration CAPTCHA challenges, selects the Vendetta Booster Display, accepts the legal acknowledgment, and records the confirmed entry. Only a newly submitted entry emits a success webhook, including the exact proxy used; already-entered accounts are recorded without a duplicate success notification. Accounts entered in earlier Riot drawings are eligible again because the entry marker carries the campaign id.",
-      "version": "0.3.4",
+      "version": "0.3.5",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="

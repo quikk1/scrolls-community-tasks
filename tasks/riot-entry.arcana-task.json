@@ -1,9 +1,9 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-09-08T18:40:22.804Z",
+  "exportedAt": "2026-09-08T18:56:28.154Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.3.4",
+    "version": "0.3.5",
     "metadata": {
       "id": "riot-entry",
       "name": "Riot Entry - Riftbound (Browser)",
@@ -1474,6 +1474,30 @@
         "config": {
           "ms": 6000
         }
+      },
+      {
+        "id": "n_log_auth_state",
+        "kind": "log",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "config": {
+          "level": "info",
+          "message": "Login probe for {{account.username}} reported: {{authState}}"
+        }
+      },
+      {
+        "id": "n_log_result_state",
+        "kind": "log",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "config": {
+          "level": "info",
+          "message": "Registration probe for {{account.username}} reported: {{entryResult}}"
+        }
       }
     ],
     "edges": [
@@ -1709,7 +1733,7 @@
         "id": "e_probe_auth__next",
         "from": "n_probe_auth",
         "fromPort": "next",
-        "to": "n_br_auth_reg"
+        "to": "n_log_auth_state"
       },
       {
         "id": "e_br_auth_reg__true",
@@ -2009,7 +2033,7 @@
         "id": "e_probe_result__next",
         "from": "n_probe_result",
         "fromPort": "next",
-        "to": "n_br_res_done"
+        "to": "n_log_result_state"
       },
       {
         "id": "e_br_res_done__true",
@@ -2286,6 +2310,18 @@
         "from": "n_dwell_entry_captcha",
         "fromPort": "next",
         "to": "n_probe_result"
+      },
+      {
+        "id": "e_log_auth_state__next",
+        "from": "n_log_auth_state",
+        "fromPort": "next",
+        "to": "n_br_auth_reg"
+      },
+      {
+        "id": "e_log_result_state__next",
+        "from": "n_log_result_state",
+        "fromPort": "next",
+        "to": "n_br_res_done"
       }
     ]
   }
