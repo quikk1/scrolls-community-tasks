@@ -12,7 +12,8 @@ function deliveryInputs() {
 
 function patchGraph(source) {
   const graph = structuredClone(source);
-  if (graph.metadata?.id === 'oasis' && graph.version === '1.3.11') { delete graph.author; delete graph.signature; return graph; }
+  // Versions at or past 1.3.11 already carry the details fix - run the suite against them as-is.
+  if (graph.metadata?.id === 'oasis' && ['1.3.11', '1.3.12'].includes(graph.version)) { delete graph.author; delete graph.signature; return graph; }
   if (graph.metadata?.id !== 'oasis' || graph.version !== '1.3.8') throw new Error('Expected OASIS 1.3.8');
   const node = id => {
     const value = graph.nodes.find(n => n.id === id);
