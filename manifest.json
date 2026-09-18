@@ -123,8 +123,8 @@
         "email",
         "turnstile"
       ],
-      "version": "0.3.3",
-      "description": "Oasis-style browser flow for SuperSwipe no-payment draws. Selects your size, accepts the cookie banner, checks five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer.",
+      "version": "0.3.4",
+      "description": "Oasis-style browser flow for SuperSwipe no-payment draws. Selects your size, accepts the cookie banner, checks five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. 0.3.4: the run dialog now ships with the module, so its fields no longer depend on the app version.",
       "author": {
         "name": "Scrolls",
         "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E="

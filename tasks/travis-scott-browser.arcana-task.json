@@ -3,12 +3,12 @@
   "exportedAt": "2026-09-04T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.3.3",
+    "version": "0.3.4",
     "metadata": {
       "id": "travis-scott-browser",
       "name": "Travis Scott — Browser Entry",
       "class": "raffle",
-      "description": "Oasis-style browser flow for SuperSwipe no-payment draws. Selects your size, accepts the cookie banner, checks five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer.",
+      "description": "Oasis-style browser flow for SuperSwipe no-payment draws. Selects your size, accepts the cookie banner, checks five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. 0.3.4: the run dialog now ships with the module, so its fields no longer depend on the app version.",
       "tags": [
         "travis-scott",
         "superswipe",
@@ -1280,7 +1280,193 @@
     "author": {
       "name": "Scrolls",
       "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "ipyKJb7HqCDhX4SQTG8PrMB/qJhrpCYjvLsoESsNl2P8HSnKyedy1fXwJEIIgUASExBmyHDWlbVWgNveaPc0BA=="
+      "signature": "zbYmkDy4+P8bgpDFWjp+uUFd2jN5KNlbNNEl708KzzsYyE44x6fGOrd9k6lsZrZ8xKkiwXA7jeALJJWicxQVAQ=="
+    },
+    "runSchema": {
+      "schemaVersion": 1,
+      "kind": "graph",
+      "module": {
+        "id": "travis-scott-browser",
+        "name": "Travis Scott — Browser Entry",
+        "site": "shop.travisscott.com",
+        "siteLabel": "Travis Scott",
+        "execution": "browser"
+      },
+      "tabs": {
+        "identity": {
+          "kinds": [
+            "saved",
+            "generated"
+          ]
+        },
+        "network": {
+          "proxy": "optional"
+        },
+        "api": {
+          "captcha": [
+            {
+              "type": "turnstile",
+              "mode": "token",
+              "label": "Turnstile solver"
+            }
+          ]
+        }
+      },
+      "threads": {
+        "default": 1,
+        "max": 20
+      },
+      "runCount": "identity",
+      "inputs": [
+        {
+          "id": "url",
+          "type": "url",
+          "label": "Store / product URL",
+          "default": "https://shop.travisscott.com/",
+          "required": true
+        },
+        {
+          "id": "product",
+          "type": "text",
+          "label": "Exact product title",
+          "default": "AIR FORCE 1 '07 LOW CACTUS JACK",
+          "required": true
+        },
+        {
+          "id": "sizeMode",
+          "type": "segmented",
+          "label": "Size selection",
+          "default": "Single size",
+          "options": [
+            {
+              "value": "Single size",
+              "hint": "Enter one size."
+            },
+            {
+              "value": "Size range",
+              "hint": "Chooses randomly within your inclusive bounds."
+            },
+            {
+              "value": "Random",
+              "hint": "Chooses from the available supported sizes."
+            }
+          ]
+        },
+        {
+          "id": "size",
+          "type": "select",
+          "label": "Size",
+          "default": "10.5",
+          "options": [
+            "3.5",
+            "4",
+            "4.5",
+            "5",
+            "5.5",
+            "6",
+            "6.5",
+            "7",
+            "7.5",
+            "8",
+            "8.5",
+            "9",
+            "9.5",
+            "10",
+            "10.5",
+            "11",
+            "11.5",
+            "12",
+            "12.5",
+            "13",
+            "14",
+            "15"
+          ],
+          "visibleWhen": {
+            "input": "sizeMode",
+            "equals": "Single size"
+          },
+          "requiredWhen": {
+            "input": "sizeMode",
+            "equals": "Single size"
+          }
+        },
+        {
+          "id": "sizeMinimum",
+          "type": "select",
+          "label": "Minimum size",
+          "default": "8",
+          "options": [
+            "3.5",
+            "4",
+            "4.5",
+            "5",
+            "5.5",
+            "6",
+            "6.5",
+            "7",
+            "7.5",
+            "8",
+            "8.5",
+            "9",
+            "9.5",
+            "10",
+            "10.5",
+            "11",
+            "11.5",
+            "12",
+            "12.5",
+            "13",
+            "14",
+            "15"
+          ],
+          "visibleWhen": {
+            "input": "sizeMode",
+            "equals": "Size range"
+          },
+          "requiredWhen": {
+            "input": "sizeMode",
+            "equals": "Size range"
+          }
+        },
+        {
+          "id": "sizeMaximum",
+          "type": "select",
+          "label": "Maximum size",
+          "default": "12",
+          "options": [
+            "3.5",
+            "4",
+            "4.5",
+            "5",
+            "5.5",
+            "6",
+            "6.5",
+            "7",
+            "7.5",
+            "8",
+            "8.5",
+            "9",
+            "9.5",
+            "10",
+            "10.5",
+            "11",
+            "11.5",
+            "12",
+            "12.5",
+            "13",
+            "14",
+            "15"
+          ],
+          "visibleWhen": {
+            "input": "sizeMode",
+            "equals": "Size range"
+          },
+          "requiredWhen": {
+            "input": "sizeMode",
+            "equals": "Size range"
+          }
+        }
+      ]
     }
   }
 }
