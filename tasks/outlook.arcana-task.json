@@ -205,14 +205,14 @@
       },
       {
         "id": "n_dup",
-        "kind": "accounts.pick",
+        "kind": "inventory.pick",
         "position": {
           "x": 40,
           "y": 260
         },
         "config": {
           "site": "outlook.com",
-          "emailLike": "{{fullEmail}}",
+          "email": "{{fullEmail}}",
           "into": "dupHit"
         }
       },
@@ -236,7 +236,7 @@
           "y": 380
         },
         "config": {
-          "message": "Already generated - {{fullEmail}} exists in the accounts database"
+          "message": "Already generated - {{fullEmail}} is already in Inventory for outlook.com"
         }
       },
       {
