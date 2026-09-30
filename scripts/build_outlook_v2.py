@@ -318,8 +318,9 @@ names_script = (
     "  }\n"
     "  var body = (document.body && document.body.innerText || \"\");\n"
     "  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked before names step\");\n"
-    "  // captcha may appear right after password instead of names\n"
-    "  if (document.querySelector(\"#enforcementFrame, iframe[src*='arkoselabs'], iframe[src*='funcaptcha']\")) return \"captcha-early\";\n"
+    "  // NOTE: a captcha can appear before names on some exits. We keep waiting\n"
+    "  // for the name fields regardless - the captcha block downstream solves any\n"
+    "  // challenge that is up, and names still must be filled before it submits.\n"
     "  await sleep(500);\n"
     "}\n"
     "throw new Error(\"name fields never appeared after country/DOB\");"
@@ -532,7 +533,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.2.1"
+graph["version"] = "2.2.2"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
