@@ -3,11 +3,11 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.5",
+    "version": "2.0.0",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
-      "description": "Creates an Outlook/Hotmail account on the profile's own browser engine (proxy + fingerprint + human input, to pass Microsoft's Arkose signals). signup.live.com email step (handles both the legacy MemberName and redesigned usernameInput signup DOMs) -> password -> name -> country/DOB -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, gets the token from the configured solver, and submits it through the challenge-complete postMessage the page listens for, so the cross-origin enforcement frame is never a problem. Fails fast on emails that already exist (database check plus live taken-error), bails when Microsoft demands SMS before the captcha, dismisses the privacy/stay-signed-in prompts, saves to the Database, and opens the inbox once to warm the account. Outlook gen.",
+      "description": "Creates an Outlook/Hotmail account on the profile's own browser engine (proxy + fingerprint + human input, to pass Microsoft's Arkose signals). Uses the current create-account surface (outlook.live.com/mail/?prompt=create_account, fluent=2): email + domain dropdown -> password -> country/birthdate (Fluent dropdowns) -> first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, gets the token from the configured solver, and submits it through the challenge-complete postMessage so the cross-origin enforcement frame is never a problem. Fails fast on taken emails, SMS gates, and flagged exit IPs (blocked page). Saves to the Database and opens the inbox once to warm the account. Needs an email source for the identity address and a captcha key in Key Vault; proxies recommended. Outlook gen.",
       "tags": [
         "outlook",
         "hotmail",
@@ -47,88 +47,88 @@
         "id": "n_c_prep",
         "kind": "comment",
         "position": {
-          "x": -220,
+          "x": -260,
           "y": 120
         },
         "config": {
-          "text": "Identity prep: build local-part, full email, DOB parts, country"
+          "text": "Identity prep: local part, full email, domain, DOB parts, country"
         }
       },
       {
         "id": "n_c_nav",
         "kind": "comment",
         "position": {
-          "x": -220,
-          "y": 480
+          "x": -260,
+          "y": 420
         },
         "config": {
-          "text": "Navigate + proxy gate (one retry, then rotate)"
+          "text": "Navigate to create_account (fluent=2) + load gate"
         }
       },
       {
         "id": "n_c_email",
         "kind": "comment",
         "position": {
-          "x": -220,
-          "y": 780
+          "x": -260,
+          "y": 700
         },
         "config": {
-          "text": "Email step (both signup DOMs) + taken check"
+          "text": "Email + domain dropdown + Next"
         }
       },
       {
-        "id": "n_c_creds",
+        "id": "n_c_pw",
         "kind": "comment",
         "position": {
-          "x": -220,
-          "y": 1150
+          "x": -260,
+          "y": 900
         },
         "config": {
-          "text": "Password + name"
+          "text": "Password + Next"
         }
       },
       {
         "id": "n_c_geo",
         "kind": "comment",
         "position": {
-          "x": -220,
-          "y": 1310
+          "x": -260,
+          "y": 1120
         },
         "config": {
-          "text": "Country/DOB + Arkose blob hook"
+          "text": "Country + DOB (Fluent dropdowns + year input) + Next"
         }
       },
       {
-        "id": "n_c_gate",
+        "id": "n_c_names",
         "kind": "comment",
         "position": {
-          "x": -220,
-          "y": 1470
+          "x": -260,
+          "y": 1360
         },
         "config": {
-          "text": "Pre-captcha SMS gate"
+          "text": "First/last name + Next"
         }
       },
       {
         "id": "n_c_captcha",
         "kind": "comment",
         "position": {
-          "x": -220,
-          "y": 1700
+          "x": -260,
+          "y": 1600
         },
         "config": {
-          "text": "FunCaptcha solve + cross-frame token submit + landing"
+          "text": "Arkose blob hook + FunCaptcha solve + token submit"
         }
       },
       {
-        "id": "n_c_save",
+        "id": "n_c_finish",
         "kind": "comment",
         "position": {
-          "x": 1140,
-          "y": 1560
+          "x": -260,
+          "y": 1860
         },
         "config": {
-          "text": "Save account + optional inbox warm-up"
+          "text": "Backup email / landing / dismiss / save / warm-up"
         }
       },
       {
@@ -140,7 +140,7 @@
         },
         "config": {
           "into": "prep",
-          "script": "// Build the identity pieces the form needs.\n// identity.* and addresses.0.* come from the scrolls SDK runtime.\n// Domain comes from the identity email when present, else outlook.com.\nvar email = (\"{{identity.email}}\" || \"\").trim();\nvar local = email.indexOf(\"@\") > 0 ? email.split(\"@\")[0] : email;\nvar dom = (email.indexOf(\"@hotmail.com\") !== -1) ? \"hotmail.com\" : \"outlook.com\";\nvar dob = \"{{identity.dob}}\";\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/\\.](\\d{1,2})[-\\/\\.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse {\n  var m2 = dob.match(/(\\d{1,2})[-\\/\\.](\\d{1,2})[-\\/\\.](\\d{4})/);\n  if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; }\n}\nif (!y) { y = \"1995\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\nvar year = parseInt(y, 10); if (year > 2010) year = 1995;\nreturn {\n  emailLocal: local,\n  fullEmail: local + \"@\" + dom,\n  msDomain: \"@\" + dom,\n  domainText: dom === \"hotmail.com\" ? \"hotmail.com\" : \"outlook.com\",\n  month: monthName,\n  day: d,\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").trim()\n};"
+          "script": "// Build the identity pieces the form needs.\n// identity.* and addresses.0.* come from the scrolls SDK runtime.\nvar email = (\"{{identity.email}}\" || \"\").trim();\nvar local = email.indexOf(\"@\") > 0 ? email.split(\"@\")[0] : email;\nvar dom = (email.indexOf(\"@hotmail.com\") !== -1) ? \"hotmail.com\" : \"outlook.com\";\nvar dob = \"{{identity.dob}}\";\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  fullEmail: local + \"@\" + dom,\n  domainText: \"@\" + dom,\n  month: monthName,\n  day: d,\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").trim()\n};"
         }
       },
       {
@@ -175,8 +175,8 @@
           "y": 20
         },
         "config": {
-          "name": "msDomain",
-          "value": "{{prep.msDomain}}"
+          "name": "domainText",
+          "value": "{{prep.domainText}}"
         }
       },
       {
@@ -208,7 +208,7 @@
         "kind": "tryCatch",
         "position": {
           "x": 40,
-          "y": 140
+          "y": 220
         },
         "config": {}
       },
@@ -216,8 +216,8 @@
         "id": "n_dup",
         "kind": "inventory.pick",
         "position": {
-          "x": 40,
-          "y": 260
+          "x": 250,
+          "y": 300
         },
         "config": {
           "site": "outlook.com",
@@ -229,8 +229,8 @@
         "id": "n_dup_branch",
         "kind": "branch",
         "position": {
-          "x": 240,
-          "y": 260
+          "x": 470,
+          "y": 300
         },
         "config": {
           "op": "truthy",
@@ -241,8 +241,8 @@
         "id": "n_dup_fail",
         "kind": "fail",
         "position": {
-          "x": 240,
-          "y": 380
+          "x": 470,
+          "y": 420
         },
         "config": {
           "message": "Already generated - {{fullEmail}} is already in Inventory for outlook.com"
@@ -253,10 +253,10 @@
         "kind": "goto",
         "position": {
           "x": 40,
-          "y": 480
+          "y": 420
         },
         "config": {
-          "url": "https://signup.live.com/",
+          "url": "https://outlook.live.com/mail/?prompt=create_account",
           "waitUntil": "domcontentloaded",
           "timeoutMs": 120000
         }
@@ -266,10 +266,10 @@
         "kind": "dwell",
         "position": {
           "x": 240,
-          "y": 480
+          "y": 420
         },
         "config": {
-          "ms": 2825
+          "ms": 2500
         }
       },
       {
@@ -277,20 +277,43 @@
         "kind": "tryCatch",
         "position": {
           "x": 40,
-          "y": 620
+          "y": 560
         },
         "config": {}
       },
       {
-        "id": "n_gate_email",
+        "id": "n_gate_form",
         "kind": "evaluate",
         "position": {
           "x": 250,
-          "y": 700
+          "y": 640
         },
         "config": {
           "into": "gate",
-          "script": "// Email-step gate. The signup page always puts \"account\" in its\n// <title> from first paint, so the title is the fast reliable page-loaded\n// signal; the fill step's own long timeout absorbs slow form render. When the\n// title never lands we THROW with a diagnostic (real title, url, readyState,\n// a body snippet) so the log shows WHAT the page actually is - a block page,\n// a redirect, a blank shell - instead of a bare timeout. One in-page reload,\n// then the throw rotates the exit (or just fails on direct connect).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar tries = Number(\"{{gateTries}}\") || 0;\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  if ((document.title || \"\").toLowerCase().indexOf(\"account\") !== -1) return { state: \"ready\", flow: \"\", tries: 0 };\n  var body = (document.body && (document.body.innerText || \"\"));\n  if (/unusual activity|temporarily blocked|try again later|verify your identity/i.test(body)) throw new Error(\"Microsoft served a block page - rotate the exit IP\");\n  await sleep(500);\n}\nif (tries >= 1) {\n  var t = (document.title || \"\").slice(0, 80);\n  var u = \"\";\n  try { u = location.href.slice(0, 80); } catch (e) {}\n  var rs = document.readyState;\n  var snip = ((document.body && document.body.innerText) || \"\").replace(/\\s+/g, \" \").slice(0, 120);\n  throw new Error(\"signup.live.com never loaded its account page. title='\" + t + \"' readyState=\" + rs + \" url=\" + u + \" body=\" + snip);\n}\nreturn { state: \"reload\", flow: \"\", tries: tries + 1 };"
+          "script": "// Load gate for the fluent=2 signup surface. The mail app redirects to\n// signup.live.com/signup?...&fluent=2 and renders 'Create your Microsoft\n// account'. Wait for the email box or the heading, detect a block/redirect.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar tries = Number(\"{{gateTries}}\") || 0;\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  var t = (document.title || \"\").toLowerCase();\n  if (t.indexOf(\"blocked\") !== -1) throw new Error(\"Account creation blocked at load - exit IP is flagged\");\n  if (document.querySelector(\"input[name='email']\")) return { state: \"ready\", tries: 0 };\n  if (t.indexOf(\"create your microsoft account\") !== -1 || t.indexOf(\"account\") !== -1) {\n    if (document.querySelector(\"input[name='email'], input[type='email']\")) return { state: \"ready\", tries: 0 };\n  }\n  var body = (document.body && (document.body.innerText || \"\"));\n  if (/unusual activity|temporarily blocked|try again later|verify your identity/i.test(body)) throw new Error(\"Microsoft served a block page - rotate the exit IP\");\n  await sleep(500);\n}\nif (tries >= 1) {\n  var ti = (document.title || \"\").slice(0, 80); var u = \"\"; try { u = location.href.slice(0, 80); } catch (e) {}\n  throw new Error(\"create_account page never rendered the email box. title='\" + ti + \"' url=\" + u);\n}\nreturn { state: \"reload\", tries: tries + 1 };"
+        }
+      },
+      {
+        "id": "n_gate_rotate",
+        "kind": "log",
+        "position": {
+          "x": 250,
+          "y": 800
+        },
+        "config": {
+          "level": "warn",
+          "message": "create_account load failed - retrying once, then the run fails so the engine rotates"
+        }
+      },
+      {
+        "id": "n_gate_dead",
+        "kind": "fail",
+        "position": {
+          "x": 470,
+          "y": 800
+        },
+        "config": {
+          "message": "Signup page blocked or connection dead"
         }
       },
       {
@@ -298,7 +321,7 @@
         "kind": "branch",
         "position": {
           "x": 470,
-          "y": 700
+          "y": 640
         },
         "config": {
           "op": "==",
@@ -307,27 +330,28 @@
         }
       },
       {
-        "id": "n_s_flow",
-        "kind": "setVar",
+        "id": "n_gate_retry",
+        "kind": "math.incVar",
         "position": {
-          "x": 460,
-          "y": 560
+          "x": 470,
+          "y": 720
         },
         "config": {
-          "name": "flowKind",
-          "value": "{{gate.flow}}"
+          "name": "gateTries",
+          "current": "{{gateTries}}",
+          "by": 1
         }
       },
       {
-        "id": "n_resolve_email_sel",
+        "id": "n_arm_blob",
         "kind": "evaluate",
         "position": {
-          "x": 40,
-          "y": 660
+          "x": 700,
+          "y": 560
         },
         "config": {
-          "into": "emailStep",
-          "script": "// Resolve which email input is actually VISIBLE once the page settles,\n// and what value it wants. The modern variant (Enter your email address) has\n// no domain dropdown - it wants the full address typed in. The legacy variant\n// (MemberName + domain select) wants only the local part. Return both.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&el.offsetParent!==null;}\nvar local = \"{{emailLocal}}\";\nvar full = \"{{fullEmail}}\";\nvar deadline = Date.now() + 90000;\nvar lastUrl = \"\";\nwhile (Date.now() < deadline) {\n  var modern = document.querySelector(\"#usernameInput\");\n  if (vis(modern)) return { selector: \"input#usernameInput\", value: full };\n  var legacy = document.querySelector(\"#MemberName\");\n  if (vis(legacy)) return { selector: \"input#MemberName\", value: local };\n  try { lastUrl = location.href; } catch (e) {}\n  if (/login\\.live\\.com|login\\.microsoftonline\\.com/i.test(lastUrl)) throw new Error(\"signup.live.com redirected to a sign-in page (\" + lastUrl.slice(0, 70) + \") - exit IP is being deflected\");\n  await sleep(400);\n}\nvar t = (document.title || \"\").slice(0, 60);\nthrow new Error(\"email input never became visible. title='\" + t + \"' url=\" + lastUrl.slice(0, 70));"
+          "into": "blobArmed",
+          "script": "// Wrap fetch/XHR early and stash the Arkose data[blob] off the POST body.\nif (!window.__scBlobHooked) {\n  window.__scBlobHooked = true; window.__arkoseBlob = \"\";\n  var pick = function (body) { if (!body) return \"\"; try { var s = typeof body === \"string\" ? body : \"\"; var m = s.match(/data%5Bblob%5D=([^&]+)/) || s.match(/data\\[blob\\]=([^&]+)/); return m ? decodeURIComponent(m[1]) : \"\"; } catch (e) { return \"\"; } };\n  var of = window.fetch;\n  window.fetch = function (url, opts) { try { if (String(url).indexOf(\"client-api.arkoselabs.com/fc/gt2/public_key/\") !== -1) { var b = pick(opts && opts.body); if (b) window.__arkoseBlob = b; } } catch (e) {} return of.apply(this, arguments); };\n  var oo = XMLHttpRequest.prototype.open, os = XMLHttpRequest.prototype.send;\n  XMLHttpRequest.prototype.open = function (m, u) { this.__scUrl = u; return oo.apply(this, arguments); };\n  XMLHttpRequest.prototype.send = function (body) { try { if (String(this.__scUrl).indexOf(\"client-api.arkoselabs.com/fc/gt2/public_key/\") !== -1) { var b = pick(body); if (b) window.__arkoseBlob = b; } } catch (e) {} return os.apply(this, arguments); };\n}\nreturn \"armed\";"
         }
       },
       {
@@ -335,11 +359,11 @@
         "kind": "fill",
         "position": {
           "x": 40,
-          "y": 780
+          "y": 700
         },
         "config": {
-          "selector": "{{emailStep.selector}}",
-          "value": "{{emailStep.value}}",
+          "selector": "input[name='email']:visible",
+          "value": "{{emailLocal}}",
           "speed": "natural",
           "typos": false,
           "instant": false,
@@ -347,26 +371,26 @@
         }
       },
       {
-        "id": "n_pick_domain",
+        "id": "n_domain",
         "kind": "evaluate",
         "position": {
           "x": 260,
-          "y": 780
+          "y": 700
         },
         "config": {
           "into": "domainSet",
-          "script": "// Domain select only exists on one variant each (legacy: #LiveDomainBoxList,\n// modern: #domainSelect). Pick the option whose label is the wanted domain.\nvar want = \"{{msDomain}}\";\nvar sel = document.querySelector(\"#LiveDomainBoxList\") || document.querySelector(\"#domainSelect\");\nif (sel) {\n  var done = false;\n  for (var i = 0; i < sel.options.length; i++) {\n    var t = (sel.options[i].text || \"\").toLowerCase();\n    if (t.indexOf(want.replace(\"@\", \"\")) !== -1) { sel.selectedIndex = i; sel.dispatchEvent(new Event(\"change\", { bubbles: true })); done = true; break; }\n  }\n  return done ? \"set\" : \"missing-option\";\n}\nreturn \"no-select\";"
+          "script": "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n// .fui-Option / [role=option] with text like '@outlook.com'. Open it, pick\n// the wanted domain. If only outlook.com is offered and we wanted hotmail,\n// leave the default rather than fail - the email step still proceeds.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar want = (\"{{domainText}}\" || \"@outlook.com\").trim().toLowerCase();\nvar btn = document.querySelector(\"button#domainDropdownId\");\nif (!btn) return \"no-dropdown\";\nvar cur = (btn.innerText || \"\").trim().toLowerCase();\nif (cur === want) return \"already:\" + cur;\nbtn.click();\nvar deadline = Date.now() + 8000; var picked = \"\";\nwhile (Date.now() < deadline) {\n  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n  for (var i = 0; i < opts.length; i++) {\n    if ((opts[i].innerText || \"\").trim().toLowerCase() === want) { opts[i].click(); picked = want; break; }\n  }\n  if (picked) break;\n  await sleep(250);\n}\nif (picked) return \"set:\" + picked;\ntry { document.body.click(); } catch (e) {}\nreturn \"kept:\" + (document.querySelector(\"button#domainDropdownId\") || {}).innerText;"
         }
       },
       {
-        "id": "n_click_next1",
+        "id": "n_click_email_next",
         "kind": "click",
         "position": {
-          "x": 470,
-          "y": 780
+          "x": 480,
+          "y": 700
         },
         "config": {
-          "selector": "input#iSignupAction:visible, button#iSignupAction:visible, input#nextButton:visible, button#nextButton:visible, button[type=\"submit\"]:visible",
+          "selector": "button[data-testid=\"primaryButton\"]:visible",
           "timeoutMs": 60000
         }
       },
@@ -375,11 +399,11 @@
         "kind": "evaluate",
         "position": {
           "x": 40,
-          "y": 920
+          "y": 880
         },
         "config": {
           "into": "emailErr",
-          "script": "// Scan for #usernameInputError across 3 passes, 2s apart.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfor (var pass = 0; pass < 3; pass++) {\n  var els = document.querySelectorAll(\"#usernameInputError, #MemberNameError, [id$='InputError']\");\n  for (var i = 0; i < els.length; i++) {\n    if (vis(els[i]) && (els[i].textContent || \"\").trim()) return \"taken:\" + (els[i].textContent || \"\").trim().slice(0, 160);\n  }\n  var pw = document.querySelector(\"#PasswordInput, #Password\");\n  if (vis(pw)) return \"ok\";\n  await sleep(2000);\n}\nvar pw2 = document.querySelector(\"#PasswordInput, #Password\");\nreturn vis(pw2) ? \"ok\" : \"unknown\";"
+          "script": "// After Next on the email step: scan for a taken/invalid error, else confirm\n// we reached the password box.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfor (var pass = 0; pass < 4; pass++) {\n  var err = document.querySelector(\"[role='alert'], .fui-Text[class*='error'], [id*='Error'], [id*='error']\");\n  if (vis(err) && (err.innerText || \"\").trim()) return \"taken:\" + (err.innerText || \"\").trim().slice(0, 160);\n  if (vis(document.querySelector(\"input[type='password']\"))) return \"ok\";\n  var body = (document.body && document.body.innerText || \"\");\n  if (/already have an account|already exists|someone already has|taken|try another/i.test(body)) return \"taken:\" + body.replace(/\\s+/g, \" \").slice(0, 140);\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked after email step\");\n  await sleep(1500);\n}\nreturn vis(document.querySelector(\"input[type='password']\")) ? \"ok\" : \"unknown\";"
         }
       },
       {
@@ -387,7 +411,7 @@
         "kind": "branch",
         "position": {
           "x": 260,
-          "y": 920
+          "y": 880
         },
         "config": {
           "op": "==",
@@ -400,7 +424,7 @@
         "kind": "fail",
         "position": {
           "x": 260,
-          "y": 1050
+          "y": 1010
         },
         "config": {
           "message": "Email already exists or was rejected: {{emailErr}}"
@@ -411,119 +435,107 @@
         "kind": "fill",
         "position": {
           "x": 40,
-          "y": 1150
+          "y": 1010
         },
         "config": {
-          "selector": "input#PasswordInput:visible, input#Password:visible, input[type=\"password\"]:visible",
+          "selector": "input[type='password']:visible",
           "value": "{{identity.password}}",
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 120000
+          "timeoutMs": 60000
         }
       },
       {
-        "id": "n_click_next2",
+        "id": "n_click_pw_next",
         "kind": "click",
         "position": {
           "x": 260,
-          "y": 1150
+          "y": 1010
         },
         "config": {
-          "selector": "input#iSignupAction:visible, button#iSignupAction:visible, input#nextButton:visible, button#nextButton:visible",
-          "timeoutMs": 120000
+          "selector": "button[data-testid=\"primaryButton\"]:visible",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_geo",
+        "kind": "evaluate",
+        "position": {
+          "x": 40,
+          "y": 1120
+        },
+        "config": {
+          "into": "geoSet",
+          "script": "// Country + birthdate page (fluent=2). Country/Birth month/Birth day are\n// Fluent dropdown buttons; Birth year is a number input. Click a dropdown,\n// then click the matching [role=option]. Empty country leaves the geo default.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nasync function pickOpt(btnSel, want) {\n  if (!want) return \"skip\";\n  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n  if ((btn.innerText || \"\").trim().toLowerCase() === String(want).toLowerCase()) return \"already\";\n  btn.click();\n  var deadline = Date.now() + 9000;\n  while (Date.now() < deadline) {\n    var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n    for (var i = 0; i < opts.length; i++) {\n      if ((opts[i].innerText || \"\").trim().toLowerCase() === String(want).toLowerCase()) { opts[i].click(); return \"set\"; }\n    }\n    await sleep(250);\n  }\n  try { document.body.click(); } catch (e) {}\n  return \"no-opt:\" + want;\n}\nvar parts = \"{{dob}}\".split(\"|\");\nvar country = (\"{{countryPick}}\" || \"\").trim();\nif (country) await pickOpt(\"button#countryDropdownId\", country);\nawait sleep(400 + Math.random() * 600);\nawait pickOpt(\"button#BirthMonthDropdown\", parts[0]);\nawait sleep(400 + Math.random() * 600);\nawait pickOpt(\"button#BirthDayDropdown\", parts[1]);\nawait sleep(300 + Math.random() * 400);\nvar y = document.querySelector(\"input[name='BirthYear']\");\nif (y) { y.focus(); y.value = \"\"; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.value = parts[2]; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.dispatchEvent(new Event(\"change\", { bubbles: true })); }\nreturn \"done\";"
+        }
+      },
+      {
+        "id": "n_click_geo_next",
+        "kind": "click",
+        "position": {
+          "x": 260,
+          "y": 1120
+        },
+        "config": {
+          "selector": "button[data-testid=\"primaryButton\"]:visible",
+          "timeoutMs": 60000
+        }
+      },
+      {
+        "id": "n_names",
+        "kind": "evaluate",
+        "position": {
+          "x": 40,
+          "y": 1360
+        },
+        "config": {
+          "into": "namesReady",
+          "script": "// Names page: firstNameInput + lastNameInput. Block page can appear here too.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  var f = document.querySelector(\"input#firstNameInput\");\n  if (vis(f)) {\n    var l = document.querySelector(\"input#lastNameInput\");\n    return \"ready\";\n  }\n  var body = (document.body && document.body.innerText || \"\");\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked before names step\");\n  // captcha may appear right after password instead of names\n  if (document.querySelector(\"#enforcementFrame, iframe[src*='arkoselabs'], iframe[src*='funcaptcha']\")) return \"captcha-early\";\n  await sleep(500);\n}\nthrow new Error(\"name fields never appeared after country/DOB\");"
         }
       },
       {
         "id": "n_fill_first",
         "kind": "fill",
         "position": {
-          "x": 480,
-          "y": 1150
+          "x": 260,
+          "y": 1360
         },
         "config": {
-          "selector": "input#FirstName:visible, input#firstNameInput:visible",
+          "selector": "input#firstNameInput:visible",
           "value": "{{identity.firstName}}",
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 120000
+          "timeoutMs": 60000
         }
       },
       {
         "id": "n_fill_last",
         "kind": "fill",
         "position": {
-          "x": 700,
-          "y": 1150
+          "x": 480,
+          "y": 1360
         },
         "config": {
-          "selector": "input#LastName:visible, input#lastNameInput:visible",
+          "selector": "input#lastNameInput:visible",
           "value": "{{identity.lastName}}",
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 120000
+          "timeoutMs": 60000
         }
       },
       {
-        "id": "n_click_next3",
-        "kind": "click",
-        "position": {
-          "x": 920,
-          "y": 1150
-        },
-        "config": {
-          "selector": "input#iSignupAction:visible, button#iSignupAction:visible, input#nextButton:visible, button#nextButton:visible",
-          "timeoutMs": 120000
-        }
-      },
-      {
-        "id": "n_arm_blob",
-        "kind": "evaluate",
-        "position": {
-          "x": 40,
-          "y": 1310
-        },
-        "config": {
-          "into": "blobArmed",
-          "script": "// Wrap fetch/XHR before the challenge loads and stash data[blob] off the\n// Arkose POST body ourselves.\nif (!window.__scBlobHooked) {\n  window.__scBlobHooked = true;\n  window.__arkoseBlob = \"\";\n  var pick = function (body) {\n    if (!body) return \"\";\n    try {\n      var s = typeof body === \"string\" ? body : \"\";\n      var m = s.match(/data%5Bblob%5D=([^&]+)/) || s.match(/data\\[blob\\]=([^&]+)/);\n      return m ? decodeURIComponent(m[1]) : \"\";\n    } catch (e) { return \"\"; }\n  };\n  var of = window.fetch;\n  window.fetch = function (url, opts) {\n    try {\n      if (String(url).indexOf(\"client-api.arkoselabs.com/fc/gt2/public_key/\") !== -1) {\n        var b = pick(opts && opts.body);\n        if (b) window.__arkoseBlob = b;\n      }\n    } catch (e) {}\n    return of.apply(this, arguments);\n  };\n  var oo = XMLHttpRequest.prototype.open, os = XMLHttpRequest.prototype.send;\n  XMLHttpRequest.prototype.open = function (m, u) { this.__scUrl = u; return oo.apply(this, arguments); };\n  XMLHttpRequest.prototype.send = function (body) {\n    try {\n      if (String(this.__scUrl).indexOf(\"client-api.arkoselabs.com/fc/gt2/public_key/\") !== -1) {\n        var b = pick(body);\n        if (b) window.__arkoseBlob = b;\n      }\n    } catch (e) {}\n    return os.apply(this, arguments);\n  };\n}\nreturn \"armed\";"
-        }
-      },
-      {
-        "id": "n_fill_country",
-        "kind": "evaluate",
-        "position": {
-          "x": 260,
-          "y": 1310
-        },
-        "config": {
-          "into": "countrySet",
-          "script": "// Country dropdown (legacy #Country / modern #countryRegionDropdown). Pick by\n// visible text; empty input leaves whatever Microsoft geolocated.\nvar want = (\"{{countryPick}}\" || \"\").trim();\nif (!want) return \"skipped\";\nvar sel = document.querySelector(\"#Country\") || document.querySelector(\"#countryRegionDropdown\");\nif (!sel) throw new Error(\"Country dropdown not found\");\nfor (var i = 0; i < sel.options.length; i++) {\n  if ((sel.options[i].text || \"\").trim().toLowerCase() === want.toLowerCase()) {\n    sel.selectedIndex = i;\n    sel.dispatchEvent(new Event(\"change\", { bubbles: true }));\n    return \"set:\" + want;\n  }\n}\nthrow new Error(\"Country option not found: \" + want);"
-        }
-      },
-      {
-        "id": "n_fill_dob",
-        "kind": "evaluate",
-        "position": {
-          "x": 480,
-          "y": 1310
-        },
-        "config": {
-          "into": "dobSet",
-          "script": "// DOB fields are text inputs on both variants; type like a human.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar parts = \"{{dob}}\".split(\"|\");\nfunction put(sel, val) {\n  var el = document.querySelector(sel);\n  if (!el) throw new Error(\"missing \" + sel);\n  el.focus();\n  el.value = \"\";\n  el.dispatchEvent(new Event(\"input\", { bubbles: true }));\n  el.value = val;\n  el.dispatchEvent(new Event(\"input\", { bubbles: true }));\n  el.dispatchEvent(new Event(\"change\", { bubbles: true }));\n}\nput(\"#BirthMonth\", parts[0]);\nawait sleep(400 + Math.random() * 900);\nput(\"#BirthDay\", parts[1]);\nawait sleep(400 + Math.random() * 900);\nput(\"#BirthYear\", parts[2]);\nreturn \"set\";"
-        }
-      },
-      {
-        "id": "n_click_next4",
+        "id": "n_click_names_next",
         "kind": "click",
         "position": {
           "x": 700,
-          "y": 1310
+          "y": 1360
         },
         "config": {
-          "selector": "input#iSignupAction:visible, button#iSignupAction:visible, input#nextButton:visible, button#nextButton:visible",
-          "timeoutMs": 120000
+          "selector": "button[data-testid=\"primaryButton\"]:visible",
+          "timeoutMs": 60000
         }
       },
       {
@@ -531,19 +543,19 @@
         "kind": "evaluate",
         "position": {
           "x": 40,
-          "y": 1470
+          "y": 1600
         },
         "config": {
           "into": "gateState",
-          "script": "// Pre-captcha SMS gate (bail here) + captcha frame detection.\n// 'landed' short-circuits: Microsoft sometimes skips the challenge entirely.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 30000;\nwhile (Date.now() < deadline) {\n  if ((document.body && (document.body.innerText || \"\")).indexOf(\"When you need to prove\") !== -1) return \"sms-gate\";\n  if (location.href.indexOf(\"account.microsoft.com\") !== -1) return \"landed\";\n  var f = document.querySelector(\"#enforcementFrame\");\n  if (vis(f)) return \"captcha\";\n  var hip = document.querySelector(\"#hipEnforcementContainer, #pageContent\");\n  if (vis(hip) && document.querySelector(\"iframe[src*='arkoselabs'], iframe[src*='funcaptcha'], #enforcementFrame\")) return \"captcha\";\n  await sleep(500);\n}\nreturn \"timeout\";"
+          "script": "// After names: detect a block, an SMS/identity gate, the captcha frame, or a\n// straight-through landing.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 30000;\nwhile (Date.now() < deadline) {\n  var body = (document.body && document.body.innerText || \"\");\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked after names step\");\n  if (/When you need to prove|verify your phone|enter.*phone number|text you a code/i.test(body)) return \"sms-gate\";\n  if (location.href.indexOf(\"account.microsoft.com\") !== -1 || location.href.indexOf(\"outlook.live.com/mail\") !== -1) return \"landed\";\n  if (vis(document.querySelector(\"#enforcementFrame\"))) return \"captcha\";\n  if (document.querySelector(\"iframe[src*='arkoselabs'], iframe[src*='funcaptcha']\")) return \"captcha\";\n  await sleep(500);\n}\nreturn \"timeout\";"
         }
       },
       {
-        "id": "n_sms_gate_branch",
+        "id": "n_gate2_branch",
         "kind": "branch",
         "position": {
           "x": 250,
-          "y": 1470
+          "y": 1600
         },
         "config": {
           "op": "==",
@@ -552,14 +564,27 @@
         }
       },
       {
+        "id": "n_gate2_landed_branch",
+        "kind": "branch",
+        "position": {
+          "x": 250,
+          "y": 1740
+        },
+        "config": {
+          "op": "==",
+          "left": "{{gateState}}",
+          "right": "landed"
+        }
+      },
+      {
         "id": "n_sms_gate_fail",
         "kind": "fail",
         "position": {
           "x": 250,
-          "y": 1600
+          "y": 1880
         },
         "config": {
-          "message": "Failed before captcha: state={{gateState}} (SMS verification demanded or page never reached the challenge)"
+          "message": "Stopped before captcha: state={{gateState}} (SMS verification demanded or challenge never appeared)"
         }
       },
       {
@@ -567,11 +592,11 @@
         "kind": "evaluate",
         "position": {
           "x": 40,
-          "y": 1700
+          "y": 1740
         },
         "config": {
           "into": "arkoseBlob",
-          "script": "// Give the challenge a moment to fire its key POST, then read the stash.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar deadline = Date.now() + 20000;\nwhile (Date.now() < deadline) {\n  if (window.__arkoseBlob) return window.__arkoseBlob;\n  await sleep(400);\n}\nreturn \"\";"
+          "script": "// Read the stashed Arkose data[blob]; give the challenge a moment to POST.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar deadline = Date.now() + 20000;\nwhile (Date.now() < deadline) { if (window.__arkoseBlob) return window.__arkoseBlob; await sleep(400); }\nreturn \"\";"
         }
       },
       {
@@ -579,7 +604,7 @@
         "kind": "captcha.waitForSolved",
         "position": {
           "x": 260,
-          "y": 1700
+          "y": 1740
         },
         "config": {
           "captchaType": "funcaptcha",
@@ -597,11 +622,11 @@
         "kind": "evaluate",
         "position": {
           "x": 480,
-          "y": 1700
+          "y": 1740
         },
         "config": {
           "into": "tokenSubmitted",
-          "script": "// Cross-frame trick: the enforcementFrame is cross-origin, so inject a\n// submitter INTO it, then postMessage the token up to the page's own listener.\n// No token = the challenge never appeared; nothing to submit, land will confirm.\nvar token = \"{{captchaToken}}\";\nif (!token) return \"skipped-no-challenge\";\nvar enc = document.getElementById(\"enforcementFrame\");\nvar posted = false;\ntry {\n  var encWin = enc && (enc.contentWindow || enc);\n  var encDoc = enc && (enc.contentDocument || (encWin && encWin.document));\n  if (encDoc) {\n    var s = encDoc.createElement(\"SCRIPT\");\n    s.textContent = \"function CaptchaSubmit(token){ var j = JSON.stringify({ eventId:'challenge-complete', payload:{ sessionToken: token } }); parent.postMessage(j, '*'); }\";\n    encDoc.documentElement.appendChild(s);\n    encWin.CaptchaSubmit(token);\n    posted = true;\n  }\n} catch (e) { /* cross-origin: fall through to direct postMessage */ }\nif (!posted) {\n  var j = JSON.stringify({ eventId: \"challenge-complete\", payload: { sessionToken: token } });\n  if (enc && enc.contentWindow) enc.contentWindow.postMessage(j, \"*\");\n  window.postMessage(j, \"*\");\n}\nreturn posted ? \"injected\" : \"posted\";"
+          "script": "// Cross-frame token submit: inject a submitter into the cross-origin\n// enforcementFrame, else postMessage the token up to the page listener.\nvar token = \"{{captchaToken}}\";\nif (!token) return \"skipped-no-challenge\";\nvar enc = document.getElementById(\"enforcementFrame\");\nvar posted = false;\ntry {\n  var encWin = enc && (enc.contentWindow || enc);\n  var encDoc = enc && (enc.contentDocument || (encWin && encWin.document));\n  if (encDoc) {\n    var s = encDoc.createElement(\"SCRIPT\");\n    s.textContent = \"function CaptchaSubmit(token){ var j = JSON.stringify({ eventId:'challenge-complete', payload:{ sessionToken: token } }); parent.postMessage(j, '*'); }\";\n    encDoc.documentElement.appendChild(s);\n    encWin.CaptchaSubmit(token);\n    posted = true;\n  }\n} catch (e) {}\nif (!posted) {\n  var j = JSON.stringify({ eventId: \"challenge-complete\", payload: { sessionToken: token } });\n  if (enc && enc.contentWindow) enc.contentWindow.postMessage(j, \"*\");\n  window.postMessage(j, \"*\");\n}\nreturn posted ? \"injected\" : \"posted\";"
         }
       },
       {
@@ -609,11 +634,11 @@
         "kind": "evaluate",
         "position": {
           "x": 700,
-          "y": 1700
+          "y": 1740
         },
         "config": {
           "into": "landState",
-          "script": "// Wait for the redirect to account.microsoft.com; retry the token post every\n// few seconds in case the first one raced the listener attaching. Empty token\n// means the challenge never appeared - Microsoft let us straight through.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar token = \"{{captchaToken}}\";\nvar j = token ? JSON.stringify({ eventId: \"challenge-complete\", payload: { sessionToken: token } }) : \"\";\nvar deadline = Date.now() + 120000;\nwhile (Date.now() < deadline) {\n  if (location.href.indexOf(\"account.microsoft.com\") !== -1) return \"landed\";\n  if (j) {\n    var f = document.getElementById(\"enforcementFrame\");\n    if (!f) { await sleep(1000); continue; }\n    try { if (f.contentWindow) f.contentWindow.postMessage(j, \"*\"); window.postMessage(j, \"*\"); } catch (e) {}\n  }\n  await sleep(3000);\n}\nthrow new Error(\"Signup never completed - no redirect to account.microsoft.com\");"
+          "script": "// Wait for the account to land (mail app or account.microsoft.com), re-posting\n// the token in case the first submit raced the listener. Empty token means the\n// challenge never appeared and Microsoft let us straight through.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar token = \"{{captchaToken}}\";\nvar j = token ? JSON.stringify({ eventId: \"challenge-complete\", payload: { sessionToken: token } }) : \"\";\nvar deadline = Date.now() + 120000;\nwhile (Date.now() < deadline) {\n  var u = \"\";\n  try { u = location.href; } catch (e) {}\n  if (u.indexOf(\"account.microsoft.com\") !== -1 || u.indexOf(\"outlook.live.com/mail\") !== -1) return \"landed\";\n  var body = (document.body && document.body.innerText || \"\");\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked after captcha\");\n  if (j) {\n    var f = document.getElementById(\"enforcementFrame\");\n    if (f) { try { if (f.contentWindow) f.contentWindow.postMessage(j, \"*\"); window.postMessage(j, \"*\"); } catch (e) {} }\n  }\n  await sleep(3000);\n}\nthrow new Error(\"Signup never completed - no redirect to the mailbox\");"
         }
       },
       {
@@ -621,11 +646,11 @@
         "kind": "evaluate",
         "position": {
           "x": 920,
-          "y": 1700
+          "y": 1740
         },
         "config": {
           "into": "dismissed",
-          "script": "// Privacy notice + Stay-signed-in prompts: click through whatever shows.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 20000;\nwhile (Date.now() < deadline) {\n  var hit = false;\n  var btns = document.querySelectorAll(\"button, a[role='button'], input[type='submit']\");\n  for (var i = 0; i < btns.length; i++) {\n    if (!vis(btns[i])) continue;\n    var t = ((btns[i].innerText || btns[i].value || \"\")).trim();\n    if (/^(accept|next|yes|ok|continue)$/i.test(t)) { btns[i].click(); hit = true; break; }\n  }\n  var stay = document.querySelector(\"#idBtn_Back, #kmsiCheckboxField + label, [name='DontShowAgain']\");\n  if (vis(stay)) { stay.click(); hit = true; }\n  if (!hit) break;\n  await sleep(1500);\n}\nreturn \"done\";"
+          "script": "// Click through privacy / stay-signed-in / welcome prompts.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 20000;\nwhile (Date.now() < deadline) {\n  var hit = false;\n  var btns = document.querySelectorAll(\"button, a[role='button'], input[type='submit']\");\n  for (var i = 0; i < btns.length; i++) {\n    if (!vis(btns[i])) continue;\n    var t = ((btns[i].innerText || btns[i].value || \"\")).trim();\n    if (/^(accept|next|yes|ok|continue|get started|done|skip)$/i.test(t)) { btns[i].click(); hit = true; break; }\n  }\n  var stay = document.querySelector(\"#idBtn_Back, [name='DontShowAgain']\");\n  if (vis(stay)) { stay.click(); hit = true; }\n  if (!hit) break;\n  await sleep(1500);\n}\nreturn \"done\";"
         }
       },
       {
@@ -633,7 +658,7 @@
         "kind": "accounts.save",
         "position": {
           "x": 1140,
-          "y": 1700
+          "y": 1740
         },
         "config": {
           "email": "{{fullEmail}}",
@@ -647,8 +672,8 @@
         "id": "n_warmup_check",
         "kind": "branch",
         "position": {
-          "x": 1350,
-          "y": 1700
+          "x": 1360,
+          "y": 1740
         },
         "config": {
           "op": "==",
@@ -660,8 +685,8 @@
         "id": "n_warmup",
         "kind": "goto",
         "position": {
-          "x": 1350,
-          "y": 1560
+          "x": 1360,
+          "y": 1600
         },
         "config": {
           "url": "https://outlook.live.com/mail/0/inbox",
@@ -674,7 +699,7 @@
         "kind": "dwell",
         "position": {
           "x": 1560,
-          "y": 1560
+          "y": 1600
         },
         "config": {
           "ms": 4000
@@ -685,45 +710,9 @@
         "kind": "noop",
         "position": {
           "x": 1780,
-          "y": 1700
+          "y": 1740
         },
         "config": {}
-      },
-      {
-        "id": "n_gate_rotate",
-        "kind": "log",
-        "position": {
-          "x": 250,
-          "y": 860
-        },
-        "config": {
-          "level": "warn",
-          "message": "signup.live.com gate failed - rotating proxy"
-        }
-      },
-      {
-        "id": "n_gate_dead",
-        "kind": "fail",
-        "position": {
-          "x": 470,
-          "y": 860
-        },
-        "config": {
-          "message": "Signup page blocked or proxy dead"
-        }
-      },
-      {
-        "id": "n_gate_retry",
-        "kind": "math.incVar",
-        "position": {
-          "x": 470,
-          "y": 780
-        },
-        "config": {
-          "name": "gateTries",
-          "current": "{{gateTries}}",
-          "by": 1
-        }
       }
     ],
     "edges": [
@@ -771,273 +760,273 @@
       },
       {
         "id": "e8",
-        "from": "n_dup",
-        "fromPort": "next",
-        "to": "n_dup_tc"
-      },
-      {
-        "id": "e9",
-        "from": "n_dup_branch",
-        "fromPort": "true",
-        "to": "n_goto"
-      },
-      {
-        "id": "e10",
-        "from": "n_dup_branch",
-        "fromPort": "false",
-        "to": "n_dup_fail"
-      },
-      {
-        "id": "e11",
-        "from": "n_goto",
-        "fromPort": "next",
-        "to": "n_goto_dwell"
-      },
-      {
-        "id": "e12",
-        "from": "n_goto_dwell",
-        "fromPort": "next",
-        "to": "n_gate_tc"
-      },
-      {
-        "id": "e12b",
-        "from": "n_gate_tc",
-        "fromPort": "loop",
-        "to": "n_gate_email"
-      },
-      {
-        "id": "e14",
-        "from": "n_gate_branch",
-        "fromPort": "true",
-        "to": "n_s_flow"
-      },
-      {
-        "id": "e16",
-        "from": "n_s_flow",
-        "fromPort": "next",
-        "to": "n_resolve_email_sel"
-      },
-      {
-        "id": "e16b",
-        "from": "n_resolve_email_sel",
-        "fromPort": "next",
-        "to": "n_fill_email"
-      },
-      {
-        "id": "e17",
-        "from": "n_fill_email",
-        "fromPort": "next",
-        "to": "n_pick_domain"
-      },
-      {
-        "id": "e18",
-        "from": "n_pick_domain",
-        "fromPort": "next",
-        "to": "n_click_next1"
-      },
-      {
-        "id": "e19",
-        "from": "n_click_next1",
-        "fromPort": "next",
-        "to": "n_email_err"
-      },
-      {
-        "id": "e20",
-        "from": "n_email_err",
-        "fromPort": "next",
-        "to": "n_email_err_branch"
-      },
-      {
-        "id": "e21",
-        "from": "n_email_err_branch",
-        "fromPort": "true",
-        "to": "n_fill_pw"
-      },
-      {
-        "id": "e22",
-        "from": "n_email_err_branch",
-        "fromPort": "false",
-        "to": "n_email_taken"
-      },
-      {
-        "id": "e23",
-        "from": "n_fill_pw",
-        "fromPort": "next",
-        "to": "n_click_next2"
-      },
-      {
-        "id": "e24",
-        "from": "n_click_next2",
-        "fromPort": "next",
-        "to": "n_fill_first"
-      },
-      {
-        "id": "e25",
-        "from": "n_fill_first",
-        "fromPort": "next",
-        "to": "n_fill_last"
-      },
-      {
-        "id": "e26",
-        "from": "n_fill_last",
-        "fromPort": "next",
-        "to": "n_click_next3"
-      },
-      {
-        "id": "e27",
-        "from": "n_click_next3",
-        "fromPort": "next",
-        "to": "n_arm_blob"
-      },
-      {
-        "id": "e28",
-        "from": "n_arm_blob",
-        "fromPort": "next",
-        "to": "n_fill_country"
-      },
-      {
-        "id": "e29",
-        "from": "n_fill_country",
-        "fromPort": "next",
-        "to": "n_fill_dob"
-      },
-      {
-        "id": "e30",
-        "from": "n_fill_dob",
-        "fromPort": "next",
-        "to": "n_click_next4"
-      },
-      {
-        "id": "e31",
-        "from": "n_click_next4",
-        "fromPort": "next",
-        "to": "n_sms_gate"
-      },
-      {
-        "id": "e32",
-        "from": "n_sms_gate",
-        "fromPort": "next",
-        "to": "n_sms_gate_branch"
-      },
-      {
-        "id": "e33",
-        "from": "n_sms_gate_branch",
-        "fromPort": "true",
-        "to": "n_get_blob"
-      },
-      {
-        "id": "e34",
-        "from": "n_sms_gate_branch",
-        "fromPort": "false",
-        "to": "n_sms_gate_fail"
-      },
-      {
-        "id": "e35",
-        "from": "n_get_blob",
-        "fromPort": "next",
-        "to": "n_captcha"
-      },
-      {
-        "id": "e36",
-        "from": "n_captcha",
-        "fromPort": "next",
-        "to": "n_submit_token"
-      },
-      {
-        "id": "e37",
-        "from": "n_submit_token",
-        "fromPort": "next",
-        "to": "n_land"
-      },
-      {
-        "id": "e38",
-        "from": "n_land",
-        "fromPort": "next",
-        "to": "n_dismiss"
-      },
-      {
-        "id": "e39",
-        "from": "n_dismiss",
-        "fromPort": "next",
-        "to": "n_save"
-      },
-      {
-        "id": "e40",
-        "from": "n_save",
-        "fromPort": "next",
-        "to": "n_warmup_check"
-      },
-      {
-        "id": "e41",
-        "from": "n_warmup_check",
-        "fromPort": "true",
-        "to": "n_warmup"
-      },
-      {
-        "id": "e42",
-        "from": "n_warmup",
-        "fromPort": "next",
-        "to": "n_warmup_dwell"
-      },
-      {
-        "id": "e43",
-        "from": "n_warmup_dwell",
-        "fromPort": "next",
-        "to": "n_done"
-      },
-      {
-        "id": "e44",
-        "from": "n_warmup_check",
-        "fromPort": "false",
-        "to": "n_done"
-      },
-      {
-        "id": "e13",
-        "from": "n_gate_email",
-        "fromPort": "next",
-        "to": "n_gate_tc"
-      },
-      {
-        "id": "e13b",
-        "from": "n_gate_tc",
-        "fromPort": "exit",
-        "to": "n_gate_branch"
-      },
-      {
-        "id": "e13c",
-        "from": "n_gate_tc",
-        "fromPort": "catch",
-        "to": "n_gate_rotate"
-      },
-      {
-        "id": "e13d",
-        "from": "n_gate_rotate",
-        "fromPort": "next",
-        "to": "n_gate_dead"
-      },
-      {
-        "id": "e15",
-        "from": "n_gate_branch",
-        "fromPort": "false",
-        "to": "n_gate_retry"
-      },
-      {
-        "id": "e15z",
-        "from": "n_gate_retry",
-        "fromPort": "next",
-        "to": "n_goto"
-      },
-      {
-        "id": "e_dup_tc_loop",
         "from": "n_dup_tc",
         "fromPort": "loop",
         "to": "n_dup"
       },
       {
-        "id": "e_dup_tc_exit",
+        "id": "e9",
+        "from": "n_dup",
+        "fromPort": "next",
+        "to": "n_dup_tc"
+      },
+      {
+        "id": "e10",
         "from": "n_dup_tc",
         "fromPort": "exit",
         "to": "n_dup_branch"
+      },
+      {
+        "id": "e11",
+        "from": "n_dup_branch",
+        "fromPort": "true",
+        "to": "n_goto"
+      },
+      {
+        "id": "e12",
+        "from": "n_dup_branch",
+        "fromPort": "false",
+        "to": "n_dup_fail"
+      },
+      {
+        "id": "e13",
+        "from": "n_goto",
+        "fromPort": "next",
+        "to": "n_goto_dwell"
+      },
+      {
+        "id": "e14",
+        "from": "n_goto_dwell",
+        "fromPort": "next",
+        "to": "n_gate_tc"
+      },
+      {
+        "id": "e15",
+        "from": "n_gate_tc",
+        "fromPort": "loop",
+        "to": "n_gate_form"
+      },
+      {
+        "id": "e16",
+        "from": "n_gate_form",
+        "fromPort": "next",
+        "to": "n_gate_tc"
+      },
+      {
+        "id": "e17",
+        "from": "n_gate_tc",
+        "fromPort": "exit",
+        "to": "n_gate_branch"
+      },
+      {
+        "id": "e18",
+        "from": "n_gate_tc",
+        "fromPort": "catch",
+        "to": "n_gate_rotate"
+      },
+      {
+        "id": "e19",
+        "from": "n_gate_rotate",
+        "fromPort": "next",
+        "to": "n_gate_dead"
+      },
+      {
+        "id": "e20",
+        "from": "n_gate_branch",
+        "fromPort": "true",
+        "to": "n_arm_blob"
+      },
+      {
+        "id": "e21",
+        "from": "n_gate_branch",
+        "fromPort": "false",
+        "to": "n_gate_retry"
+      },
+      {
+        "id": "e22",
+        "from": "n_gate_retry",
+        "fromPort": "next",
+        "to": "n_goto"
+      },
+      {
+        "id": "e23",
+        "from": "n_arm_blob",
+        "fromPort": "next",
+        "to": "n_fill_email"
+      },
+      {
+        "id": "e24",
+        "from": "n_fill_email",
+        "fromPort": "next",
+        "to": "n_domain"
+      },
+      {
+        "id": "e25",
+        "from": "n_domain",
+        "fromPort": "next",
+        "to": "n_click_email_next"
+      },
+      {
+        "id": "e26",
+        "from": "n_click_email_next",
+        "fromPort": "next",
+        "to": "n_email_err"
+      },
+      {
+        "id": "e27",
+        "from": "n_email_err",
+        "fromPort": "next",
+        "to": "n_email_err_branch"
+      },
+      {
+        "id": "e28",
+        "from": "n_email_err_branch",
+        "fromPort": "true",
+        "to": "n_fill_pw"
+      },
+      {
+        "id": "e29",
+        "from": "n_email_err_branch",
+        "fromPort": "false",
+        "to": "n_email_taken"
+      },
+      {
+        "id": "e30",
+        "from": "n_fill_pw",
+        "fromPort": "next",
+        "to": "n_click_pw_next"
+      },
+      {
+        "id": "e31",
+        "from": "n_click_pw_next",
+        "fromPort": "next",
+        "to": "n_geo"
+      },
+      {
+        "id": "e32",
+        "from": "n_geo",
+        "fromPort": "next",
+        "to": "n_click_geo_next"
+      },
+      {
+        "id": "e33",
+        "from": "n_click_geo_next",
+        "fromPort": "next",
+        "to": "n_names"
+      },
+      {
+        "id": "e34",
+        "from": "n_names",
+        "fromPort": "next",
+        "to": "n_fill_first"
+      },
+      {
+        "id": "e35",
+        "from": "n_fill_first",
+        "fromPort": "next",
+        "to": "n_fill_last"
+      },
+      {
+        "id": "e36",
+        "from": "n_fill_last",
+        "fromPort": "next",
+        "to": "n_click_names_next"
+      },
+      {
+        "id": "e37",
+        "from": "n_click_names_next",
+        "fromPort": "next",
+        "to": "n_sms_gate"
+      },
+      {
+        "id": "e38",
+        "from": "n_sms_gate",
+        "fromPort": "next",
+        "to": "n_gate2_branch"
+      },
+      {
+        "id": "e39",
+        "from": "n_gate2_branch",
+        "fromPort": "true",
+        "to": "n_get_blob"
+      },
+      {
+        "id": "e40",
+        "from": "n_gate2_branch",
+        "fromPort": "false",
+        "to": "n_gate2_landed_branch"
+      },
+      {
+        "id": "e41",
+        "from": "n_gate2_landed_branch",
+        "fromPort": "true",
+        "to": "n_land"
+      },
+      {
+        "id": "e42",
+        "from": "n_gate2_landed_branch",
+        "fromPort": "false",
+        "to": "n_sms_gate_fail"
+      },
+      {
+        "id": "e43",
+        "from": "n_get_blob",
+        "fromPort": "next",
+        "to": "n_captcha"
+      },
+      {
+        "id": "e44",
+        "from": "n_captcha",
+        "fromPort": "next",
+        "to": "n_submit_token"
+      },
+      {
+        "id": "e45",
+        "from": "n_submit_token",
+        "fromPort": "next",
+        "to": "n_land"
+      },
+      {
+        "id": "e46",
+        "from": "n_land",
+        "fromPort": "next",
+        "to": "n_dismiss"
+      },
+      {
+        "id": "e47",
+        "from": "n_dismiss",
+        "fromPort": "next",
+        "to": "n_save"
+      },
+      {
+        "id": "e48",
+        "from": "n_save",
+        "fromPort": "next",
+        "to": "n_warmup_check"
+      },
+      {
+        "id": "e49",
+        "from": "n_warmup_check",
+        "fromPort": "true",
+        "to": "n_warmup"
+      },
+      {
+        "id": "e50",
+        "from": "n_warmup",
+        "fromPort": "next",
+        "to": "n_warmup_dwell"
+      },
+      {
+        "id": "e51",
+        "from": "n_warmup_dwell",
+        "fromPort": "next",
+        "to": "n_done"
+      },
+      {
+        "id": "e52",
+        "from": "n_warmup_check",
+        "fromPort": "false",
+        "to": "n_done"
       }
     ],
     "author": {

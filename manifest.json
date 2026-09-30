@@ -94,8 +94,8 @@
     {
       "id": "outlook",
       "name": "Outlook Account Generator",
-      "description": "Creates an Outlook/Hotmail account on the profile's own browser engine (proxy + fingerprint + human input, to pass Microsoft's Arkose signals). signup.live.com email step (handles both the legacy MemberName and redesigned usernameInput signup DOMs) -> password -> name -> country/DOB -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, gets the token from the configured solver, and submits it through the challenge-complete postMessage the page listens for, so the cross-origin enforcement frame is never a problem. Fails fast on emails that already exist (database check plus live taken-error), bails when Microsoft demands SMS before the captcha, dismisses the privacy/stay-signed-in prompts, saves to the Database, and opens the inbox once to warm the account. Needs an email source for the identity address, a captcha key in Key Vault, and proxies recommended.",
-      "version": "1.0.5",
+      "description": "Creates an Outlook/Hotmail account on the profile own browser engine (proxy + fingerprint + human input, to pass Microsoft Arkose signals). Uses the current create-account surface (outlook.live.com/mail/?prompt=create_account, fluent=2): email + domain dropdown -> password -> country/birthdate (Fluent dropdowns) -> first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, gets the token from the configured solver, and submits it through the challenge-complete postMessage so the cross-origin enforcement frame is never a problem. Fails fast on taken emails, SMS gates, and flagged exit IPs (blocked page). Saves to the Database and opens the inbox once to warm the account. Needs an email source for the identity address and a captcha key in Key Vault; proxies recommended.",
+      "version": "2.0.0",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
