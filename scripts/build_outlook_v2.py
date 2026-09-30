@@ -15,6 +15,32 @@ def C(i, x, y, text):
 
 NEXT = 'button[data-testid="primaryButton"]:visible'
 
+# Resilient primary-Next click used where a strict ":visible" engine click can
+# wait out its timeout on a disabled-while-validating or re-rendering button.
+# Polls for any visible, ENABLED submit control and clicks it.
+def resilient_next_script(label):
+    return (
+        "// Click the " + label + " page's primary Next, tolerating a\n"
+        "// disabled->enabled transition and re-renders. Polls for any visible,\n"
+        "// enabled submit control (testid primaryButton, type=submit, or a\n"
+        "// button labelled Next/Continue/etc).\n"
+        "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
+        "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
+        "function findNext(){\n"
+        "  var cands = document.querySelectorAll(\"button[data-testid='primaryButton'], button[type='submit'], input[type='submit'], button\");\n"
+        "  for (var i=0;i<cands.length;i++){var b=cands[i];if(!vis(b))continue;var dis=b.disabled||b.getAttribute('aria-disabled')==='true';var t=((b.innerText||b.value||'')+'').trim();var tid=b.getAttribute('data-testid')||'';if(dis)continue;if(tid==='primaryButton'||b.type==='submit'||/^(next|continue|submit|sign up|create account)$/i.test(t))return b;}\n"
+        "  return null;\n"
+        "}\n"
+        "var deadline = Date.now() + 60000;\n"
+        "while (Date.now() < deadline) {\n"
+        "  if (/account creation has been blocked/i.test((document.title||'')+' '+(document.body&&document.body.innerText||''))) throw new Error('Account creation blocked at " + label + " step');\n"
+        "  var b = findNext();\n"
+        "  if (b) { try { b.scrollIntoView({block:'center'}); } catch(e){} await sleep(200); b.click(); return 'clicked'; }\n"
+        "  await sleep(400);\n"
+        "}\n"
+        "throw new Error('" + label + " Next button never became clickable');"
+    )
+
 nodes = []
 edges = []
 eid = [0]
@@ -322,7 +348,7 @@ nodes.append(N("n_fill_pw", "fill", 40, 1010, {
     "speed": "natural", "typos": False, "instant": False, "timeoutMs": 60000
 }))
 E("n_fill_pw", "n_click_pw_next")
-nodes.append(N("n_click_pw_next", "click", 260, 1010, {"selector": NEXT, "timeoutMs": 60000}))
+nodes.append(N("n_click_pw_next", "evaluate", 260, 1010, {"into": "pwNext", "script": resilient_next_script("password")}))
 E("n_click_pw_next", "n_geo")
 
 # ---- country + DOB ----
@@ -386,7 +412,7 @@ geo_script = (
 )
 nodes.append(N("n_geo", "evaluate", 40, 1120, {"into": "geoSet", "script": geo_script}))
 E("n_geo", "n_click_geo_next")
-nodes.append(N("n_click_geo_next", "click", 260, 1120, {"selector": NEXT, "timeoutMs": 60000}))
+nodes.append(N("n_click_geo_next", "evaluate", 260, 1120, {"into": "geoNext", "script": resilient_next_script("birthdate")}))
 E("n_click_geo_next", "n_names")
 
 # ---- names ----
@@ -422,7 +448,7 @@ nodes.append(N("n_fill_last", "fill", 480, 1360, {
     "speed": "natural", "typos": False, "instant": False, "timeoutMs": 60000
 }))
 E("n_fill_last", "n_click_names_next")
-nodes.append(N("n_click_names_next", "click", 700, 1360, {"selector": NEXT, "timeoutMs": 60000}))
+nodes.append(N("n_click_names_next", "evaluate", 700, 1360, {"into": "namesNext", "script": resilient_next_script("names")}))
 E("n_click_names_next", "n_sms_gate")
 
 # ---- pre-captcha gate / blocked / captcha frame ----
@@ -541,7 +567,7 @@ nodes.append(N("n_backup_fill", "fill", 1140, 1860, {
     "instant": False, "timeoutMs": 20000
 }))
 E("n_backup_fill", "n_backup_click")
-nodes.append(N("n_backup_click", "click", 1360, 1860, {"selector": NEXT, "timeoutMs": 20000}))
+nodes.append(N("n_backup_click", "evaluate", 1360, 1860, {"into": "backupNext", "script": resilient_next_script("backup-email")}))
 E("n_backup_click", "n_land")
 
 # ---- landing (re-post while waiting), tolerates empty token ----
@@ -627,7 +653,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.3"
+graph["version"] = "2.3.4"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",

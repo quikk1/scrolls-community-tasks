@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "2.3.3",
+    "version": "2.3.4",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -505,14 +505,14 @@
       },
       {
         "id": "n_click_pw_next",
-        "kind": "click",
+        "kind": "evaluate",
         "position": {
           "x": 260,
           "y": 1010
         },
         "config": {
-          "selector": "button[data-testid=\"primaryButton\"]:visible",
-          "timeoutMs": 60000
+          "into": "pwNext",
+          "script": "// Click the password page's primary Next, tolerating a\n// disabled->enabled transition and re-renders. Polls for any visible,\n// enabled submit control (testid primaryButton, type=submit, or a\n// button labelled Next/Continue/etc).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction findNext(){\n  var cands = document.querySelectorAll(\"button[data-testid='primaryButton'], button[type='submit'], input[type='submit'], button\");\n  for (var i=0;i<cands.length;i++){var b=cands[i];if(!vis(b))continue;var dis=b.disabled||b.getAttribute('aria-disabled')==='true';var t=((b.innerText||b.value||'')+'').trim();var tid=b.getAttribute('data-testid')||'';if(dis)continue;if(tid==='primaryButton'||b.type==='submit'||/^(next|continue|submit|sign up|create account)$/i.test(t))return b;}\n  return null;\n}\nvar deadline = Date.now() + 60000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||'')+' '+(document.body&&document.body.innerText||''))) throw new Error('Account creation blocked at password step');\n  var b = findNext();\n  if (b) { try { b.scrollIntoView({block:'center'}); } catch(e){} await sleep(200); b.click(); return 'clicked'; }\n  await sleep(400);\n}\nthrow new Error('password Next button never became clickable');"
         }
       },
       {
@@ -529,14 +529,14 @@
       },
       {
         "id": "n_click_geo_next",
-        "kind": "click",
+        "kind": "evaluate",
         "position": {
           "x": 260,
           "y": 1120
         },
         "config": {
-          "selector": "button[data-testid=\"primaryButton\"]:visible",
-          "timeoutMs": 60000
+          "into": "geoNext",
+          "script": "// Click the birthdate page's primary Next, tolerating a\n// disabled->enabled transition and re-renders. Polls for any visible,\n// enabled submit control (testid primaryButton, type=submit, or a\n// button labelled Next/Continue/etc).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction findNext(){\n  var cands = document.querySelectorAll(\"button[data-testid='primaryButton'], button[type='submit'], input[type='submit'], button\");\n  for (var i=0;i<cands.length;i++){var b=cands[i];if(!vis(b))continue;var dis=b.disabled||b.getAttribute('aria-disabled')==='true';var t=((b.innerText||b.value||'')+'').trim();var tid=b.getAttribute('data-testid')||'';if(dis)continue;if(tid==='primaryButton'||b.type==='submit'||/^(next|continue|submit|sign up|create account)$/i.test(t))return b;}\n  return null;\n}\nvar deadline = Date.now() + 60000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||'')+' '+(document.body&&document.body.innerText||''))) throw new Error('Account creation blocked at birthdate step');\n  var b = findNext();\n  if (b) { try { b.scrollIntoView({block:'center'}); } catch(e){} await sleep(200); b.click(); return 'clicked'; }\n  await sleep(400);\n}\nthrow new Error('birthdate Next button never became clickable');"
         }
       },
       {
@@ -585,14 +585,14 @@
       },
       {
         "id": "n_click_names_next",
-        "kind": "click",
+        "kind": "evaluate",
         "position": {
           "x": 700,
           "y": 1360
         },
         "config": {
-          "selector": "button[data-testid=\"primaryButton\"]:visible",
-          "timeoutMs": 60000
+          "into": "namesNext",
+          "script": "// Click the names page's primary Next, tolerating a\n// disabled->enabled transition and re-renders. Polls for any visible,\n// enabled submit control (testid primaryButton, type=submit, or a\n// button labelled Next/Continue/etc).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction findNext(){\n  var cands = document.querySelectorAll(\"button[data-testid='primaryButton'], button[type='submit'], input[type='submit'], button\");\n  for (var i=0;i<cands.length;i++){var b=cands[i];if(!vis(b))continue;var dis=b.disabled||b.getAttribute('aria-disabled')==='true';var t=((b.innerText||b.value||'')+'').trim();var tid=b.getAttribute('data-testid')||'';if(dis)continue;if(tid==='primaryButton'||b.type==='submit'||/^(next|continue|submit|sign up|create account)$/i.test(t))return b;}\n  return null;\n}\nvar deadline = Date.now() + 60000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||'')+' '+(document.body&&document.body.innerText||''))) throw new Error('Account creation blocked at names step');\n  var b = findNext();\n  if (b) { try { b.scrollIntoView({block:'center'}); } catch(e){} await sleep(200); b.click(); return 'clicked'; }\n  await sleep(400);\n}\nthrow new Error('names Next button never became clickable');"
         }
       },
       {
@@ -742,14 +742,14 @@
       },
       {
         "id": "n_backup_click",
-        "kind": "click",
+        "kind": "evaluate",
         "position": {
           "x": 1360,
           "y": 1860
         },
         "config": {
-          "selector": "button[data-testid=\"primaryButton\"]:visible",
-          "timeoutMs": 20000
+          "into": "backupNext",
+          "script": "// Click the backup-email page's primary Next, tolerating a\n// disabled->enabled transition and re-renders. Polls for any visible,\n// enabled submit control (testid primaryButton, type=submit, or a\n// button labelled Next/Continue/etc).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction findNext(){\n  var cands = document.querySelectorAll(\"button[data-testid='primaryButton'], button[type='submit'], input[type='submit'], button\");\n  for (var i=0;i<cands.length;i++){var b=cands[i];if(!vis(b))continue;var dis=b.disabled||b.getAttribute('aria-disabled')==='true';var t=((b.innerText||b.value||'')+'').trim();var tid=b.getAttribute('data-testid')||'';if(dis)continue;if(tid==='primaryButton'||b.type==='submit'||/^(next|continue|submit|sign up|create account)$/i.test(t))return b;}\n  return null;\n}\nvar deadline = Date.now() + 60000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||'')+' '+(document.body&&document.body.innerText||''))) throw new Error('Account creation blocked at backup-email step');\n  var b = findNext();\n  if (b) { try { b.scrollIntoView({block:'center'}); } catch(e){} await sleep(200); b.click(); return 'clicked'; }\n  await sleep(400);\n}\nthrow new Error('backup-email Next button never became clickable');"
         }
       },
       {
