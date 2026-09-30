@@ -425,7 +425,24 @@ geo_script = (
     "var dayNum = parseInt(parts[2], 10) || 15;\n"
     "var country = (\"{{countryPick}}\" || \"\").trim();\n"
     "var results = {};\n"
-    "if (country) results.country = await pickByText(\"button#countryDropdownId\", country);\n"
+    "// Wait for the birthdate page to settle first - the fields mount\n"
+    "// progressively after the password Next, so querying country the instant we\n"
+    "// land can race and return no-btn. Poll until the month dropdown exists.\n"
+    "var readyDeadline = Date.now() + 30000;\n"
+    "while (Date.now() < readyDeadline) {\n"
+    "  if (/account creation has been blocked/i.test((document.title||\"\")+\" \"+(document.body&&document.body.innerText||\"\"))) throw new Error(\"Account creation blocked at birthdate step\");\n"
+    "  if (document.querySelector(\"button#BirthMonthDropdown\") || document.querySelector(\"input[name='BirthYear']\")) break;\n"
+    "  await sleep(400);\n"
+    "}\n"
+    "// Country is OPTIONAL and is often pre-filled from the exit IP's geo (e.g.\n"
+    "// value=ES) or absent entirely. Only set it when the dropdown is present AND\n"
+    "// empty-ish; never fail the step over it. Month/day are the required fields.\n"
+    "var cBtn = document.querySelector(\"button#countryDropdownId\");\n"
+    "if (country && cBtn) {\n"
+    "  var curCountry = getVal(cBtn);\n"
+    "  if (curCountry && curCountry.toLowerCase() === String(country).toLowerCase()) { results.country = \"already:\" + curCountry; }\n"
+    "  else { results.country = await pickByText(\"button#countryDropdownId\", country); }\n"
+    "}\n"
     "await sleep(400 + Math.random() * 600);\n"
     "results.month = await pickByIndex(\"button#BirthMonthDropdown\", monthNum);\n"
     "await sleep(400 + Math.random() * 600);\n"
@@ -433,8 +450,8 @@ geo_script = (
     "await sleep(300 + Math.random() * 400);\n"
     "var y = document.querySelector(\"input[name='BirthYear']\");\n"
     "if (y) { y.focus(); y.value = \"\"; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.value = parts[3]; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.dispatchEvent(new Event(\"change\", { bubbles: true })); y.dispatchEvent(new Event(\"blur\", { bubbles: true })); }\n"
-    "// surface failures loudly so a silently-unset month/day is debuggable\n"
-    "var bad = []; for (var k in results) { if (String(results[k]).indexOf(\"failed\") === 0 || String(results[k]).indexOf(\"no-opt\") === 0 || String(results[k]).indexOf(\"no-list\") === 0 || String(results[k]).indexOf(\"no-btn\") === 0) bad.push(k + \"=\" + results[k]); }\n"
+    "// only month/day are mandatory here; surface a failure on either loudly\n"
+    "var bad = []; [\"month\", \"day\"].forEach(function (k) { var v = String(results[k] || \"\"); if (v.indexOf(\"failed\") === 0 || v.indexOf(\"no-btn\") === 0 || v.indexOf(\"no-list\") === 0) bad.push(k + \"=\" + v); });\n"
     "if (bad.length) throw new Error(\"birthdate fields not set: \" + bad.join(\", \"));\n"
     "return \"done:\" + JSON.stringify(results);"
 )
@@ -697,7 +714,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.6"
+graph["version"] = "2.3.7"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
