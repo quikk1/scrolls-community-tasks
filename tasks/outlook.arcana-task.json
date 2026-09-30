@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.4",
+    "version": "1.0.5",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -326,8 +326,8 @@
           "y": 660
         },
         "config": {
-          "into": "emailSel",
-          "script": "// Resolve which email input actually exists once the page settles.\n// signup.live.com redirects/re-renders after first paint, so a fixed\n// comma-selector fill can time out waiting on a node that flashed and went.\n// Wait for a stable input, then hand the fill step the exact selector.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 90000;\nvar lastUrl = \"\";\nwhile (Date.now() < deadline) {\n  var legacy = document.querySelector(\"#MemberName\");\n  var modern = document.querySelector(\"#usernameInput\");\n  if (vis(legacy)) return \"input#MemberName\";\n  if (vis(modern)) return \"input#usernameInput\";\n  try { lastUrl = location.href; } catch (e) {}\n  // bounced to a sign-in page instead of signup - wrong landing\n  if (/login\\.live\\.com|login\\.microsoftonline\\.com/i.test(lastUrl)) throw new Error(\"signup.live.com redirected to a sign-in page (\" + lastUrl.slice(0, 70) + \") - exit IP is being deflected\");\n  await sleep(400);\n}\nvar t = (document.title || \"\").slice(0, 60);\nthrow new Error(\"email input never became visible. title='\" + t + \"' url=\" + lastUrl.slice(0, 70));"
+          "into": "emailStep",
+          "script": "// Resolve which email input is actually VISIBLE once the page settles,\n// and what value it wants. The modern variant (Enter your email address) has\n// no domain dropdown - it wants the full address typed in. The legacy variant\n// (MemberName + domain select) wants only the local part. Return both.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&el.offsetParent!==null;}\nvar local = \"{{emailLocal}}\";\nvar full = \"{{fullEmail}}\";\nvar deadline = Date.now() + 90000;\nvar lastUrl = \"\";\nwhile (Date.now() < deadline) {\n  var modern = document.querySelector(\"#usernameInput\");\n  if (vis(modern)) return { selector: \"input#usernameInput\", value: full };\n  var legacy = document.querySelector(\"#MemberName\");\n  if (vis(legacy)) return { selector: \"input#MemberName\", value: local };\n  try { lastUrl = location.href; } catch (e) {}\n  if (/login\\.live\\.com|login\\.microsoftonline\\.com/i.test(lastUrl)) throw new Error(\"signup.live.com redirected to a sign-in page (\" + lastUrl.slice(0, 70) + \") - exit IP is being deflected\");\n  await sleep(400);\n}\nvar t = (document.title || \"\").slice(0, 60);\nthrow new Error(\"email input never became visible. title='\" + t + \"' url=\" + lastUrl.slice(0, 70));"
         }
       },
       {
@@ -338,8 +338,8 @@
           "y": 780
         },
         "config": {
-          "selector": "{{emailSel}}",
-          "value": "{{emailLocal}}",
+          "selector": "{{emailStep.selector}}",
+          "value": "{{emailStep.value}}",
           "speed": "natural",
           "typos": false,
           "instant": false,
@@ -366,8 +366,8 @@
           "y": 780
         },
         "config": {
-          "selector": "input#iSignupAction:visible, button#iSignupAction:visible, input#nextButton:visible, button#nextButton:visible",
-          "timeoutMs": 120000
+          "selector": "input#iSignupAction:visible, button#iSignupAction:visible, input#nextButton:visible, button#nextButton:visible, button[type=\"submit\"]:visible",
+          "timeoutMs": 60000
         }
       },
       {
