@@ -241,14 +241,22 @@ email_err_script = (
     "// we reached the password box.\n"
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
     "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
-    "for (var pass = 0; pass < 4; pass++) {\n"
-    "  var err = document.querySelector(\"[role='alert'], .fui-Text[class*='error'], [id*='Error'], [id*='error']\");\n"
-    "  if (vis(err) && (err.innerText || \"\").trim()) return \"taken:\" + (err.innerText || \"\").trim().slice(0, 160);\n"
+    "// Reaching the password box = the email was ACCEPTED. Check that FIRST so a\n"
+    "// transient/lingering alert can never be misread as 'taken'. Only treat an\n"
+    "// alert as a real rejection when its text matches a taken/invalid pattern.\n"
+    "function takenTxt(s){ return /already have an account|already exists|someone already|already taken|is taken|try another|pick a different|not available|can't use|cannot use|invalid/i.test(s||\"\"); }\n"
+    "for (var pass = 0; pass < 5; pass++) {\n"
     "  if (vis(document.querySelector(\"input[type='password']\"))) return \"ok\";\n"
+    "  var err = document.querySelector(\"[role='alert'], .fui-Text[class*='error'], [id*='Error'], [id*='error']\");\n"
+    "  var et = err ? (err.innerText || \"\").trim() : \"\";\n"
+    "  if (vis(err) && et && takenTxt(et)) return \"taken:\" + et.slice(0, 160);\n"
     "  var body = (document.body && document.body.innerText || \"\");\n"
-    "  if (/already have an account|already exists|someone already has|taken|try another/i.test(body)) return \"taken:\" + body.replace(/\\s+/g, \" \").slice(0, 140);\n"
     "  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked after email step\");\n"
-    "  await sleep(1500);\n"
+    "  await sleep(1200);\n"
+    "  // re-check password each pass; only a persistent taken-pattern alert counts\n"
+    "  if (vis(document.querySelector(\"input[type='password']\"))) return \"ok\";\n"
+    "  if (vis(err) && et && takenTxt(et)) return \"taken:\" + et.slice(0, 160);\n"
+    "  if (takenTxt(body)) return \"taken:\" + body.replace(/\\s+/g, \" \").slice(0, 140);\n"
     "}\n"
     "return vis(document.querySelector(\"input[type='password']\")) ? \"ok\" : \"unknown\";"
 )
@@ -284,8 +292,11 @@ regen_script = (
     "  w2 + w1 + digits\n"
     "];\n"
     "var local = shapes[rnd(shapes.length)];\n"
+    "// If the email box is gone we already ADVANCED (password page) - the prior\n"
+    "// 'taken' was a stale/lingering alert. Don't refill or click; hand back the\n"
+    "// current local so the taken-check re-runs and sees the password box -> ok.\n"
     "var em = document.querySelector(\"input[name='email']\");\n"
-    "if (!em) throw new Error(\"email box gone during regen\");\n"
+    "if (!em || document.querySelector(\"input[type='password']\")) return \"{{emailLocal}}\";\n"
     "setVal(em, local);\n"
     "await sleep(400 + Math.random() * 500);\n"
     "var next = document.querySelector(\"button[data-testid='primaryButton']:not([disabled]), button[type='submit']:not([disabled])\");\n"
@@ -590,7 +601,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.1"
+graph["version"] = "2.3.2"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
