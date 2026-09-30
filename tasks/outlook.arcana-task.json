@@ -3,11 +3,11 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "2.2.0",
+    "version": "2.2.1",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
-      "description": "Creates Outlook/Hotmail accounts on the profile's own browser engine (proxy + fingerprint + human input, to pass Microsoft's Arkose signals). A generator, not an entry tool: it mints its own human-looking usernames (first+last+random digits) and rotates solar's regional outlook.* domain table - no email list needed. Uses the current create-account surface (outlook.live.com/mail/?prompt=create_account, fluent=2): email + domain dropdown -> password -> country/birthdate (Fluent dropdowns) -> first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, gets the token from the configured solver, and submits it through the challenge-complete postMessage so the cross-origin enforcement frame is never a problem. Fails fast on taken emails, SMS gates, and flagged exit IPs. Optionally fills a backup email, saves to the Database, and opens the inbox once to warm the account. Needs a captcha key in Key Vault; proxies recommended. Outlook gen.",
+      "description": "Creates Outlook/Hotmail accounts on the profile's own browser engine (proxy + fingerprint + human input, to pass Microsoft's Arkose signals). A generator, not an entry tool: it mints its own human-looking usernames (first+last+random digits) - no email list needed. Uses the current create-account surface (outlook.live.com/mail/?prompt=create_account, fluent=2): email + domain dropdown -> password -> country/birthdate (Fluent dropdowns) -> first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, gets the token from the configured solver, and submits it through the challenge-complete postMessage so the cross-origin enforcement frame is never a problem. Fails fast on taken emails, SMS gates, and flagged exit IPs. Optionally fills a backup email, saves to the Database, and opens the inbox once to warm the account. Needs a captcha key in Key Vault; proxies recommended. Outlook gen.",
       "tags": [
         "outlook",
         "hotmail",
@@ -21,7 +21,7 @@
           "label": "Mint @hotmail.com instead of outlook.*",
           "type": "boolean",
           "defaultValue": false,
-          "hint": "Off: rotate the local part across solar's regional outlook.* table (outlook.com, .co.uk, .de, ...). On: every account is minted @hotmail.com."
+          "hint": "Off: prefer @outlook.com (the surface offers a short list like @outlook.com / @outlook.in / @hotmail.com; falls back to what's offered). On: prefer @hotmail.com."
         },
         {
           "id": "backupEmail",
@@ -160,7 +160,7 @@
         },
         "config": {
           "into": "prep",
-          "script": "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n// email local part ourselves (human-looking: first+last+random digits) rather\n// than asking for an address - a generator mints its own usernames. Names and\n// password come from the SDK identity; domain rotates over solar2's regional\n// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n// scrolls SDK runtime.\nfunction rnd(n){ return Math.floor(Math.random() * n); }\nvar first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nvar last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nif (!first) first = \"user\";\nif (!last) last = \"account\";\n// solar2 GetRandomUsername: random local part. Build a few human shapes and pick one.\nvar digits = String(rnd(900) + 100);\nvar shapes = [\n  first + last + digits,\n  first + \".\" + last + digits,\n  first + last.charAt(0) + digits,\n  first.charAt(0) + last + digits,\n  first + digits + last\n];\nvar local = shapes[rnd(shapes.length)];\n// solar2 regional domain table; hotmailDomain flips to hotmail.com\nvar outlookDomains = [\"outlook.com\", \"outlook.co.uk\", \"outlook.de\", \"outlook.es\", \"outlook.fr\", \"outlook.jp\", \"outlook.com.vn\", \"outlook.it\", \"outlook.my\", \"outlook.cz\", \"outlook.pt\", \"outlook.kr\"];\nvar hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\nvar dom = hotmail ? \"hotmail.com\" : outlookDomains[rnd(outlookDomains.length)];\nvar dob = \"{{identity.dob}}\";\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  fullEmail: local + \"@\" + dom,\n  domainText: \"@\" + dom,\n  month: monthName,\n  day: d,\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").trim()\n};"
+          "script": "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n// email local part ourselves (human-looking: first+last+random digits) rather\n// than asking for an address - a generator mints its own usernames. Names and\n// password come from the SDK identity; domain rotates over solar2's regional\n// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n// scrolls SDK runtime.\nfunction rnd(n){ return Math.floor(Math.random() * n); }\nvar first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nvar last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nif (!first) first = \"user\";\nif (!last) last = \"account\";\n// solar2 GetRandomUsername: random local part. Build a few human shapes and pick one.\nvar digits = String(rnd(900) + 100);\nvar shapes = [\n  first + last + digits,\n  first + \".\" + last + digits,\n  first + last.charAt(0) + digits,\n  first.charAt(0) + last + digits,\n  first + digits + last\n];\nvar local = shapes[rnd(shapes.length)];\n// The live surface only offers a short domain list (e.g. @outlook.com,\n// @outlook.in, @hotmail.com) - solar2's 12-region table is from an older\n// surface and must NOT be pre-baked. We just express a preference: hotmail\n// toggle -> prefer @hotmail.com, else prefer @outlook.com. The domain step\n// picks from what's actually offered and falls back, never fails.\nvar hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\nvar wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\nvar dob = \"{{identity.dob}}\";\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  wantDomain: wantDom,\n  month: monthName,\n  day: d,\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").trim()\n};"
         }
       },
       {
@@ -184,7 +184,7 @@
         },
         "config": {
           "name": "fullEmail",
-          "value": "{{prep.fullEmail}}"
+          "value": "{{prep.emailLocal}}@{{prep.wantDomain}}"
         }
       },
       {
@@ -195,8 +195,8 @@
           "y": 20
         },
         "config": {
-          "name": "domainText",
-          "value": "{{prep.domainText}}"
+          "name": "wantDomain",
+          "value": "{{prep.wantDomain}}"
         }
       },
       {
@@ -398,8 +398,20 @@
           "y": 700
         },
         "config": {
-          "into": "domainSet",
-          "script": "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n// .fui-Option / [role=option] with text like '@outlook.com'. Port of solar2's\n// domainListJS precheck: open the dropdown, READ the offered domains, and fail\n// fast if the wanted one is not offered. Then pick it.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar want = (\"{{domainText}}\" || \"@outlook.com\").trim().toLowerCase();\nvar btn = document.querySelector(\"button#domainDropdownId\");\nif (!btn) return \"no-dropdown\";\nvar cur = (btn.innerText || \"\").trim().toLowerCase();\nif (cur === want) return \"already:\" + cur;\nbtn.click();\nvar deadline = Date.now() + 9000; var offered = []; var picked = \"\";\nwhile (Date.now() < deadline) {\n  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n  offered = [];\n  for (var i = 0; i < opts.length; i++) {\n    var tx = (opts[i].innerText || \"\").trim().toLowerCase();\n    if (tx) offered.push(tx);\n    if (tx === want) { opts[i].click(); picked = want; break; }\n  }\n  if (picked || offered.length) break;\n  await sleep(250);\n}\nif (picked) return \"set:\" + picked;\ntry { document.body.click(); } catch (e) {}\n// solar2: \"domain '%s' is not available\" - fail fast rather than mint the wrong TLD\nif (offered.length && offered.indexOf(want) === -1) throw new Error(\"domain '\" + want + \"' is not available (offered: \" + offered.join(\", \") + \")\");\nreturn \"kept:\" + ((document.querySelector(\"button#domainDropdownId\") || {}).innerText || \"\").trim();"
+          "into": "pickedDomain",
+          "script": "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n// .fui-Option / [role=option] with text like '@outlook.com'. The live surface\n// offers only a short list (e.g. @outlook.com, @outlook.in, @hotmail.com), so\n// we pick from what is ACTUALLY offered: prefer the wanted domain, else fall\n// back to the first offered option. Never fails on domain. Returns the picked\n// domain (no @) so the full address is built from reality.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar want = (\"@\" + ((\"{{wantDomain}}\" || \"outlook.com\").trim().toLowerCase()));\nvar btn = document.querySelector(\"button#domainDropdownId\");\nif (!btn) return (\"outlook.com\");\nvar cur = (btn.innerText || \"\").trim().toLowerCase();\nif (cur.indexOf(\"@\") === 0 && cur === want) return cur.slice(1);\nbtn.click();\nvar deadline = Date.now() + 9000; var offered = []; var pickEl = null;\nwhile (Date.now() < deadline) {\n  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n  offered = []; pickEl = null;\n  for (var i = 0; i < opts.length; i++) {\n    var tx = (opts[i].innerText || \"\").trim().toLowerCase();\n    if (!tx || tx.indexOf(\"@\") !== 0) continue;\n    offered.push(tx);\n    if (tx === want) pickEl = opts[i];\n  }\n  if (offered.length) break;\n  await sleep(250);\n}\nif (!offered.length) { try { document.body.click(); } catch (e) {} return cur.indexOf(\"@\") === 0 ? cur.slice(1) : \"outlook.com\"; }\nvar chosenTx = pickEl ? want : offered[0];\nif (!pickEl) {\n  var all = document.querySelectorAll(\"[role='option'], .fui-Option\");\n  for (var k = 0; k < all.length; k++) { var t2 = (all[k].innerText || \"\").trim().toLowerCase(); if (t2 === chosenTx) { pickEl = all[k]; break; } }\n}\nif (pickEl) pickEl.click();\nreturn chosenTx.slice(1);"
+        }
+      },
+      {
+        "id": "n_s_full2",
+        "kind": "setVar",
+        "position": {
+          "x": 480,
+          "y": 560
+        },
+        "config": {
+          "name": "fullEmail",
+          "value": "{{emailLocal}}@{{pickedDomain}}"
         }
       },
       {
@@ -896,172 +908,178 @@
         "id": "e25",
         "from": "n_domain",
         "fromPort": "next",
-        "to": "n_click_email_next"
+        "to": "n_s_full2"
       },
       {
         "id": "e26",
+        "from": "n_s_full2",
+        "fromPort": "next",
+        "to": "n_click_email_next"
+      },
+      {
+        "id": "e27",
         "from": "n_click_email_next",
         "fromPort": "next",
         "to": "n_email_err"
       },
       {
-        "id": "e27",
+        "id": "e28",
         "from": "n_email_err",
         "fromPort": "next",
         "to": "n_email_err_branch"
       },
       {
-        "id": "e28",
+        "id": "e29",
         "from": "n_email_err_branch",
         "fromPort": "true",
         "to": "n_fill_pw"
       },
       {
-        "id": "e29",
+        "id": "e30",
         "from": "n_email_err_branch",
         "fromPort": "false",
         "to": "n_email_taken"
       },
       {
-        "id": "e30",
+        "id": "e31",
         "from": "n_fill_pw",
         "fromPort": "next",
         "to": "n_click_pw_next"
       },
       {
-        "id": "e31",
+        "id": "e32",
         "from": "n_click_pw_next",
         "fromPort": "next",
         "to": "n_geo"
       },
       {
-        "id": "e32",
+        "id": "e33",
         "from": "n_geo",
         "fromPort": "next",
         "to": "n_click_geo_next"
       },
       {
-        "id": "e33",
+        "id": "e34",
         "from": "n_click_geo_next",
         "fromPort": "next",
         "to": "n_names"
       },
       {
-        "id": "e34",
+        "id": "e35",
         "from": "n_names",
         "fromPort": "next",
         "to": "n_fill_first"
       },
       {
-        "id": "e35",
+        "id": "e36",
         "from": "n_fill_first",
         "fromPort": "next",
         "to": "n_fill_last"
       },
       {
-        "id": "e36",
+        "id": "e37",
         "from": "n_fill_last",
         "fromPort": "next",
         "to": "n_click_names_next"
       },
       {
-        "id": "e37",
+        "id": "e38",
         "from": "n_click_names_next",
         "fromPort": "next",
         "to": "n_sms_gate"
       },
       {
-        "id": "e38",
+        "id": "e39",
         "from": "n_sms_gate",
         "fromPort": "next",
         "to": "n_gate2_branch"
       },
       {
-        "id": "e39",
+        "id": "e40",
         "from": "n_gate2_branch",
         "fromPort": "true",
         "to": "n_get_blob"
       },
       {
-        "id": "e40",
+        "id": "e41",
         "from": "n_gate2_branch",
         "fromPort": "false",
         "to": "n_gate2_landed_branch"
       },
       {
-        "id": "e41",
+        "id": "e42",
         "from": "n_gate2_landed_branch",
         "fromPort": "true",
         "to": "n_land"
       },
       {
-        "id": "e42",
+        "id": "e43",
         "from": "n_gate2_landed_branch",
         "fromPort": "false",
         "to": "n_sms_gate_fail"
       },
       {
-        "id": "e43",
+        "id": "e44",
         "from": "n_get_blob",
         "fromPort": "next",
         "to": "n_captcha"
       },
       {
-        "id": "e44",
+        "id": "e45",
         "from": "n_captcha",
         "fromPort": "next",
         "to": "n_submit_token"
       },
       {
-        "id": "e45",
+        "id": "e46",
         "from": "n_submit_token",
         "fromPort": "next",
         "to": "n_backup"
       },
       {
-        "id": "e46",
+        "id": "e47",
         "from": "n_backup",
         "fromPort": "next",
         "to": "n_land"
       },
       {
-        "id": "e47",
+        "id": "e48",
         "from": "n_land",
         "fromPort": "next",
         "to": "n_dismiss"
       },
       {
-        "id": "e48",
+        "id": "e49",
         "from": "n_dismiss",
         "fromPort": "next",
         "to": "n_save"
       },
       {
-        "id": "e49",
+        "id": "e50",
         "from": "n_save",
         "fromPort": "next",
         "to": "n_warmup_check"
       },
       {
-        "id": "e50",
+        "id": "e51",
         "from": "n_warmup_check",
         "fromPort": "true",
         "to": "n_warmup"
       },
       {
-        "id": "e51",
+        "id": "e52",
         "from": "n_warmup",
         "fromPort": "next",
         "to": "n_warmup_dwell"
       },
       {
-        "id": "e52",
+        "id": "e53",
         "from": "n_warmup_dwell",
         "fromPort": "next",
         "to": "n_done"
       },
       {
-        "id": "e53",
+        "id": "e54",
         "from": "n_warmup_check",
         "fromPort": "false",
         "to": "n_done"

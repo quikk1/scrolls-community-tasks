@@ -61,10 +61,13 @@ prep_script = (
     "  first + digits + last\n"
     "];\n"
     "var local = shapes[rnd(shapes.length)];\n"
-    "// solar2 regional domain table; hotmailDomain flips to hotmail.com\n"
-    "var outlookDomains = [\"outlook.com\", \"outlook.co.uk\", \"outlook.de\", \"outlook.es\", \"outlook.fr\", \"outlook.jp\", \"outlook.com.vn\", \"outlook.it\", \"outlook.my\", \"outlook.cz\", \"outlook.pt\", \"outlook.kr\"];\n"
+    "// The live surface only offers a short domain list (e.g. @outlook.com,\n"
+    "// @outlook.in, @hotmail.com) - solar2's 12-region table is from an older\n"
+    "// surface and must NOT be pre-baked. We just express a preference: hotmail\n"
+    "// toggle -> prefer @hotmail.com, else prefer @outlook.com. The domain step\n"
+    "// picks from what's actually offered and falls back, never fails.\n"
     "var hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\n"
-    "var dom = hotmail ? \"hotmail.com\" : outlookDomains[rnd(outlookDomains.length)];\n"
+    "var wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\n"
     "var dob = \"{{identity.dob}}\";\n"
     "var y = \"\", m = \"\", d = \"\";\n"
     "var mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\n"
@@ -76,8 +79,7 @@ prep_script = (
     "var year = parseInt(y, 10); if (year > 2007) year = 1994;\n"
     "return {\n"
     "  emailLocal: local,\n"
-    "  fullEmail: local + \"@\" + dom,\n"
-    "  domainText: \"@\" + dom,\n"
+    "  wantDomain: wantDom,\n"
     "  month: monthName,\n"
     "  day: d,\n"
     "  year: String(year),\n"
@@ -89,8 +91,10 @@ E("n_prep", "n_s_local")
 
 for nid, name, val, x in [
     ("n_s_local", "emailLocal", "{{prep.emailLocal}}", 230),
-    ("n_s_full", "fullEmail", "{{prep.fullEmail}}", 390),
-    ("n_s_domain", "domainText", "{{prep.domainText}}", 550),
+    # predicted address for the up-front dedupe; refined to the real picked
+    # domain right after the domain step (n_s_full2)
+    ("n_s_full", "fullEmail", "{{prep.emailLocal}}@{{prep.wantDomain}}", 390),
+    ("n_s_domain", "wantDomain", "{{prep.wantDomain}}", 550),
     ("n_s_dob", "dob", "{{prep.month}}|{{prep.day}}|{{prep.year}}", 710),
     ("n_s_country", "countryPick", "{{prep.country}}", 870),
 ]:
@@ -186,36 +190,44 @@ E("n_fill_email", "n_domain")
 
 domain_script = (
     "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n"
-    "// .fui-Option / [role=option] with text like '@outlook.com'. Port of solar2's\n"
-    "// domainListJS precheck: open the dropdown, READ the offered domains, and fail\n"
-    "// fast if the wanted one is not offered. Then pick it.\n"
+    "// .fui-Option / [role=option] with text like '@outlook.com'. The live surface\n"
+    "// offers only a short list (e.g. @outlook.com, @outlook.in, @hotmail.com), so\n"
+    "// we pick from what is ACTUALLY offered: prefer the wanted domain, else fall\n"
+    "// back to the first offered option. Never fails on domain. Returns the picked\n"
+    "// domain (no @) so the full address is built from reality.\n"
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
-    "var want = (\"{{domainText}}\" || \"@outlook.com\").trim().toLowerCase();\n"
+    "var want = (\"@\" + ((\"{{wantDomain}}\" || \"outlook.com\").trim().toLowerCase()));\n"
     "var btn = document.querySelector(\"button#domainDropdownId\");\n"
-    "if (!btn) return \"no-dropdown\";\n"
+    "if (!btn) return (\"outlook.com\");\n"
     "var cur = (btn.innerText || \"\").trim().toLowerCase();\n"
-    "if (cur === want) return \"already:\" + cur;\n"
+    "if (cur.indexOf(\"@\") === 0 && cur === want) return cur.slice(1);\n"
     "btn.click();\n"
-    "var deadline = Date.now() + 9000; var offered = []; var picked = \"\";\n"
+    "var deadline = Date.now() + 9000; var offered = []; var pickEl = null;\n"
     "while (Date.now() < deadline) {\n"
     "  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n"
-    "  offered = [];\n"
+    "  offered = []; pickEl = null;\n"
     "  for (var i = 0; i < opts.length; i++) {\n"
     "    var tx = (opts[i].innerText || \"\").trim().toLowerCase();\n"
-    "    if (tx) offered.push(tx);\n"
-    "    if (tx === want) { opts[i].click(); picked = want; break; }\n"
+    "    if (!tx || tx.indexOf(\"@\") !== 0) continue;\n"
+    "    offered.push(tx);\n"
+    "    if (tx === want) pickEl = opts[i];\n"
     "  }\n"
-    "  if (picked || offered.length) break;\n"
+    "  if (offered.length) break;\n"
     "  await sleep(250);\n"
     "}\n"
-    "if (picked) return \"set:\" + picked;\n"
-    "try { document.body.click(); } catch (e) {}\n"
-    "// solar2: \"domain '%s' is not available\" - fail fast rather than mint the wrong TLD\n"
-    "if (offered.length && offered.indexOf(want) === -1) throw new Error(\"domain '\" + want + \"' is not available (offered: \" + offered.join(\", \") + \")\");\n"
-    "return \"kept:\" + ((document.querySelector(\"button#domainDropdownId\") || {}).innerText || \"\").trim();"
+    "if (!offered.length) { try { document.body.click(); } catch (e) {} return cur.indexOf(\"@\") === 0 ? cur.slice(1) : \"outlook.com\"; }\n"
+    "var chosenTx = pickEl ? want : offered[0];\n"
+    "if (!pickEl) {\n"
+    "  var all = document.querySelectorAll(\"[role='option'], .fui-Option\");\n"
+    "  for (var k = 0; k < all.length; k++) { var t2 = (all[k].innerText || \"\").trim().toLowerCase(); if (t2 === chosenTx) { pickEl = all[k]; break; } }\n"
+    "}\n"
+    "if (pickEl) pickEl.click();\n"
+    "return chosenTx.slice(1);"
 )
-nodes.append(N("n_domain", "evaluate", 260, 700, {"into": "domainSet", "script": domain_script}))
-E("n_domain", "n_click_email_next")
+nodes.append(N("n_domain", "evaluate", 260, 700, {"into": "pickedDomain", "script": domain_script}))
+E("n_domain", "n_s_full2")
+nodes.append(N("n_s_full2", "setVar", 480, 560, {"name": "fullEmail", "value": "{{emailLocal}}@{{pickedDomain}}"}))
+E("n_s_full2", "n_click_email_next")
 nodes.append(N("n_click_email_next", "click", 480, 700, {"selector": NEXT, "timeoutMs": 60000}))
 E("n_click_email_next", "n_email_err")
 
@@ -506,8 +518,8 @@ nodes.append(N("n_done", "noop", 1780, 1740, {}))
 meta_desc = (
     "Creates Outlook/Hotmail accounts on the profile's own browser engine (proxy + "
     "fingerprint + human input, to pass Microsoft's Arkose signals). A generator, not an "
-    "entry tool: it mints its own human-looking usernames (first+last+random digits) and "
-    "rotates solar's regional outlook.* domain table - no email list needed. Uses the "
+    "entry tool: it mints its own human-looking usernames (first+last+random digits) - "
+    "no email list needed. Uses the "
     "current create-account surface (outlook.live.com/mail/?prompt=create_account, "
     "fluent=2): email + domain dropdown -> password -> country/birthdate (Fluent "
     "dropdowns) -> first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose "
@@ -520,7 +532,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.2.0"
+graph["version"] = "2.2.1"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
@@ -532,7 +544,7 @@ graph["metadata"] = {
             "label": "Mint @hotmail.com instead of outlook.*",
             "type": "boolean",
             "defaultValue": False,
-            "hint": "Off: rotate the local part across solar's regional outlook.* table (outlook.com, .co.uk, .de, ...). On: every account is minted @hotmail.com."
+            "hint": "Off: prefer @outlook.com (the surface offers a short list like @outlook.com / @outlook.in / @hotmail.com; falls back to what's offered). On: prefer @hotmail.com."
         },
         {
             "id": "backupEmail",
@@ -584,7 +596,7 @@ refs = set()
 for n in nodes:
     for part in json.dumps(n["config"]).split("{{")[1:]:
         refs.add(part.split("}}")[0].strip())
-stale = [r for r in refs if r in ("backupEmail", "warmupInbox", "hotmailDomain", "msDomain")]
+stale = [r for r in refs if r in ("backupEmail", "warmupInbox", "hotmailDomain", "msDomain", "domainText", "prep.fullEmail", "prep.domainText")]
 print("stale refs (should be none):", stale)
 if bad or unreached or badbranch or stale:
     raise SystemExit("graph invalid")
