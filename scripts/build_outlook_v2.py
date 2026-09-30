@@ -79,13 +79,15 @@ prep_script = (
     "else { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\n"
     "if (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\n"
     "var months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\n"
-    "var monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\n"
+    "var mNum = Math.min(12, Math.max(1, parseInt(m, 10)));\n"
+    "var monthName = months[mNum - 1];\n"
     "var year = parseInt(y, 10); if (year > 2007) year = 1994;\n"
     "return {\n"
     "  emailLocal: local,\n"
     "  wantDomain: wantDom,\n"
     "  month: monthName,\n"
-    "  day: d,\n"
+    "  monthNum: String(mNum),\n"
+    "  day: String(parseInt(d, 10) || 15),\n"
     "  year: String(year),\n"
     "  country: (\"{{addresses.0.country}}\" || \"\").replace(/[^A-Za-z ]/g, \"\").trim()\n"
     "};"
@@ -99,7 +101,7 @@ for nid, name, val, x in [
     # domain right after the domain step (n_s_full2)
     ("n_s_full", "fullEmail", "{{prep.emailLocal}}@{{prep.wantDomain}}", 390),
     ("n_s_domain", "wantDomain", "{{prep.wantDomain}}", 550),
-    ("n_s_dob", "dob", "{{prep.month}}|{{prep.day}}|{{prep.year}}", 710),
+    ("n_s_dob", "dob", "{{prep.month}}|{{prep.monthNum}}|{{prep.day}}|{{prep.year}}", 710),
     ("n_s_country", "countryPick", "{{prep.country}}", 870),
 ]:
     nodes.append(N(nid, "setVar", x, 20, {"name": name, "value": val}))
@@ -330,32 +332,56 @@ geo_script = (
     "// then click the matching [role=option]. Empty country leaves the geo default.\n"
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
     "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
-    "async function pickOpt(btnSel, want) {\n"
-    "  if (!want) return \"skip\";\n"
-    "  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n"
-    "  if ((btn.innerText || \"\").trim().toLowerCase() === String(want).toLowerCase()) return \"already\";\n"
+    "// solar2 picks month/day by INDEX (.fui-Option:nth-child(n)), not by text -\n"
+    "// Fluent option text can have nested spans / locale strings that defeat an\n"
+    "// exact-text match, which is why the month never got set. Month options are\n"
+    "// always January..December in order, day options 1..31, so nth-of-the-list is\n"
+    "// deterministic and locale-proof. Country (free-text) still matches by text.\n"
+    "async function openList(btnSel) {\n"
+    "  var btn = document.querySelector(btnSel); if (!btn) return null;\n"
     "  btn.click();\n"
     "  var deadline = Date.now() + 9000;\n"
     "  while (Date.now() < deadline) {\n"
     "    var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n"
-    "    for (var i = 0; i < opts.length; i++) {\n"
-    "      if ((opts[i].innerText || \"\").trim().toLowerCase() === String(want).toLowerCase()) { opts[i].click(); return \"set\"; }\n"
-    "    }\n"
+    "    if (opts.length) return opts;\n"
     "    await sleep(250);\n"
+    "  }\n"
+    "  return null;\n"
+    "}\n"
+    "async function pickIndex(btnSel, idx1) {\n"
+    "  var opts = await openList(btnSel);\n"
+    "  if (!opts) return \"no-list:\" + btnSel;\n"
+    "  var i = Math.max(1, Math.min(opts.length, idx1)) - 1;\n"
+    "  opts[i].click();\n"
+    "  return \"set:\" + (opts[i].innerText || \"\").trim();\n"
+    "}\n"
+    "async function pickText(btnSel, want) {\n"
+    "  if (!want) return \"skip\";\n"
+    "  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n"
+    "  if ((btn.innerText || \"\").trim().toLowerCase() === String(want).toLowerCase()) return \"already\";\n"
+    "  var opts = await openList(btnSel);\n"
+    "  if (!opts) return \"no-list:\" + btnSel;\n"
+    "  var w = String(want).trim().toLowerCase();\n"
+    "  for (var i = 0; i < opts.length; i++) {\n"
+    "    var t = (opts[i].innerText || \"\").trim().toLowerCase();\n"
+    "    if (t === w || t.indexOf(w) !== -1 || w.indexOf(t) !== -1) { opts[i].click(); return \"set\"; }\n"
     "  }\n"
     "  try { document.body.click(); } catch (e) {}\n"
     "  return \"no-opt:\" + want;\n"
     "}\n"
     "var parts = \"{{dob}}\".split(\"|\");\n"
+    "// parts: [monthName, monthNum, day, year]\n"
+    "var monthNum = parseInt(parts[1], 10) || 6;\n"
+    "var dayNum = parseInt(parts[2], 10) || 15;\n"
     "var country = (\"{{countryPick}}\" || \"\").trim();\n"
-    "if (country) await pickOpt(\"button#countryDropdownId\", country);\n"
+    "if (country) await pickText(\"button#countryDropdownId\", country);\n"
     "await sleep(400 + Math.random() * 600);\n"
-    "await pickOpt(\"button#BirthMonthDropdown\", parts[0]);\n"
+    "await pickIndex(\"button#BirthMonthDropdown\", monthNum);\n"
     "await sleep(400 + Math.random() * 600);\n"
-    "await pickOpt(\"button#BirthDayDropdown\", parts[1]);\n"
+    "await pickIndex(\"button#BirthDayDropdown\", dayNum);\n"
     "await sleep(300 + Math.random() * 400);\n"
     "var y = document.querySelector(\"input[name='BirthYear']\");\n"
-    "if (y) { y.focus(); y.value = \"\"; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.value = parts[2]; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.dispatchEvent(new Event(\"change\", { bubbles: true })); }\n"
+    "if (y) { y.focus(); y.value = \"\"; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.value = parts[3]; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.dispatchEvent(new Event(\"change\", { bubbles: true })); }\n"
     "return \"done\";"
 )
 nodes.append(N("n_geo", "evaluate", 40, 1120, {"into": "geoSet", "script": geo_script}))
@@ -601,7 +627,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.2"
+graph["version"] = "2.3.3"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
