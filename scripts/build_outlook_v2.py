@@ -252,8 +252,50 @@ nodes.append(N("n_email_err", "evaluate", 40, 880, {"into": "emailErr", "script"
 E("n_email_err", "n_email_err_branch")
 nodes.append(N("n_email_err_branch", "branch", 260, 880, {"op": "==", "left": "{{emailErr}}", "right": "ok"}))
 E("n_email_err_branch", "n_fill_pw", "true")
-nodes.append(N("n_email_taken", "fail", 260, 1010, {"message": "Email already exists or was rejected: {{emailErr}}"}))
-E("n_email_err_branch", "n_email_taken", "false")
+
+# taken -> regenerate the local part and retry (solar2 regenerates on collision
+# instead of dying). Mints a higher-entropy name, refills the field, clicks
+# Next, and loops back through the taken-check. Capped at 4 regens per run.
+regen_script = (
+    "// The minted username collided. Like solar2, regenerate instead of failing:\n"
+    "// build a fresh higher-entropy local part from first/last + more digits,\n"
+    "// clear and refill the email box, click Next, and hand the new local back so\n"
+    "// fullEmail/emailLocal can be updated before the taken-check runs again.\n"
+    "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
+    "function setVal(el,val){el.focus();el.value=\"\";el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\n"
+    "window.__scRegenN = (window.__scRegenN || 0) + 1;\n"
+    "if (window.__scRegenN > 4) throw new Error(\"Username keeps colliding after 4 regenerations (last: \" + (\"{{emailErr}}\"||\"\").slice(0,120) + \")\");\n"
+    "function rnd(n){ return Math.floor(Math.random() * n); }\n"
+    "var first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
+    "var last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
+    "if (!first) first = \"user\"; if (!last) last = \"account\";\n"
+    "var digits = String(rnd(900000) + 100000);\n"
+    "var shapes = [\n"
+    "  first + last + digits,\n"
+    "  first + \".\" + last + digits,\n"
+    "  first.charAt(0) + last + digits,\n"
+    "  first + last.charAt(0) + digits,\n"
+    "  last + first + digits\n"
+    "];\n"
+    "var local = shapes[rnd(shapes.length)];\n"
+    "var em = document.querySelector(\"input[name='email']\");\n"
+    "if (!em) throw new Error(\"email box gone during regen\");\n"
+    "setVal(em, local);\n"
+    "await sleep(400 + Math.random() * 500);\n"
+    "var next = document.querySelector(\"button[data-testid='primaryButton']:not([disabled]), button[type='submit']:not([disabled])\");\n"
+    "if (next) next.click();\n"
+    "// give the availability check a moment so the old alert is gone before the\n"
+    "// taken-check reads the page again\n"
+    "await sleep(3000);\n"
+    "return local;"
+)
+nodes.append(N("n_regen_email", "evaluate", 260, 1010, {"into": "regenLocal", "script": regen_script}))
+E("n_email_err_branch", "n_regen_email", "false")
+nodes.append(N("n_s_regen", "setVar", 480, 1010, {"name": "emailLocal", "value": "{{regenLocal}}"}))
+E("n_regen_email", "n_s_regen")
+nodes.append(N("n_s_regen_full", "setVar", 700, 1010, {"name": "fullEmail", "value": "{{regenLocal}}@{{pickedDomain}}"}))
+E("n_s_regen", "n_s_regen_full")
+E("n_s_regen_full", "n_email_err")
 
 # ---- password ----
 nodes.append(N("n_fill_pw", "fill", 40, 1010, {
@@ -533,7 +575,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.2.2"
+graph["version"] = "2.3.0"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
@@ -598,6 +640,7 @@ for n in nodes:
     for part in json.dumps(n["config"]).split("{{")[1:]:
         refs.add(part.split("}}")[0].strip())
 stale = [r for r in refs if r in ("backupEmail", "warmupInbox", "hotmailDomain", "msDomain", "domainText", "prep.fullEmail", "prep.domainText")]
+nodes = [n for n in nodes if n["id"] != "n_email_taken"]
 print("stale refs (should be none):", stale)
 if bad or unreached or badbranch or stale:
     raise SystemExit("graph invalid")
