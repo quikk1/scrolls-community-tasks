@@ -114,8 +114,7 @@ prep_script = (
     "  month: monthName,\n"
     "  monthNum: String(mNum),\n"
     "  day: String(parseInt(d, 10) || 15),\n"
-    "  year: String(year),\n"
-    "  country: (\"{{addresses.0.country}}\" || \"\").replace(/[^A-Za-z ]/g, \"\").trim()\n"
+    "  year: String(year)\n"
     "};"
 )
 nodes.append(N("n_prep", "evaluate", 40, 120, {"into": "prep", "script": prep_script}))
@@ -128,11 +127,10 @@ for nid, name, val, x in [
     ("n_s_full", "fullEmail", "{{prep.emailLocal}}@{{prep.wantDomain}}", 390),
     ("n_s_domain", "wantDomain", "{{prep.wantDomain}}", 550),
     ("n_s_dob", "dob", "{{prep.month}}|{{prep.monthNum}}|{{prep.day}}|{{prep.year}}", 710),
-    ("n_s_country", "countryPick", "{{prep.country}}", 870),
 ]:
     nodes.append(N(nid, "setVar", x, 20, {"name": name, "value": val}))
-E("n_s_local", "n_s_full"); E("n_s_full", "n_s_domain"); E("n_s_domain", "n_s_dob"); E("n_s_dob", "n_s_country")
-E("n_s_country", "n_dup_tc")
+E("n_s_local", "n_s_full"); E("n_s_full", "n_s_domain"); E("n_s_domain", "n_s_dob")
+E("n_s_dob", "n_dup_tc")
 
 # ---- dedupe (tm pattern) ----
 nodes.append(N("n_dup_tc", "tryCatch", 40, 220, {}))
@@ -405,45 +403,21 @@ geo_script = (
     "  }\n"
     "  return \"failed:\" + btnSel;\n"
     "}\n"
-    "async function pickByText(btnSel, want){\n"
-    "  if (!want) return \"skip\";\n"
-    "  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n"
-    "  if (getVal(btn).toLowerCase() === String(want).toLowerCase()) return \"already\";\n"
-    "  var lb = await openCombo(btn); if (!lb) return \"no-list:\" + btnSel;\n"
-    "  var w = String(want).trim().toLowerCase();\n"
-    "  var opts = document.querySelectorAll(\"[role='listbox'] [role='option'], [role='option'], .fui-Option\");\n"
-    "  for (var i = 0; i < opts.length; i++) {\n"
-    "    var t = (opts[i].innerText || \"\").trim().toLowerCase();\n"
-    "    if (t === w || t.indexOf(w) !== -1 || w.indexOf(t) !== -1) { opts[i].click(); await sleep(250); return \"set:\" + getVal(btn); }\n"
-    "  }\n"
-    "  press(btn, \"Escape\"); try { document.body.click(); } catch (e) {}\n"
-    "  return \"no-opt:\" + want;\n"
-    "}\n"
     "var parts = \"{{dob}}\".split(\"|\");\n"
     "// parts: [monthName, monthNum, day, year]\n"
     "var monthNum = parseInt(parts[1], 10) || 6;\n"
     "var dayNum = parseInt(parts[2], 10) || 15;\n"
-    "var country = (\"{{countryPick}}\" || \"\").trim();\n"
     "var results = {};\n"
-    "// Wait for the birthdate page to settle first - the fields mount\n"
-    "// progressively after the password Next, so querying country the instant we\n"
-    "// land can race and return no-btn. Poll until the month dropdown exists.\n"
+    "// Country is AUTO-SET from the exit IP's geo (e.g. value=ES) and must NOT be\n"
+    "// overridden - a proxy/country mismatch is a flag. We leave it alone. Only\n"
+    "// month/day/year are ours to fill. Wait for the birthdate page to settle\n"
+    "// first - the fields mount progressively after the password Next.\n"
     "var readyDeadline = Date.now() + 30000;\n"
     "while (Date.now() < readyDeadline) {\n"
     "  if (/account creation has been blocked/i.test((document.title||\"\")+\" \"+(document.body&&document.body.innerText||\"\"))) throw new Error(\"Account creation blocked at birthdate step\");\n"
     "  if (document.querySelector(\"button#BirthMonthDropdown\") || document.querySelector(\"input[name='BirthYear']\")) break;\n"
     "  await sleep(400);\n"
     "}\n"
-    "// Country is OPTIONAL and is often pre-filled from the exit IP's geo (e.g.\n"
-    "// value=ES) or absent entirely. Only set it when the dropdown is present AND\n"
-    "// empty-ish; never fail the step over it. Month/day are the required fields.\n"
-    "var cBtn = document.querySelector(\"button#countryDropdownId\");\n"
-    "if (country && cBtn) {\n"
-    "  var curCountry = getVal(cBtn);\n"
-    "  if (curCountry && curCountry.toLowerCase() === String(country).toLowerCase()) { results.country = \"already:\" + curCountry; }\n"
-    "  else { results.country = await pickByText(\"button#countryDropdownId\", country); }\n"
-    "}\n"
-    "await sleep(400 + Math.random() * 600);\n"
     "results.month = await pickByIndex(\"button#BirthMonthDropdown\", monthNum);\n"
     "await sleep(400 + Math.random() * 600);\n"
     "results.day = await pickByIndex(\"button#BirthDayDropdown\", dayNum);\n"
@@ -714,7 +688,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.7"
+graph["version"] = "2.3.8"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",

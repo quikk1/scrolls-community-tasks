@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "2.3.7",
+    "version": "2.3.8",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -160,7 +160,7 @@
         },
         "config": {
           "into": "prep",
-          "script": "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n// email local part ourselves (human-looking: first+last+random digits) rather\n// than asking for an address - a generator mints its own usernames. Names and\n// password come from the SDK identity; domain rotates over solar2's regional\n// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n// scrolls SDK runtime.\nfunction rnd(n){ return Math.floor(Math.random() * n); }\n// solar2 GetRandomUsername: mint a human-looking local part. We do NOT inject\n// the identity name into this script - a name with a quote/apostrophe would\n// break the JS at parse time (raw {{}} substitution). Build from letter\n// syllables instead; names are filled separately via safe fill-node values.\nvar syl = [\"an\",\"bel\",\"cor\",\"dan\",\"el\",\"fen\",\"gar\",\"han\",\"iv\",\"jo\",\"ka\",\"li\",\"mar\",\"nor\",\"os\",\"per\",\"qu\",\"ri\",\"sam\",\"tan\",\"ur\",\"vi\",\"wil\",\"ya\",\"zo\"];\nfunction word(){ return syl[rnd(syl.length)] + syl[rnd(syl.length)] + (Math.random()<0.5 ? syl[rnd(syl.length)] : \"\"); }\nvar w1 = word(), w2 = word();\nvar digits = String(rnd(900) + 100);\nvar shapes = [\n  w1 + w2 + digits,\n  w1 + \".\" + w2 + digits,\n  w1 + w2.charAt(0) + digits,\n  w1.charAt(0) + w2 + digits,\n  w1 + digits + w2\n];\nvar local = shapes[rnd(shapes.length)];\n// The live surface only offers a short domain list (e.g. @outlook.com,\n// @outlook.in, @hotmail.com) - solar2's 12-region table is from an older\n// surface and must NOT be pre-baked. We just express a preference: hotmail\n// toggle -> prefer @hotmail.com, else prefer @outlook.com. The domain step\n// picks from what's actually offered and falls back, never fails.\nvar hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\nvar wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\n// dob/country are engine-formatted (digits, ISO code) - safe to inline. Strip\n// anything that could break the literal anyway.\nvar dob = (\"{{identity.dob}}\" || \"\").replace(/[^0-9\\-\\/.]/g, \"\");\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar mNum = Math.min(12, Math.max(1, parseInt(m, 10)));\nvar monthName = months[mNum - 1];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  wantDomain: wantDom,\n  month: monthName,\n  monthNum: String(mNum),\n  day: String(parseInt(d, 10) || 15),\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").replace(/[^A-Za-z ]/g, \"\").trim()\n};"
+          "script": "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n// email local part ourselves (human-looking: first+last+random digits) rather\n// than asking for an address - a generator mints its own usernames. Names and\n// password come from the SDK identity; domain rotates over solar2's regional\n// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n// scrolls SDK runtime.\nfunction rnd(n){ return Math.floor(Math.random() * n); }\n// solar2 GetRandomUsername: mint a human-looking local part. We do NOT inject\n// the identity name into this script - a name with a quote/apostrophe would\n// break the JS at parse time (raw {{}} substitution). Build from letter\n// syllables instead; names are filled separately via safe fill-node values.\nvar syl = [\"an\",\"bel\",\"cor\",\"dan\",\"el\",\"fen\",\"gar\",\"han\",\"iv\",\"jo\",\"ka\",\"li\",\"mar\",\"nor\",\"os\",\"per\",\"qu\",\"ri\",\"sam\",\"tan\",\"ur\",\"vi\",\"wil\",\"ya\",\"zo\"];\nfunction word(){ return syl[rnd(syl.length)] + syl[rnd(syl.length)] + (Math.random()<0.5 ? syl[rnd(syl.length)] : \"\"); }\nvar w1 = word(), w2 = word();\nvar digits = String(rnd(900) + 100);\nvar shapes = [\n  w1 + w2 + digits,\n  w1 + \".\" + w2 + digits,\n  w1 + w2.charAt(0) + digits,\n  w1.charAt(0) + w2 + digits,\n  w1 + digits + w2\n];\nvar local = shapes[rnd(shapes.length)];\n// The live surface only offers a short domain list (e.g. @outlook.com,\n// @outlook.in, @hotmail.com) - solar2's 12-region table is from an older\n// surface and must NOT be pre-baked. We just express a preference: hotmail\n// toggle -> prefer @hotmail.com, else prefer @outlook.com. The domain step\n// picks from what's actually offered and falls back, never fails.\nvar hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\nvar wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\n// dob/country are engine-formatted (digits, ISO code) - safe to inline. Strip\n// anything that could break the literal anyway.\nvar dob = (\"{{identity.dob}}\" || \"\").replace(/[^0-9\\-\\/.]/g, \"\");\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar mNum = Math.min(12, Math.max(1, parseInt(m, 10)));\nvar monthName = months[mNum - 1];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  wantDomain: wantDom,\n  month: monthName,\n  monthNum: String(mNum),\n  day: String(parseInt(d, 10) || 15),\n  year: String(year)\n};"
         }
       },
       {
@@ -209,18 +209,6 @@
         "config": {
           "name": "dob",
           "value": "{{prep.month}}|{{prep.monthNum}}|{{prep.day}}|{{prep.year}}"
-        }
-      },
-      {
-        "id": "n_s_country",
-        "kind": "setVar",
-        "position": {
-          "x": 870,
-          "y": 20
-        },
-        "config": {
-          "name": "countryPick",
-          "value": "{{prep.country}}"
         }
       },
       {
@@ -524,7 +512,7 @@
         },
         "config": {
           "into": "geoSet",
-          "script": "// Country + birthdate page (fluent=2). Country/Birth month/Birth day are\n// Fluent dropdown buttons; Birth year is a number input. Click a dropdown,\n// then click the matching [role=option]. Empty country leaves the geo default.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n// Fluent v9 comboboxes (role=combobox, aria-expanded, a portaled listbox).\n// Clicking the portaled [role=option] node is unreliable - it mounts in a\n// body-level layer and the click can miss. The locale- and markup-proof way\n// is KEYBOARD, exactly how a human uses it: focus the button, open with\n// Enter/ArrowDown, ArrowDown to the index, Enter to commit. Verify via the\n// button's value/aria-invalid clearing; fall back to clicking the option.\nfunction key(el, type, k){ el.dispatchEvent(new KeyboardEvent(type, { key: k, code: k, bubbles: true, cancelable: true })); }\nfunction press(el, k){ key(el,'keydown',k); key(el,'keyup',k); }\nfunction getVal(btn){ var s = btn.querySelector(\"[data-testid='truncatedSelectedText']\"); var t = ((s && s.innerText) || btn.innerText || \"\").trim(); var v = btn.getAttribute(\"value\") || \"\"; return (v || t); }\nasync function openCombo(btn){\n  btn.focus(); await sleep(150);\n  btn.click(); await sleep(300);\n  if (btn.getAttribute(\"aria-expanded\") !== \"true\") { press(btn, \"Enter\"); await sleep(300); }\n  if (btn.getAttribute(\"aria-expanded\") !== \"true\") { press(btn, \"ArrowDown\"); await sleep(300); }\n  var deadline = Date.now() + 8000;\n  while (Date.now() < deadline) {\n    var lb = document.querySelector(\"[role='listbox']\");\n    if (lb) return lb;\n    if (btn.getAttribute(\"aria-expanded\") === \"true\") return document.querySelector(\"[role='listbox']\") || btn;\n    await sleep(200);\n  }\n  return null;\n}\nasync function pickByIndex(btnSel, idx1, isSet){\n  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n  for (var attempt = 0; attempt < 2; attempt++) {\n    var before = getVal(btn);\n    var lb = await openCombo(btn);\n    if (lb) {\n      // keyboard: ArrowDown idx1 times from the top, then Enter\n      var i; for (i = 0; i < idx1; i++) { press(btn, \"ArrowDown\"); await sleep(90); }\n      press(btn, \"Enter\"); await sleep(300);\n      if (getVal(btn) !== before && getVal(btn) !== \"\") return \"kbd:\" + getVal(btn);\n      // fallback: click the nth option in the open listbox (portal-safe query)\n      var opts = document.querySelectorAll(\"[role='listbox'] [role='option'], [role='option'], .fui-Option\");\n      if (opts.length) {\n        var j = Math.max(1, Math.min(opts.length, idx1)) - 1;\n        try { opts[j].scrollIntoView({block:'nearest'}); } catch(e){}\n        opts[j].click(); await sleep(300);\n        if (getVal(btn) !== before && getVal(btn) !== \"\") return \"click:\" + getVal(btn);\n      }\n      // close any open list before retrying\n      press(btn, \"Escape\"); try { document.body.click(); } catch(e){} await sleep(300);\n    }\n  }\n  return \"failed:\" + btnSel;\n}\nasync function pickByText(btnSel, want){\n  if (!want) return \"skip\";\n  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n  if (getVal(btn).toLowerCase() === String(want).toLowerCase()) return \"already\";\n  var lb = await openCombo(btn); if (!lb) return \"no-list:\" + btnSel;\n  var w = String(want).trim().toLowerCase();\n  var opts = document.querySelectorAll(\"[role='listbox'] [role='option'], [role='option'], .fui-Option\");\n  for (var i = 0; i < opts.length; i++) {\n    var t = (opts[i].innerText || \"\").trim().toLowerCase();\n    if (t === w || t.indexOf(w) !== -1 || w.indexOf(t) !== -1) { opts[i].click(); await sleep(250); return \"set:\" + getVal(btn); }\n  }\n  press(btn, \"Escape\"); try { document.body.click(); } catch (e) {}\n  return \"no-opt:\" + want;\n}\nvar parts = \"{{dob}}\".split(\"|\");\n// parts: [monthName, monthNum, day, year]\nvar monthNum = parseInt(parts[1], 10) || 6;\nvar dayNum = parseInt(parts[2], 10) || 15;\nvar country = (\"{{countryPick}}\" || \"\").trim();\nvar results = {};\n// Wait for the birthdate page to settle first - the fields mount\n// progressively after the password Next, so querying country the instant we\n// land can race and return no-btn. Poll until the month dropdown exists.\nvar readyDeadline = Date.now() + 30000;\nwhile (Date.now() < readyDeadline) {\n  if (/account creation has been blocked/i.test((document.title||\"\")+\" \"+(document.body&&document.body.innerText||\"\"))) throw new Error(\"Account creation blocked at birthdate step\");\n  if (document.querySelector(\"button#BirthMonthDropdown\") || document.querySelector(\"input[name='BirthYear']\")) break;\n  await sleep(400);\n}\n// Country is OPTIONAL and is often pre-filled from the exit IP's geo (e.g.\n// value=ES) or absent entirely. Only set it when the dropdown is present AND\n// empty-ish; never fail the step over it. Month/day are the required fields.\nvar cBtn = document.querySelector(\"button#countryDropdownId\");\nif (country && cBtn) {\n  var curCountry = getVal(cBtn);\n  if (curCountry && curCountry.toLowerCase() === String(country).toLowerCase()) { results.country = \"already:\" + curCountry; }\n  else { results.country = await pickByText(\"button#countryDropdownId\", country); }\n}\nawait sleep(400 + Math.random() * 600);\nresults.month = await pickByIndex(\"button#BirthMonthDropdown\", monthNum);\nawait sleep(400 + Math.random() * 600);\nresults.day = await pickByIndex(\"button#BirthDayDropdown\", dayNum);\nawait sleep(300 + Math.random() * 400);\nvar y = document.querySelector(\"input[name='BirthYear']\");\nif (y) { y.focus(); y.value = \"\"; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.value = parts[3]; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.dispatchEvent(new Event(\"change\", { bubbles: true })); y.dispatchEvent(new Event(\"blur\", { bubbles: true })); }\n// only month/day are mandatory here; surface a failure on either loudly\nvar bad = []; [\"month\", \"day\"].forEach(function (k) { var v = String(results[k] || \"\"); if (v.indexOf(\"failed\") === 0 || v.indexOf(\"no-btn\") === 0 || v.indexOf(\"no-list\") === 0) bad.push(k + \"=\" + v); });\nif (bad.length) throw new Error(\"birthdate fields not set: \" + bad.join(\", \"));\nreturn \"done:\" + JSON.stringify(results);"
+          "script": "// Country + birthdate page (fluent=2). Country/Birth month/Birth day are\n// Fluent dropdown buttons; Birth year is a number input. Click a dropdown,\n// then click the matching [role=option]. Empty country leaves the geo default.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n// Fluent v9 comboboxes (role=combobox, aria-expanded, a portaled listbox).\n// Clicking the portaled [role=option] node is unreliable - it mounts in a\n// body-level layer and the click can miss. The locale- and markup-proof way\n// is KEYBOARD, exactly how a human uses it: focus the button, open with\n// Enter/ArrowDown, ArrowDown to the index, Enter to commit. Verify via the\n// button's value/aria-invalid clearing; fall back to clicking the option.\nfunction key(el, type, k){ el.dispatchEvent(new KeyboardEvent(type, { key: k, code: k, bubbles: true, cancelable: true })); }\nfunction press(el, k){ key(el,'keydown',k); key(el,'keyup',k); }\nfunction getVal(btn){ var s = btn.querySelector(\"[data-testid='truncatedSelectedText']\"); var t = ((s && s.innerText) || btn.innerText || \"\").trim(); var v = btn.getAttribute(\"value\") || \"\"; return (v || t); }\nasync function openCombo(btn){\n  btn.focus(); await sleep(150);\n  btn.click(); await sleep(300);\n  if (btn.getAttribute(\"aria-expanded\") !== \"true\") { press(btn, \"Enter\"); await sleep(300); }\n  if (btn.getAttribute(\"aria-expanded\") !== \"true\") { press(btn, \"ArrowDown\"); await sleep(300); }\n  var deadline = Date.now() + 8000;\n  while (Date.now() < deadline) {\n    var lb = document.querySelector(\"[role='listbox']\");\n    if (lb) return lb;\n    if (btn.getAttribute(\"aria-expanded\") === \"true\") return document.querySelector(\"[role='listbox']\") || btn;\n    await sleep(200);\n  }\n  return null;\n}\nasync function pickByIndex(btnSel, idx1, isSet){\n  var btn = document.querySelector(btnSel); if (!btn) return \"no-btn:\" + btnSel;\n  for (var attempt = 0; attempt < 2; attempt++) {\n    var before = getVal(btn);\n    var lb = await openCombo(btn);\n    if (lb) {\n      // keyboard: ArrowDown idx1 times from the top, then Enter\n      var i; for (i = 0; i < idx1; i++) { press(btn, \"ArrowDown\"); await sleep(90); }\n      press(btn, \"Enter\"); await sleep(300);\n      if (getVal(btn) !== before && getVal(btn) !== \"\") return \"kbd:\" + getVal(btn);\n      // fallback: click the nth option in the open listbox (portal-safe query)\n      var opts = document.querySelectorAll(\"[role='listbox'] [role='option'], [role='option'], .fui-Option\");\n      if (opts.length) {\n        var j = Math.max(1, Math.min(opts.length, idx1)) - 1;\n        try { opts[j].scrollIntoView({block:'nearest'}); } catch(e){}\n        opts[j].click(); await sleep(300);\n        if (getVal(btn) !== before && getVal(btn) !== \"\") return \"click:\" + getVal(btn);\n      }\n      // close any open list before retrying\n      press(btn, \"Escape\"); try { document.body.click(); } catch(e){} await sleep(300);\n    }\n  }\n  return \"failed:\" + btnSel;\n}\nvar parts = \"{{dob}}\".split(\"|\");\n// parts: [monthName, monthNum, day, year]\nvar monthNum = parseInt(parts[1], 10) || 6;\nvar dayNum = parseInt(parts[2], 10) || 15;\nvar results = {};\n// Country is AUTO-SET from the exit IP's geo (e.g. value=ES) and must NOT be\n// overridden - a proxy/country mismatch is a flag. We leave it alone. Only\n// month/day/year are ours to fill. Wait for the birthdate page to settle\n// first - the fields mount progressively after the password Next.\nvar readyDeadline = Date.now() + 30000;\nwhile (Date.now() < readyDeadline) {\n  if (/account creation has been blocked/i.test((document.title||\"\")+\" \"+(document.body&&document.body.innerText||\"\"))) throw new Error(\"Account creation blocked at birthdate step\");\n  if (document.querySelector(\"button#BirthMonthDropdown\") || document.querySelector(\"input[name='BirthYear']\")) break;\n  await sleep(400);\n}\nresults.month = await pickByIndex(\"button#BirthMonthDropdown\", monthNum);\nawait sleep(400 + Math.random() * 600);\nresults.day = await pickByIndex(\"button#BirthDayDropdown\", dayNum);\nawait sleep(300 + Math.random() * 400);\nvar y = document.querySelector(\"input[name='BirthYear']\");\nif (y) { y.focus(); y.value = \"\"; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.value = parts[3]; y.dispatchEvent(new Event(\"input\", { bubbles: true })); y.dispatchEvent(new Event(\"change\", { bubbles: true })); y.dispatchEvent(new Event(\"blur\", { bubbles: true })); }\n// only month/day are mandatory here; surface a failure on either loudly\nvar bad = []; [\"month\", \"day\"].forEach(function (k) { var v = String(results[k] || \"\"); if (v.indexOf(\"failed\") === 0 || v.indexOf(\"no-btn\") === 0 || v.indexOf(\"no-list\") === 0) bad.push(k + \"=\" + v); });\nif (bad.length) throw new Error(\"birthdate fields not set: \" + bad.join(\", \"));\nreturn \"done:\" + JSON.stringify(results);"
         }
       },
       {
@@ -897,358 +885,352 @@
         "id": "e6",
         "from": "n_s_dob",
         "fromPort": "next",
-        "to": "n_s_country"
-      },
-      {
-        "id": "e7",
-        "from": "n_s_country",
-        "fromPort": "next",
         "to": "n_dup_tc"
       },
       {
-        "id": "e8",
+        "id": "e7",
         "from": "n_dup_tc",
         "fromPort": "loop",
         "to": "n_dup"
       },
       {
-        "id": "e9",
+        "id": "e8",
         "from": "n_dup",
         "fromPort": "next",
         "to": "n_dup_tc"
       },
       {
-        "id": "e10",
+        "id": "e9",
         "from": "n_dup_tc",
         "fromPort": "exit",
         "to": "n_dup_branch"
       },
       {
-        "id": "e11",
+        "id": "e10",
         "from": "n_dup_branch",
         "fromPort": "true",
         "to": "n_goto"
       },
       {
-        "id": "e12",
+        "id": "e11",
         "from": "n_dup_branch",
         "fromPort": "false",
         "to": "n_dup_fail"
       },
       {
-        "id": "e13",
+        "id": "e12",
         "from": "n_goto",
         "fromPort": "next",
         "to": "n_goto_dwell"
       },
       {
-        "id": "e14",
+        "id": "e13",
         "from": "n_goto_dwell",
         "fromPort": "next",
         "to": "n_gate_tc"
       },
       {
-        "id": "e15",
+        "id": "e14",
         "from": "n_gate_tc",
         "fromPort": "loop",
         "to": "n_gate_form"
       },
       {
-        "id": "e16",
+        "id": "e15",
         "from": "n_gate_form",
         "fromPort": "next",
         "to": "n_gate_tc"
       },
       {
-        "id": "e17",
+        "id": "e16",
         "from": "n_gate_tc",
         "fromPort": "exit",
         "to": "n_gate_branch"
       },
       {
-        "id": "e18",
+        "id": "e17",
         "from": "n_gate_tc",
         "fromPort": "catch",
         "to": "n_gate_rotate"
       },
       {
-        "id": "e19",
+        "id": "e18",
         "from": "n_gate_rotate",
         "fromPort": "next",
         "to": "n_gate_dead"
       },
       {
-        "id": "e20",
+        "id": "e19",
         "from": "n_gate_branch",
         "fromPort": "true",
         "to": "n_arm_blob"
       },
       {
-        "id": "e21",
+        "id": "e20",
         "from": "n_gate_branch",
         "fromPort": "false",
         "to": "n_gate_retry"
       },
       {
-        "id": "e22",
+        "id": "e21",
         "from": "n_gate_retry",
         "fromPort": "next",
         "to": "n_goto"
       },
       {
-        "id": "e23",
+        "id": "e22",
         "from": "n_arm_blob",
         "fromPort": "next",
         "to": "n_fill_email"
       },
       {
-        "id": "e24",
+        "id": "e23",
         "from": "n_fill_email",
         "fromPort": "next",
         "to": "n_domain"
       },
       {
-        "id": "e25",
+        "id": "e24",
         "from": "n_domain",
         "fromPort": "next",
         "to": "n_s_full2"
       },
       {
-        "id": "e26",
+        "id": "e25",
         "from": "n_s_full2",
         "fromPort": "next",
         "to": "n_click_email_next"
       },
       {
-        "id": "e27",
+        "id": "e26",
         "from": "n_click_email_next",
         "fromPort": "next",
         "to": "n_email_err"
       },
       {
-        "id": "e28",
+        "id": "e27",
         "from": "n_email_err",
         "fromPort": "next",
         "to": "n_email_err_branch"
       },
       {
-        "id": "e29",
+        "id": "e28",
         "from": "n_email_err_branch",
         "fromPort": "true",
         "to": "n_fill_pw"
       },
       {
-        "id": "e30",
+        "id": "e29",
         "from": "n_email_err_branch",
         "fromPort": "false",
         "to": "n_regen_email"
       },
       {
-        "id": "e31",
+        "id": "e30",
         "from": "n_regen_email",
         "fromPort": "next",
         "to": "n_s_regen"
       },
       {
-        "id": "e32",
+        "id": "e31",
         "from": "n_s_regen",
         "fromPort": "next",
         "to": "n_s_regen_full"
       },
       {
-        "id": "e33",
+        "id": "e32",
         "from": "n_s_regen_full",
         "fromPort": "next",
         "to": "n_email_err"
       },
       {
-        "id": "e34",
+        "id": "e33",
         "from": "n_fill_pw",
         "fromPort": "next",
         "to": "n_click_pw_next"
       },
       {
-        "id": "e35",
+        "id": "e34",
         "from": "n_click_pw_next",
         "fromPort": "next",
         "to": "n_geo"
       },
       {
-        "id": "e36",
+        "id": "e35",
         "from": "n_geo",
         "fromPort": "next",
         "to": "n_click_geo_next"
       },
       {
-        "id": "e37",
+        "id": "e36",
         "from": "n_click_geo_next",
         "fromPort": "next",
         "to": "n_names"
       },
       {
-        "id": "e38",
+        "id": "e37",
         "from": "n_names",
         "fromPort": "next",
         "to": "n_s_firstsel"
       },
       {
-        "id": "e39",
+        "id": "e38",
         "from": "n_s_firstsel",
         "fromPort": "next",
         "to": "n_s_lastsel"
       },
       {
-        "id": "e40",
+        "id": "e39",
         "from": "n_s_lastsel",
         "fromPort": "next",
         "to": "n_fill_first"
       },
       {
-        "id": "e41",
+        "id": "e40",
         "from": "n_fill_first",
         "fromPort": "next",
         "to": "n_fill_last"
       },
       {
-        "id": "e42",
+        "id": "e41",
         "from": "n_fill_last",
         "fromPort": "next",
         "to": "n_click_names_next"
       },
       {
-        "id": "e43",
+        "id": "e42",
         "from": "n_click_names_next",
         "fromPort": "next",
         "to": "n_sms_gate"
       },
       {
-        "id": "e44",
+        "id": "e43",
         "from": "n_sms_gate",
         "fromPort": "next",
         "to": "n_gate2_branch"
       },
       {
-        "id": "e45",
+        "id": "e44",
         "from": "n_gate2_branch",
         "fromPort": "true",
         "to": "n_get_blob"
       },
       {
-        "id": "e46",
+        "id": "e45",
         "from": "n_gate2_branch",
         "fromPort": "false",
         "to": "n_gate2_landed_branch"
       },
       {
-        "id": "e47",
+        "id": "e46",
         "from": "n_gate2_landed_branch",
         "fromPort": "true",
         "to": "n_land"
       },
       {
-        "id": "e48",
+        "id": "e47",
         "from": "n_gate2_landed_branch",
         "fromPort": "false",
         "to": "n_sms_gate_fail"
       },
       {
-        "id": "e49",
+        "id": "e48",
         "from": "n_get_blob",
         "fromPort": "next",
         "to": "n_captcha"
       },
       {
-        "id": "e50",
+        "id": "e49",
         "from": "n_captcha",
         "fromPort": "next",
         "to": "n_submit_token"
       },
       {
-        "id": "e51",
+        "id": "e50",
         "from": "n_submit_token",
         "fromPort": "next",
         "to": "n_backup"
       },
       {
-        "id": "e52",
+        "id": "e51",
         "from": "n_backup",
         "fromPort": "next",
         "to": "n_backup_branch"
       },
       {
-        "id": "e53",
+        "id": "e52",
         "from": "n_backup_branch",
         "fromPort": "true",
         "to": "n_backup_have"
       },
       {
-        "id": "e54",
+        "id": "e53",
         "from": "n_backup_branch",
         "fromPort": "false",
         "to": "n_land"
       },
       {
-        "id": "e55",
+        "id": "e54",
         "from": "n_backup_have",
         "fromPort": "true",
         "to": "n_backup_fill"
       },
       {
-        "id": "e56",
+        "id": "e55",
         "from": "n_backup_have",
         "fromPort": "false",
         "to": "n_land"
       },
       {
-        "id": "e57",
+        "id": "e56",
         "from": "n_backup_fill",
         "fromPort": "next",
         "to": "n_backup_click"
       },
       {
-        "id": "e58",
+        "id": "e57",
         "from": "n_backup_click",
         "fromPort": "next",
         "to": "n_land"
       },
       {
-        "id": "e59",
+        "id": "e58",
         "from": "n_land",
         "fromPort": "next",
         "to": "n_dismiss"
       },
       {
-        "id": "e60",
+        "id": "e59",
         "from": "n_dismiss",
         "fromPort": "next",
         "to": "n_save"
       },
       {
-        "id": "e61",
+        "id": "e60",
         "from": "n_save",
         "fromPort": "next",
         "to": "n_warmup_check"
       },
       {
-        "id": "e62",
+        "id": "e61",
         "from": "n_warmup_check",
         "fromPort": "true",
         "to": "n_warmup"
       },
       {
-        "id": "e63",
+        "id": "e62",
         "from": "n_warmup",
         "fromPort": "next",
         "to": "n_warmup_dwell"
       },
       {
-        "id": "e64",
+        "id": "e63",
         "from": "n_warmup_dwell",
         "fromPort": "next",
         "to": "n_done"
       },
       {
-        "id": "e65",
+        "id": "e64",
         "from": "n_warmup_check",
         "fromPort": "false",
         "to": "n_done"
