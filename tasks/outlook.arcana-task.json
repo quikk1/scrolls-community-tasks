@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.1",
+    "version": "1.0.2",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -290,7 +290,7 @@
         },
         "config": {
           "into": "gate",
-          "script": "// Email-step gate: one in-page retry for a slow proxy,\n// then THROW so the run rotates proxy instead of looping navigation on a dead one.\n// Handles both signup DOMs. Navigations during the poll destroy this isolated\n// world; the engine retries the whole node on the settled page.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&parseFloat(s.opacity||'1')>0.05;}\nvar tries = Number(\"{{gateTries}}\") || 0;\nfor (var i = 0; i < 60; i++) {\n  var legacy = document.querySelector(\"#MemberName\");\n  var modern = document.querySelector(\"#usernameInput\");\n  if (vis(legacy)) return { state: \"ready\", flow: \"legacy\", tries: 0 };\n  if (vis(modern)) return { state: \"ready\", flow: \"modern\", tries: 0 };\n  if ((document.body && (document.body.innerText || \"\")).match(/unusual activity|temporarily blocked|try again later/i)) throw new Error(\"IP blocked at signup.live.com - rotating proxy\");\n  await sleep(500);\n}\nif (tries >= 1) throw new Error(\"Bad proxy - signup.live.com email form never appeared\");\nreturn { state: \"reload\", flow: \"\", tries: tries + 1 };"
+          "script": "// Email-step gate. Matches the proven health check: the signup page\n// always puts \"account\" in its <title> even while the form JS is still\n// rendering, so the title is the fast reliable 'page loaded' signal. The fill\n// step's own long timeout then waits out slow form render. One in-page reload\n// for a slow proxy, then THROW so the run rotates proxy on a dead one.\n// Navigations during the poll destroy this isolated world; the engine retries\n// the whole node on the settled page.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar tries = Number(\"{{gateTries}}\") || 0;\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  if ((document.title || \"\").toLowerCase().indexOf(\"account\") !== -1) return { state: \"ready\", flow: \"\", tries: 0 };\n  var body = (document.body && (document.body.innerText || \"\"));\n  if (/unusual activity|temporarily blocked|try again later|verify your identity/i.test(body)) throw new Error(\"IP blocked at signup.live.com - rotating proxy\");\n  await sleep(500);\n}\nif (tries >= 1) throw new Error(\"Bad proxy - signup.live.com never loaded its account page\");\nreturn { state: \"reload\", flow: \"\", tries: tries + 1 };"
         }
       },
       {
