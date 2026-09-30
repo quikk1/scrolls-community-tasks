@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.2",
+    "version": "1.0.3",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -290,7 +290,7 @@
         },
         "config": {
           "into": "gate",
-          "script": "// Email-step gate. Matches the proven health check: the signup page\n// always puts \"account\" in its <title> even while the form JS is still\n// rendering, so the title is the fast reliable 'page loaded' signal. The fill\n// step's own long timeout then waits out slow form render. One in-page reload\n// for a slow proxy, then THROW so the run rotates proxy on a dead one.\n// Navigations during the poll destroy this isolated world; the engine retries\n// the whole node on the settled page.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar tries = Number(\"{{gateTries}}\") || 0;\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  if ((document.title || \"\").toLowerCase().indexOf(\"account\") !== -1) return { state: \"ready\", flow: \"\", tries: 0 };\n  var body = (document.body && (document.body.innerText || \"\"));\n  if (/unusual activity|temporarily blocked|try again later|verify your identity/i.test(body)) throw new Error(\"IP blocked at signup.live.com - rotating proxy\");\n  await sleep(500);\n}\nif (tries >= 1) throw new Error(\"Bad proxy - signup.live.com never loaded its account page\");\nreturn { state: \"reload\", flow: \"\", tries: tries + 1 };"
+          "script": "// Email-step gate. The signup page always puts \"account\" in its\n// <title> from first paint, so the title is the fast reliable page-loaded\n// signal; the fill step's own long timeout absorbs slow form render. When the\n// title never lands we THROW with a diagnostic (real title, url, readyState,\n// a body snippet) so the log shows WHAT the page actually is - a block page,\n// a redirect, a blank shell - instead of a bare timeout. One in-page reload,\n// then the throw rotates the exit (or just fails on direct connect).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar tries = Number(\"{{gateTries}}\") || 0;\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  if ((document.title || \"\").toLowerCase().indexOf(\"account\") !== -1) return { state: \"ready\", flow: \"\", tries: 0 };\n  var body = (document.body && (document.body.innerText || \"\"));\n  if (/unusual activity|temporarily blocked|try again later|verify your identity/i.test(body)) throw new Error(\"Microsoft served a block page - rotate the exit IP\");\n  await sleep(500);\n}\nif (tries >= 1) {\n  var t = (document.title || \"\").slice(0, 80);\n  var u = \"\";\n  try { u = location.href.slice(0, 80); } catch (e) {}\n  var rs = document.readyState;\n  var snip = ((document.body && document.body.innerText) || \"\").replace(/\\s+/g, \" \").slice(0, 120);\n  throw new Error(\"signup.live.com never loaded its account page. title='\" + t + \"' readyState=\" + rs + \" url=\" + u + \" body=\" + snip);\n}\nreturn { state: \"reload\", flow: \"\", tries: tries + 1 };"
         }
       },
       {
