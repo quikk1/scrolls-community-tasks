@@ -166,9 +166,9 @@ E("n_fill_email", "n_domain")
 
 domain_script = (
     "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n"
-    "// .fui-Option / [role=option] with text like '@outlook.com'. Open it, pick\n"
-    "// the wanted domain. If only outlook.com is offered and we wanted hotmail,\n"
-    "// leave the default rather than fail - the email step still proceeds.\n"
+    "// .fui-Option / [role=option] with text like '@outlook.com'. Port of solar2's\n"
+    "// domainListJS precheck: open the dropdown, READ the offered domains, and fail\n"
+    "// fast if the wanted one is not offered. Then pick it.\n"
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
     "var want = (\"{{domainText}}\" || \"@outlook.com\").trim().toLowerCase();\n"
     "var btn = document.querySelector(\"button#domainDropdownId\");\n"
@@ -176,18 +176,23 @@ domain_script = (
     "var cur = (btn.innerText || \"\").trim().toLowerCase();\n"
     "if (cur === want) return \"already:\" + cur;\n"
     "btn.click();\n"
-    "var deadline = Date.now() + 8000; var picked = \"\";\n"
+    "var deadline = Date.now() + 9000; var offered = []; var picked = \"\";\n"
     "while (Date.now() < deadline) {\n"
     "  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n"
+    "  offered = [];\n"
     "  for (var i = 0; i < opts.length; i++) {\n"
-    "    if ((opts[i].innerText || \"\").trim().toLowerCase() === want) { opts[i].click(); picked = want; break; }\n"
+    "    var tx = (opts[i].innerText || \"\").trim().toLowerCase();\n"
+    "    if (tx) offered.push(tx);\n"
+    "    if (tx === want) { opts[i].click(); picked = want; break; }\n"
     "  }\n"
-    "  if (picked) break;\n"
+    "  if (picked || offered.length) break;\n"
     "  await sleep(250);\n"
     "}\n"
     "if (picked) return \"set:\" + picked;\n"
     "try { document.body.click(); } catch (e) {}\n"
-    "return \"kept:\" + (document.querySelector(\"button#domainDropdownId\") || {}).innerText;"
+    "// solar2: \"domain '%s' is not available\" - fail fast rather than mint the wrong TLD\n"
+    "if (offered.length && offered.indexOf(want) === -1) throw new Error(\"domain '\" + want + \"' is not available (offered: \" + offered.join(\", \") + \")\");\n"
+    "return \"kept:\" + ((document.querySelector(\"button#domainDropdownId\") || {}).innerText || \"\").trim();"
 )
 nodes.append(N("n_domain", "evaluate", 260, 700, {"into": "domainSet", "script": domain_script}))
 E("n_domain", "n_click_email_next")
@@ -379,7 +384,38 @@ submit_script = (
     "return posted ? \"injected\" : \"posted\";"
 )
 nodes.append(N("n_submit_token", "evaluate", 480, 1740, {"into": "tokenSubmitted", "script": submit_script}))
-E("n_submit_token", "n_land")
+E("n_submit_token", "n_backup")
+
+# ---- backup email page (solar2: backupEmailInput + confirm, after captcha) ----
+backup_script = (
+    "// solar2 fills a backup/verify-email page after the captcha. It may or may\n"
+    "// not appear. If it does and a backupEmail variable is set, fill the address\n"
+    "// (and its confirm box) and click Next; empty backupEmail or no page = skip.\n"
+    "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
+    "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
+    "function setVal(el,val){el.focus();el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\n"
+    "var want = (\"{{backupEmail}}\" || \"\").trim();\n"
+    "var deadline = Date.now() + 15000;\n"
+    "while (Date.now() < deadline) {\n"
+    "  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + (document.body && document.body.innerText || \"\"))) throw new Error(\"Account creation blocked at backup-email step\");\n"
+    "  if (location.href.indexOf(\"account.microsoft.com\") !== -1 || location.href.indexOf(\"outlook.live.com/mail\") !== -1) return \"no-page-landed\";\n"
+    "  var em = document.querySelector(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n"
+    "  if (vis(em)) {\n"
+    "    if (!want) return \"page-but-no-backupEmail\";\n"
+    "    setVal(em, want);\n"
+    "    await sleep(300 + Math.random() * 400);\n"
+    "    var conf = document.querySelectorAll(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n"
+    "    if (conf.length > 1) setVal(conf[1], want);\n"
+    "    var next = document.querySelector(\"button[data-testid='primaryButton']\");\n"
+    "    if (next) next.click();\n"
+    "    return \"filled\";\n"
+    "  }\n"
+    "  await sleep(600);\n"
+    "}\n"
+    "return \"no-page\";"
+)
+nodes.append(N("n_backup", "evaluate", 480, 1860, {"into": "backupDone", "script": backup_script}))
+E("n_backup", "n_land")
 
 # ---- landing (re-post while waiting), tolerates empty token ----
 land_script = (
@@ -463,7 +499,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.0.0"
+graph["version"] = "2.1.0"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
@@ -473,7 +509,8 @@ graph["metadata"] = {
 graph["permissions"] = ["accounts", "browser", "captcha", "evaluate"]
 graph["variables"] = [
     {"name": "gateTries", "value": "0"},
-    {"name": "warmupInbox", "value": "yes"}
+    {"name": "warmupInbox", "value": "yes"},
+    {"name": "backupEmail", "value": ""}
 ]
 graph["start"] = "n_start"
 graph["nodes"] = nodes
@@ -504,4 +541,4 @@ if bad or unreached or badbranch:
     raise SystemExit("graph invalid")
 
 io.open(P, "w", encoding="utf-8", newline="\n").write(json.dumps(out, indent=2, ensure_ascii=False))
-print("written 2.0.0")
+print("written " + graph["version"])

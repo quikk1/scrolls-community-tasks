@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -30,6 +30,10 @@
       {
         "name": "warmupInbox",
         "value": "yes"
+      },
+      {
+        "name": "backupEmail",
+        "value": ""
       }
     ],
     "start": "n_start",
@@ -379,7 +383,7 @@
         },
         "config": {
           "into": "domainSet",
-          "script": "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n// .fui-Option / [role=option] with text like '@outlook.com'. Open it, pick\n// the wanted domain. If only outlook.com is offered and we wanted hotmail,\n// leave the default rather than fail - the email step still proceeds.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar want = (\"{{domainText}}\" || \"@outlook.com\").trim().toLowerCase();\nvar btn = document.querySelector(\"button#domainDropdownId\");\nif (!btn) return \"no-dropdown\";\nvar cur = (btn.innerText || \"\").trim().toLowerCase();\nif (cur === want) return \"already:\" + cur;\nbtn.click();\nvar deadline = Date.now() + 8000; var picked = \"\";\nwhile (Date.now() < deadline) {\n  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n  for (var i = 0; i < opts.length; i++) {\n    if ((opts[i].innerText || \"\").trim().toLowerCase() === want) { opts[i].click(); picked = want; break; }\n  }\n  if (picked) break;\n  await sleep(250);\n}\nif (picked) return \"set:\" + picked;\ntry { document.body.click(); } catch (e) {}\nreturn \"kept:\" + (document.querySelector(\"button#domainDropdownId\") || {}).innerText;"
+          "script": "// Domain is a Fluent dropdown (button#domainDropdownId) whose options are\n// .fui-Option / [role=option] with text like '@outlook.com'. Port of solar2's\n// domainListJS precheck: open the dropdown, READ the offered domains, and fail\n// fast if the wanted one is not offered. Then pick it.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nvar want = (\"{{domainText}}\" || \"@outlook.com\").trim().toLowerCase();\nvar btn = document.querySelector(\"button#domainDropdownId\");\nif (!btn) return \"no-dropdown\";\nvar cur = (btn.innerText || \"\").trim().toLowerCase();\nif (cur === want) return \"already:\" + cur;\nbtn.click();\nvar deadline = Date.now() + 9000; var offered = []; var picked = \"\";\nwhile (Date.now() < deadline) {\n  var opts = document.querySelectorAll(\"[role='option'], .fui-Option\");\n  offered = [];\n  for (var i = 0; i < opts.length; i++) {\n    var tx = (opts[i].innerText || \"\").trim().toLowerCase();\n    if (tx) offered.push(tx);\n    if (tx === want) { opts[i].click(); picked = want; break; }\n  }\n  if (picked || offered.length) break;\n  await sleep(250);\n}\nif (picked) return \"set:\" + picked;\ntry { document.body.click(); } catch (e) {}\n// solar2: \"domain '%s' is not available\" - fail fast rather than mint the wrong TLD\nif (offered.length && offered.indexOf(want) === -1) throw new Error(\"domain '\" + want + \"' is not available (offered: \" + offered.join(\", \") + \")\");\nreturn \"kept:\" + ((document.querySelector(\"button#domainDropdownId\") || {}).innerText || \"\").trim();"
         }
       },
       {
@@ -627,6 +631,18 @@
         "config": {
           "into": "tokenSubmitted",
           "script": "// Cross-frame token submit: inject a submitter into the cross-origin\n// enforcementFrame, else postMessage the token up to the page listener.\nvar token = \"{{captchaToken}}\";\nif (!token) return \"skipped-no-challenge\";\nvar enc = document.getElementById(\"enforcementFrame\");\nvar posted = false;\ntry {\n  var encWin = enc && (enc.contentWindow || enc);\n  var encDoc = enc && (enc.contentDocument || (encWin && encWin.document));\n  if (encDoc) {\n    var s = encDoc.createElement(\"SCRIPT\");\n    s.textContent = \"function CaptchaSubmit(token){ var j = JSON.stringify({ eventId:'challenge-complete', payload:{ sessionToken: token } }); parent.postMessage(j, '*'); }\";\n    encDoc.documentElement.appendChild(s);\n    encWin.CaptchaSubmit(token);\n    posted = true;\n  }\n} catch (e) {}\nif (!posted) {\n  var j = JSON.stringify({ eventId: \"challenge-complete\", payload: { sessionToken: token } });\n  if (enc && enc.contentWindow) enc.contentWindow.postMessage(j, \"*\");\n  window.postMessage(j, \"*\");\n}\nreturn posted ? \"injected\" : \"posted\";"
+        }
+      },
+      {
+        "id": "n_backup",
+        "kind": "evaluate",
+        "position": {
+          "x": 480,
+          "y": 1860
+        },
+        "config": {
+          "into": "backupDone",
+          "script": "// solar2 fills a backup/verify-email page after the captcha. It may or may\n// not appear. If it does and a backupEmail variable is set, fill the address\n// (and its confirm box) and click Next; empty backupEmail or no page = skip.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\nvar want = (\"{{backupEmail}}\" || \"\").trim();\nvar deadline = Date.now() + 15000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + (document.body && document.body.innerText || \"\"))) throw new Error(\"Account creation blocked at backup-email step\");\n  if (location.href.indexOf(\"account.microsoft.com\") !== -1 || location.href.indexOf(\"outlook.live.com/mail\") !== -1) return \"no-page-landed\";\n  var em = document.querySelector(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n  if (vis(em)) {\n    if (!want) return \"page-but-no-backupEmail\";\n    setVal(em, want);\n    await sleep(300 + Math.random() * 400);\n    var conf = document.querySelectorAll(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n    if (conf.length > 1) setVal(conf[1], want);\n    var next = document.querySelector(\"button[data-testid='primaryButton']\");\n    if (next) next.click();\n    return \"filled\";\n  }\n  await sleep(600);\n}\nreturn \"no-page\";"
         }
       },
       {
@@ -984,46 +1000,52 @@
         "id": "e45",
         "from": "n_submit_token",
         "fromPort": "next",
-        "to": "n_land"
+        "to": "n_backup"
       },
       {
         "id": "e46",
+        "from": "n_backup",
+        "fromPort": "next",
+        "to": "n_land"
+      },
+      {
+        "id": "e47",
         "from": "n_land",
         "fromPort": "next",
         "to": "n_dismiss"
       },
       {
-        "id": "e47",
+        "id": "e48",
         "from": "n_dismiss",
         "fromPort": "next",
         "to": "n_save"
       },
       {
-        "id": "e48",
+        "id": "e49",
         "from": "n_save",
         "fromPort": "next",
         "to": "n_warmup_check"
       },
       {
-        "id": "e49",
+        "id": "e50",
         "from": "n_warmup_check",
         "fromPort": "true",
         "to": "n_warmup"
       },
       {
-        "id": "e50",
+        "id": "e51",
         "from": "n_warmup",
         "fromPort": "next",
         "to": "n_warmup_dwell"
       },
       {
-        "id": "e51",
+        "id": "e52",
         "from": "n_warmup_dwell",
         "fromPort": "next",
         "to": "n_done"
       },
       {
-        "id": "e52",
+        "id": "e53",
         "from": "n_warmup_check",
         "fromPort": "false",
         "to": "n_done"
