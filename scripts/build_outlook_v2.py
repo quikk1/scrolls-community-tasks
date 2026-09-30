@@ -688,10 +688,11 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.8"
+graph["version"] = "2.3.9"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
+    "class": "account-generator",
     "description": meta_desc,
     "tags": ["outlook", "hotmail", "microsoft", "account-generator", "signup"],
     "inputs": [
