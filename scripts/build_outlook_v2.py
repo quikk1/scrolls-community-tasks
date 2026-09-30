@@ -688,7 +688,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.9"
+graph["version"] = "2.4.0"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
@@ -728,6 +728,40 @@ graph["start"] = "n_start"
 graph["nodes"] = nodes
 graph["edges"] = edges
 graph["author"] = {"name": "Sete_", "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="}
+
+# Run dialog schema, read off the installed graph by the app (tool-discover.ts
+# readGraphSchema: graph.runSchema, kind must be "graph"). A generator consumes
+# no identity/email/accounts source, so runCount is "single" and the only tabs
+# are Network (proxy) + API (FunCaptcha token solver) + Options (our inputs).
+# Without this the app falls back to a default per-email/profile batching dialog.
+graph["runSchema"] = {
+    "schemaVersion": 1,
+    "kind": "graph",
+    "module": {
+        "id": "outlook",
+        "name": "Outlook Account Generator",
+        "site": "outlook.live.com",
+        "siteLabel": "Outlook",
+        "execution": "browser"
+    },
+    "tabs": {
+        "network": {"proxy": "optional", "browser": True},
+        "api": {"captcha": [{"type": "funcaptcha", "mode": "token", "label": "FunCaptcha (Arkose) solver"}]},
+        "options": {"retries": {"label": "Retries per account", "max": 10}, "timeout": True, "headed": {"label": "Show browser windows", "default": False}}
+    },
+    "threads": {"default": 3, "max": 50},
+    "runCount": "single",
+    "inputs": [
+        {"type": "section", "id": "about", "label": "One account per run",
+         "hint": "A generator: it mints its own human-looking username and rotates the offered outlook.*/hotmail.com domains - no email list or profile batching. Each run creates one account and saves it to the Database. Run N threads for N accounts."},
+        {"id": "hotmailDomain", "type": "boolean", "label": "Mint @hotmail.com instead of outlook.*", "default": False,
+         "hint": "Off: prefer @outlook.com (the surface offers a short list like @outlook.com / @outlook.in / @hotmail.com; falls back to what's offered). On: prefer @hotmail.com."},
+        {"id": "backupEmail", "type": "text", "label": "Backup email (optional)", "default": "",
+         "hint": "Filled on the backup/verify-email page when Microsoft asks for one. Leave empty to skip that page."},
+        {"id": "warmupInbox", "type": "boolean", "label": "Open inbox after generation", "default": True,
+         "hint": "Open the mailbox once after the account is created to warm the session."}
+    ]
+}
 
 out = {"format": "arcana-task/v1", "exportedAt": "2026-09-30T00:00:00.000Z", "graph": graph}
 
