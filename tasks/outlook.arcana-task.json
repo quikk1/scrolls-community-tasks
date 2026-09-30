@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "2.3.0",
+    "version": "2.3.1",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -160,7 +160,7 @@
         },
         "config": {
           "into": "prep",
-          "script": "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n// email local part ourselves (human-looking: first+last+random digits) rather\n// than asking for an address - a generator mints its own usernames. Names and\n// password come from the SDK identity; domain rotates over solar2's regional\n// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n// scrolls SDK runtime.\nfunction rnd(n){ return Math.floor(Math.random() * n); }\nvar first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nvar last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nif (!first) first = \"user\";\nif (!last) last = \"account\";\n// solar2 GetRandomUsername: random local part. Build a few human shapes and pick one.\nvar digits = String(rnd(900) + 100);\nvar shapes = [\n  first + last + digits,\n  first + \".\" + last + digits,\n  first + last.charAt(0) + digits,\n  first.charAt(0) + last + digits,\n  first + digits + last\n];\nvar local = shapes[rnd(shapes.length)];\n// The live surface only offers a short domain list (e.g. @outlook.com,\n// @outlook.in, @hotmail.com) - solar2's 12-region table is from an older\n// surface and must NOT be pre-baked. We just express a preference: hotmail\n// toggle -> prefer @hotmail.com, else prefer @outlook.com. The domain step\n// picks from what's actually offered and falls back, never fails.\nvar hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\nvar wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\nvar dob = \"{{identity.dob}}\";\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  wantDomain: wantDom,\n  month: monthName,\n  day: d,\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").trim()\n};"
+          "script": "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n// email local part ourselves (human-looking: first+last+random digits) rather\n// than asking for an address - a generator mints its own usernames. Names and\n// password come from the SDK identity; domain rotates over solar2's regional\n// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n// scrolls SDK runtime.\nfunction rnd(n){ return Math.floor(Math.random() * n); }\n// solar2 GetRandomUsername: mint a human-looking local part. We do NOT inject\n// the identity name into this script - a name with a quote/apostrophe would\n// break the JS at parse time (raw {{}} substitution). Build from letter\n// syllables instead; names are filled separately via safe fill-node values.\nvar syl = [\"an\",\"bel\",\"cor\",\"dan\",\"el\",\"fen\",\"gar\",\"han\",\"iv\",\"jo\",\"ka\",\"li\",\"mar\",\"nor\",\"os\",\"per\",\"qu\",\"ri\",\"sam\",\"tan\",\"ur\",\"vi\",\"wil\",\"ya\",\"zo\"];\nfunction word(){ return syl[rnd(syl.length)] + syl[rnd(syl.length)] + (Math.random()<0.5 ? syl[rnd(syl.length)] : \"\"); }\nvar w1 = word(), w2 = word();\nvar digits = String(rnd(900) + 100);\nvar shapes = [\n  w1 + w2 + digits,\n  w1 + \".\" + w2 + digits,\n  w1 + w2.charAt(0) + digits,\n  w1.charAt(0) + w2 + digits,\n  w1 + digits + w2\n];\nvar local = shapes[rnd(shapes.length)];\n// The live surface only offers a short domain list (e.g. @outlook.com,\n// @outlook.in, @hotmail.com) - solar2's 12-region table is from an older\n// surface and must NOT be pre-baked. We just express a preference: hotmail\n// toggle -> prefer @hotmail.com, else prefer @outlook.com. The domain step\n// picks from what's actually offered and falls back, never fails.\nvar hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\nvar wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\n// dob/country are engine-formatted (digits, ISO code) - safe to inline. Strip\n// anything that could break the literal anyway.\nvar dob = (\"{{identity.dob}}\" || \"\").replace(/[^0-9\\-\\/.]/g, \"\");\nvar y = \"\", m = \"\", d = \"\";\nvar mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\nif (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\nelse { var m2 = dob.match(/(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})/); if (m2) { d = String(parseInt(m2[1], 10)); m = String(parseInt(m2[2], 10)); y = m2[3]; } }\nif (!y) { y = \"1994\"; m = \"6\"; d = \"15\"; }\nvar months = [\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"];\nvar monthName = months[Math.min(11, Math.max(0, parseInt(m, 10) - 1))];\nvar year = parseInt(y, 10); if (year > 2007) year = 1994;\nreturn {\n  emailLocal: local,\n  wantDomain: wantDom,\n  month: monthName,\n  day: d,\n  year: String(year),\n  country: (\"{{addresses.0.country}}\" || \"\").replace(/[^A-Za-z ]/g, \"\").trim()\n};"
         }
       },
       {
@@ -460,7 +460,7 @@
         },
         "config": {
           "into": "regenLocal",
-          "script": "// The minted username collided. Like solar2, regenerate instead of failing:\n// build a fresh higher-entropy local part from first/last + more digits,\n// clear and refill the email box, click Next, and hand the new local back so\n// fullEmail/emailLocal can be updated before the taken-check runs again.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction setVal(el,val){el.focus();el.value=\"\";el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\nwindow.__scRegenN = (window.__scRegenN || 0) + 1;\nif (window.__scRegenN > 4) throw new Error(\"Username keeps colliding after 4 regenerations (last: \" + (\"{{emailErr}}\"||\"\").slice(0,120) + \")\");\nfunction rnd(n){ return Math.floor(Math.random() * n); }\nvar first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nvar last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\nif (!first) first = \"user\"; if (!last) last = \"account\";\nvar digits = String(rnd(900000) + 100000);\nvar shapes = [\n  first + last + digits,\n  first + \".\" + last + digits,\n  first.charAt(0) + last + digits,\n  first + last.charAt(0) + digits,\n  last + first + digits\n];\nvar local = shapes[rnd(shapes.length)];\nvar em = document.querySelector(\"input[name='email']\");\nif (!em) throw new Error(\"email box gone during regen\");\nsetVal(em, local);\nawait sleep(400 + Math.random() * 500);\nvar next = document.querySelector(\"button[data-testid='primaryButton']:not([disabled]), button[type='submit']:not([disabled])\");\nif (next) next.click();\n// give the availability check a moment so the old alert is gone before the\n// taken-check reads the page again\nawait sleep(3000);\nreturn local;"
+          "script": "// The minted username collided. Like solar2, regenerate instead of failing:\n// build a fresh higher-entropy local part from first/last + more digits,\n// clear and refill the email box, click Next, and hand the new local back so\n// fullEmail/emailLocal can be updated before the taken-check runs again.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction setVal(el,val){el.focus();el.value=\"\";el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\nwindow.__scRegenN = (window.__scRegenN || 0) + 1;\nif (window.__scRegenN > 4) throw new Error(\"Username keeps colliding after 4 regenerations - pick a different profile or run again\");\nfunction rnd(n){ return Math.floor(Math.random() * n); }\n// No identity name injection (parse-safe); mint a fresh higher-entropy local\n// part from syllables + 6 digits.\nvar syl = [\"an\",\"bel\",\"cor\",\"dan\",\"el\",\"fen\",\"gar\",\"han\",\"iv\",\"jo\",\"ka\",\"li\",\"mar\",\"nor\",\"os\",\"per\",\"qu\",\"ri\",\"sam\",\"tan\",\"ur\",\"vi\",\"wil\",\"ya\",\"zo\"];\nfunction word(){ return syl[rnd(syl.length)] + syl[rnd(syl.length)] + (Math.random()<0.5 ? syl[rnd(syl.length)] : \"\"); }\nvar w1 = word(), w2 = word();\nvar digits = String(rnd(900000) + 100000);\nvar shapes = [\n  w1 + w2 + digits,\n  w1 + \".\" + w2 + digits,\n  w1.charAt(0) + w2 + digits,\n  w1 + w2.charAt(0) + digits,\n  w2 + w1 + digits\n];\nvar local = shapes[rnd(shapes.length)];\nvar em = document.querySelector(\"input[name='email']\");\nif (!em) throw new Error(\"email box gone during regen\");\nsetVal(em, local);\nawait sleep(400 + Math.random() * 500);\nvar next = document.querySelector(\"button[data-testid='primaryButton']:not([disabled]), button[type='submit']:not([disabled])\");\nif (next) next.click();\n// give the availability check a moment so the old alert is gone before the\n// taken-check reads the page again\nawait sleep(3000);\nreturn local;"
         }
       },
       {
@@ -694,8 +694,62 @@
           "y": 1860
         },
         "config": {
-          "into": "backupDone",
-          "script": "// solar2 fills a backup/verify-email page after the captcha. It may or may\n// not appear. If it does and a backupEmail variable is set, fill the address\n// (and its confirm box) and click Next; empty backupEmail or no page = skip.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\nvar want = (\"{{inputs.backupEmail}}\" || \"\").trim();\nvar deadline = Date.now() + 15000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + (document.body && document.body.innerText || \"\"))) throw new Error(\"Account creation blocked at backup-email step\");\n  if (location.href.indexOf(\"account.microsoft.com\") !== -1 || location.href.indexOf(\"outlook.live.com/mail\") !== -1) return \"no-page-landed\";\n  var em = document.querySelector(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n  if (vis(em)) {\n    if (!want) return \"page-but-no-backupEmail\";\n    setVal(em, want);\n    await sleep(300 + Math.random() * 400);\n    var conf = document.querySelectorAll(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n    if (conf.length > 1) setVal(conf[1], want);\n    var next = document.querySelector(\"button[data-testid='primaryButton']\");\n    if (next) next.click();\n    return \"filled\";\n  }\n  await sleep(600);\n}\nreturn \"no-page\";"
+          "into": "backupPage",
+          "script": "// solar2 fills a backup/verify-email page after the captcha. It may or may\n// not appear. If it does and a backupEmail variable is set, fill the address\n// (and its confirm box) and click Next; empty backupEmail or no page = skip.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nfunction setVal(el,val){el.focus();el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\n// NOTE: no backupEmail text is injected into this script (raw {{}} into a\n// JS string would break on quotes). The value is written by the fill node\n// downstream; this script only DETECTS the backup-email page.\nvar deadline = Date.now() + 15000;\nwhile (Date.now() < deadline) {\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + (document.body && document.body.innerText || \"\"))) throw new Error(\"Account creation blocked at backup-email step\");\n  if (location.href.indexOf(\"account.microsoft.com\") !== -1 || location.href.indexOf(\"outlook.live.com/mail\") !== -1) return \"no-page-landed\";\n  var em = document.querySelector(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n  if (vis(em)) return \"present\";\n  await sleep(600);\n}\nreturn \"no-page\";"
+        }
+      },
+      {
+        "id": "n_backup_branch",
+        "kind": "branch",
+        "position": {
+          "x": 700,
+          "y": 1860
+        },
+        "config": {
+          "op": "==",
+          "left": "{{backupPage}}",
+          "right": "present"
+        }
+      },
+      {
+        "id": "n_backup_have",
+        "kind": "branch",
+        "position": {
+          "x": 920,
+          "y": 1860
+        },
+        "config": {
+          "op": "!=",
+          "left": "{{inputs.backupEmail}}",
+          "right": ""
+        }
+      },
+      {
+        "id": "n_backup_fill",
+        "kind": "fill",
+        "position": {
+          "x": 1140,
+          "y": 1860
+        },
+        "config": {
+          "selector": "input[type='email']:visible",
+          "value": "{{inputs.backupEmail}}",
+          "speed": "natural",
+          "typos": false,
+          "instant": false,
+          "timeoutMs": 20000
+        }
+      },
+      {
+        "id": "n_backup_click",
+        "kind": "click",
+        "position": {
+          "x": 1360,
+          "y": 1860
+        },
+        "config": {
+          "selector": "button[data-testid=\"primaryButton\"]:visible",
+          "timeoutMs": 20000
         }
       },
       {
@@ -1083,46 +1137,82 @@
         "id": "e50",
         "from": "n_backup",
         "fromPort": "next",
-        "to": "n_land"
+        "to": "n_backup_branch"
       },
       {
         "id": "e51",
+        "from": "n_backup_branch",
+        "fromPort": "true",
+        "to": "n_backup_have"
+      },
+      {
+        "id": "e52",
+        "from": "n_backup_branch",
+        "fromPort": "false",
+        "to": "n_land"
+      },
+      {
+        "id": "e53",
+        "from": "n_backup_have",
+        "fromPort": "true",
+        "to": "n_backup_fill"
+      },
+      {
+        "id": "e54",
+        "from": "n_backup_have",
+        "fromPort": "false",
+        "to": "n_land"
+      },
+      {
+        "id": "e55",
+        "from": "n_backup_fill",
+        "fromPort": "next",
+        "to": "n_backup_click"
+      },
+      {
+        "id": "e56",
+        "from": "n_backup_click",
+        "fromPort": "next",
+        "to": "n_land"
+      },
+      {
+        "id": "e57",
         "from": "n_land",
         "fromPort": "next",
         "to": "n_dismiss"
       },
       {
-        "id": "e52",
+        "id": "e58",
         "from": "n_dismiss",
         "fromPort": "next",
         "to": "n_save"
       },
       {
-        "id": "e53",
+        "id": "e59",
         "from": "n_save",
         "fromPort": "next",
         "to": "n_warmup_check"
       },
       {
-        "id": "e54",
+        "id": "e60",
         "from": "n_warmup_check",
         "fromPort": "true",
         "to": "n_warmup"
       },
       {
-        "id": "e55",
+        "id": "e61",
         "from": "n_warmup",
         "fromPort": "next",
         "to": "n_warmup_dwell"
       },
       {
-        "id": "e56",
+        "id": "e62",
         "from": "n_warmup_dwell",
         "fromPort": "next",
         "to": "n_done"
       },
       {
-        "id": "e57",
+        "id": "e63",
         "from": "n_warmup_check",
         "fromPort": "false",
         "to": "n_done"

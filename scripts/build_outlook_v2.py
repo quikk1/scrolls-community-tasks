@@ -47,18 +47,20 @@ prep_script = (
     "// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n"
     "// scrolls SDK runtime.\n"
     "function rnd(n){ return Math.floor(Math.random() * n); }\n"
-    "var first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
-    "var last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
-    "if (!first) first = \"user\";\n"
-    "if (!last) last = \"account\";\n"
-    "// solar2 GetRandomUsername: random local part. Build a few human shapes and pick one.\n"
+    "// solar2 GetRandomUsername: mint a human-looking local part. We do NOT inject\n"
+    "// the identity name into this script - a name with a quote/apostrophe would\n"
+    "// break the JS at parse time (raw {{}} substitution). Build from letter\n"
+    "// syllables instead; names are filled separately via safe fill-node values.\n"
+    "var syl = [\"an\",\"bel\",\"cor\",\"dan\",\"el\",\"fen\",\"gar\",\"han\",\"iv\",\"jo\",\"ka\",\"li\",\"mar\",\"nor\",\"os\",\"per\",\"qu\",\"ri\",\"sam\",\"tan\",\"ur\",\"vi\",\"wil\",\"ya\",\"zo\"];\n"
+    "function word(){ return syl[rnd(syl.length)] + syl[rnd(syl.length)] + (Math.random()<0.5 ? syl[rnd(syl.length)] : \"\"); }\n"
+    "var w1 = word(), w2 = word();\n"
     "var digits = String(rnd(900) + 100);\n"
     "var shapes = [\n"
-    "  first + last + digits,\n"
-    "  first + \".\" + last + digits,\n"
-    "  first + last.charAt(0) + digits,\n"
-    "  first.charAt(0) + last + digits,\n"
-    "  first + digits + last\n"
+    "  w1 + w2 + digits,\n"
+    "  w1 + \".\" + w2 + digits,\n"
+    "  w1 + w2.charAt(0) + digits,\n"
+    "  w1.charAt(0) + w2 + digits,\n"
+    "  w1 + digits + w2\n"
     "];\n"
     "var local = shapes[rnd(shapes.length)];\n"
     "// The live surface only offers a short domain list (e.g. @outlook.com,\n"
@@ -68,7 +70,9 @@ prep_script = (
     "// picks from what's actually offered and falls back, never fails.\n"
     "var hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\n"
     "var wantDom = hotmail ? \"hotmail.com\" : \"outlook.com\";\n"
-    "var dob = \"{{identity.dob}}\";\n"
+    "// dob/country are engine-formatted (digits, ISO code) - safe to inline. Strip\n"
+    "// anything that could break the literal anyway.\n"
+    "var dob = (\"{{identity.dob}}\" || \"\").replace(/[^0-9\\-\\/.]/g, \"\");\n"
     "var y = \"\", m = \"\", d = \"\";\n"
     "var mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\n"
     "if (mm) { y = mm[1]; m = String(parseInt(mm[2], 10)); d = String(parseInt(mm[3], 10)); }\n"
@@ -83,7 +87,7 @@ prep_script = (
     "  month: monthName,\n"
     "  day: d,\n"
     "  year: String(year),\n"
-    "  country: (\"{{addresses.0.country}}\" || \"\").trim()\n"
+    "  country: (\"{{addresses.0.country}}\" || \"\").replace(/[^A-Za-z ]/g, \"\").trim()\n"
     "};"
 )
 nodes.append(N("n_prep", "evaluate", 40, 120, {"into": "prep", "script": prep_script}))
@@ -264,18 +268,20 @@ regen_script = (
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
     "function setVal(el,val){el.focus();el.value=\"\";el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\n"
     "window.__scRegenN = (window.__scRegenN || 0) + 1;\n"
-    "if (window.__scRegenN > 4) throw new Error(\"Username keeps colliding after 4 regenerations (last: \" + (\"{{emailErr}}\"||\"\").slice(0,120) + \")\");\n"
+    "if (window.__scRegenN > 4) throw new Error(\"Username keeps colliding after 4 regenerations - pick a different profile or run again\");\n"
     "function rnd(n){ return Math.floor(Math.random() * n); }\n"
-    "var first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
-    "var last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
-    "if (!first) first = \"user\"; if (!last) last = \"account\";\n"
+    "// No identity name injection (parse-safe); mint a fresh higher-entropy local\n"
+    "// part from syllables + 6 digits.\n"
+    "var syl = [\"an\",\"bel\",\"cor\",\"dan\",\"el\",\"fen\",\"gar\",\"han\",\"iv\",\"jo\",\"ka\",\"li\",\"mar\",\"nor\",\"os\",\"per\",\"qu\",\"ri\",\"sam\",\"tan\",\"ur\",\"vi\",\"wil\",\"ya\",\"zo\"];\n"
+    "function word(){ return syl[rnd(syl.length)] + syl[rnd(syl.length)] + (Math.random()<0.5 ? syl[rnd(syl.length)] : \"\"); }\n"
+    "var w1 = word(), w2 = word();\n"
     "var digits = String(rnd(900000) + 100000);\n"
     "var shapes = [\n"
-    "  first + last + digits,\n"
-    "  first + \".\" + last + digits,\n"
-    "  first.charAt(0) + last + digits,\n"
-    "  first + last.charAt(0) + digits,\n"
-    "  last + first + digits\n"
+    "  w1 + w2 + digits,\n"
+    "  w1 + \".\" + w2 + digits,\n"
+    "  w1.charAt(0) + w2 + digits,\n"
+    "  w1 + w2.charAt(0) + digits,\n"
+    "  w2 + w1 + digits\n"
     "];\n"
     "var local = shapes[rnd(shapes.length)];\n"
     "var em = document.querySelector(\"input[name='email']\");\n"
@@ -469,28 +475,37 @@ backup_script = (
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
     "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
     "function setVal(el,val){el.focus();el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\n"
-    "var want = (\"{{inputs.backupEmail}}\" || \"\").trim();\n"
+    "// NOTE: no backupEmail text is injected into this script (raw {{}} into a\n"
+    "// JS string would break on quotes). The value is written by the fill node\n"
+    "// downstream; this script only DETECTS the backup-email page.\n"
     "var deadline = Date.now() + 15000;\n"
     "while (Date.now() < deadline) {\n"
     "  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + (document.body && document.body.innerText || \"\"))) throw new Error(\"Account creation blocked at backup-email step\");\n"
     "  if (location.href.indexOf(\"account.microsoft.com\") !== -1 || location.href.indexOf(\"outlook.live.com/mail\") !== -1) return \"no-page-landed\";\n"
     "  var em = document.querySelector(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n"
-    "  if (vis(em)) {\n"
-    "    if (!want) return \"page-but-no-backupEmail\";\n"
-    "    setVal(em, want);\n"
-    "    await sleep(300 + Math.random() * 400);\n"
-    "    var conf = document.querySelectorAll(\"input[type='email'], input[name*='mail' i], input[id*='mail' i], input[aria-label*='email' i]\");\n"
-    "    if (conf.length > 1) setVal(conf[1], want);\n"
-    "    var next = document.querySelector(\"button[data-testid='primaryButton']\");\n"
-    "    if (next) next.click();\n"
-    "    return \"filled\";\n"
-    "  }\n"
+    "  if (vis(em)) return \"present\";\n"
     "  await sleep(600);\n"
     "}\n"
     "return \"no-page\";"
 )
-nodes.append(N("n_backup", "evaluate", 480, 1860, {"into": "backupDone", "script": backup_script}))
-E("n_backup", "n_land")
+nodes.append(N("n_backup", "evaluate", 480, 1860, {"into": "backupPage", "script": backup_script}))
+E("n_backup", "n_backup_branch")
+# fill the backup email only if the page is present AND a backupEmail was set;
+# both the page check and the value flow through parse-safe paths.
+nodes.append(N("n_backup_branch", "branch", 700, 1860, {"op": "==", "left": "{{backupPage}}", "right": "present"}))
+E("n_backup_branch", "n_backup_have", "true")
+E("n_backup_branch", "n_land", "false")
+nodes.append(N("n_backup_have", "branch", 920, 1860, {"op": "!=", "left": "{{inputs.backupEmail}}", "right": ""}))
+E("n_backup_have", "n_backup_fill", "true")
+E("n_backup_have", "n_land", "false")
+nodes.append(N("n_backup_fill", "fill", 1140, 1860, {
+    "selector": "input[type='email']:visible",
+    "value": "{{inputs.backupEmail}}", "speed": "natural", "typos": False,
+    "instant": False, "timeoutMs": 20000
+}))
+E("n_backup_fill", "n_backup_click")
+nodes.append(N("n_backup_click", "click", 1360, 1860, {"selector": NEXT, "timeoutMs": 20000}))
+E("n_backup_click", "n_land")
 
 # ---- landing (re-post while waiting), tolerates empty token ----
 land_script = (
@@ -575,7 +590,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.0"
+graph["version"] = "2.3.1"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",

@@ -95,7 +95,7 @@
       "id": "outlook",
       "name": "Outlook Account Generator",
       "description": "Creates Outlook/Hotmail accounts on the profile own browser engine (proxy + fingerprint + human input, to pass Microsoft Arkose signals). A generator, not an entry tool: it mints its own human-looking usernames (first+last+random digits) and rotates solar regional outlook.* domain table - no email list needed. Uses the current create-account surface (outlook.live.com/mail/?prompt=create_account, fluent=2): email + domain dropdown -> password -> country/birthdate -> first/last name -> FunCaptcha (Arkose) solve, submitted through the challenge-complete postMessage. Fails fast on taken emails, SMS gates, and flagged exit IPs. Run options: @hotmail.com toggle, optional backup email, inbox warm-up. Needs a captcha key in Key Vault; proxies recommended.",
-      "version": "2.3.0",
+      "version": "2.3.1",
       "author": {
         "name": "Sete_",
         "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
