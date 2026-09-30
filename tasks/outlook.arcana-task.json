@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "2.3.4",
+    "version": "2.3.5",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -548,7 +548,31 @@
         },
         "config": {
           "into": "namesReady",
-          "script": "// Names page: firstNameInput + lastNameInput. Block page can appear here too.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  var f = document.querySelector(\"input#firstNameInput\");\n  if (vis(f)) {\n    var l = document.querySelector(\"input#lastNameInput\");\n    return \"ready\";\n  }\n  var body = (document.body && document.body.innerText || \"\");\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked before names step\");\n  // NOTE: a captcha can appear before names on some exits. We keep waiting\n  // for the name fields regardless - the captcha block downstream solves any\n  // challenge that is up, and names still must be filled before it submits.\n  await sleep(500);\n}\nthrow new Error(\"name fields never appeared after country/DOB\");"
+          "script": "// Names page. The field IDs (firstNameInput/lastNameInput) are NOT stable\n// across locales - a non-English exit can render different ids, so resolve\n// the two name inputs locale-agnostically and hand exact selectors back.\n// Priority: known ids -> autocomplete given/family-name -> name/aria hints ->\n// the only two visible text inputs on the page (first = first name).\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&el.offsetParent!==null;}\nfunction uniq(el, base){ if(!el) return \"\"; if(el.id) return \"#\" + el.id; var nm=el.getAttribute(\"name\"); if(nm) return \"input[name='\" + nm + \"']\"; return base; }\nfunction findNames(){\n  var f = document.querySelector(\"input#firstNameInput, input[autocomplete='given-name'], input[name*='first' i], input[id*='first' i]\");\n  var l = document.querySelector(\"input#lastNameInput, input[autocomplete='family-name'], input[name*='last' i], input[id*='last' i]\");\n  if (vis(f) && vis(l)) return { f: f, l: l };\n  // fallback: the two visible text inputs (exclude email/password/hidden)\n  var all = document.querySelectorAll(\"input[type='text'], input:not([type])\");\n  var vis2 = [];\n  for (var i=0;i<all.length;i++){var e=all[i];if(!vis(e))continue;var t=(e.type||'').toLowerCase();if(t==='email'||t==='password'||t==='hidden'||t==='checkbox')continue;vis2.push(e);}\n  if (vis2.length >= 2) return { f: vis2[0], l: vis2[1] };\n  return null;\n}\nvar deadline = Date.now() + 45000;\nwhile (Date.now() < deadline) {\n  var body = (document.body && document.body.innerText || \"\");\n  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked before names step\");\n  var r = findNames();\n  if (r) {\n    return { first: uniq(r.f, \"input[autocomplete='given-name']\"), last: uniq(r.l, \"input[autocomplete='family-name']\") };\n  }\n  await sleep(500);\n}\nthrow new Error(\"name fields never appeared after country/DOB\");"
+        }
+      },
+      {
+        "id": "n_s_firstsel",
+        "kind": "setVar",
+        "position": {
+          "x": 260,
+          "y": 1250
+        },
+        "config": {
+          "name": "firstSel",
+          "value": "{{namesReady.first}}"
+        }
+      },
+      {
+        "id": "n_s_lastsel",
+        "kind": "setVar",
+        "position": {
+          "x": 480,
+          "y": 1250
+        },
+        "config": {
+          "name": "lastSel",
+          "value": "{{namesReady.last}}"
         }
       },
       {
@@ -559,7 +583,7 @@
           "y": 1360
         },
         "config": {
-          "selector": "input#firstNameInput:visible",
+          "selector": "{{firstSel}}",
           "value": "{{identity.firstName}}",
           "speed": "natural",
           "typos": false,
@@ -575,7 +599,7 @@
           "y": 1360
         },
         "config": {
-          "selector": "input#lastNameInput:visible",
+          "selector": "{{lastSel}}",
           "value": "{{identity.lastName}}",
           "speed": "natural",
           "typos": false,
@@ -1065,154 +1089,166 @@
         "id": "e38",
         "from": "n_names",
         "fromPort": "next",
-        "to": "n_fill_first"
+        "to": "n_s_firstsel"
       },
       {
         "id": "e39",
+        "from": "n_s_firstsel",
+        "fromPort": "next",
+        "to": "n_s_lastsel"
+      },
+      {
+        "id": "e40",
+        "from": "n_s_lastsel",
+        "fromPort": "next",
+        "to": "n_fill_first"
+      },
+      {
+        "id": "e41",
         "from": "n_fill_first",
         "fromPort": "next",
         "to": "n_fill_last"
       },
       {
-        "id": "e40",
+        "id": "e42",
         "from": "n_fill_last",
         "fromPort": "next",
         "to": "n_click_names_next"
       },
       {
-        "id": "e41",
+        "id": "e43",
         "from": "n_click_names_next",
         "fromPort": "next",
         "to": "n_sms_gate"
       },
       {
-        "id": "e42",
+        "id": "e44",
         "from": "n_sms_gate",
         "fromPort": "next",
         "to": "n_gate2_branch"
       },
       {
-        "id": "e43",
+        "id": "e45",
         "from": "n_gate2_branch",
         "fromPort": "true",
         "to": "n_get_blob"
       },
       {
-        "id": "e44",
+        "id": "e46",
         "from": "n_gate2_branch",
         "fromPort": "false",
         "to": "n_gate2_landed_branch"
       },
       {
-        "id": "e45",
+        "id": "e47",
         "from": "n_gate2_landed_branch",
         "fromPort": "true",
         "to": "n_land"
       },
       {
-        "id": "e46",
+        "id": "e48",
         "from": "n_gate2_landed_branch",
         "fromPort": "false",
         "to": "n_sms_gate_fail"
       },
       {
-        "id": "e47",
+        "id": "e49",
         "from": "n_get_blob",
         "fromPort": "next",
         "to": "n_captcha"
       },
       {
-        "id": "e48",
+        "id": "e50",
         "from": "n_captcha",
         "fromPort": "next",
         "to": "n_submit_token"
       },
       {
-        "id": "e49",
+        "id": "e51",
         "from": "n_submit_token",
         "fromPort": "next",
         "to": "n_backup"
       },
       {
-        "id": "e50",
+        "id": "e52",
         "from": "n_backup",
         "fromPort": "next",
         "to": "n_backup_branch"
       },
       {
-        "id": "e51",
+        "id": "e53",
         "from": "n_backup_branch",
         "fromPort": "true",
         "to": "n_backup_have"
       },
       {
-        "id": "e52",
+        "id": "e54",
         "from": "n_backup_branch",
         "fromPort": "false",
         "to": "n_land"
       },
       {
-        "id": "e53",
+        "id": "e55",
         "from": "n_backup_have",
         "fromPort": "true",
         "to": "n_backup_fill"
       },
       {
-        "id": "e54",
+        "id": "e56",
         "from": "n_backup_have",
         "fromPort": "false",
         "to": "n_land"
       },
       {
-        "id": "e55",
+        "id": "e57",
         "from": "n_backup_fill",
         "fromPort": "next",
         "to": "n_backup_click"
       },
       {
-        "id": "e56",
+        "id": "e58",
         "from": "n_backup_click",
         "fromPort": "next",
         "to": "n_land"
       },
       {
-        "id": "e57",
+        "id": "e59",
         "from": "n_land",
         "fromPort": "next",
         "to": "n_dismiss"
       },
       {
-        "id": "e58",
+        "id": "e60",
         "from": "n_dismiss",
         "fromPort": "next",
         "to": "n_save"
       },
       {
-        "id": "e59",
+        "id": "e61",
         "from": "n_save",
         "fromPort": "next",
         "to": "n_warmup_check"
       },
       {
-        "id": "e60",
+        "id": "e62",
         "from": "n_warmup_check",
         "fromPort": "true",
         "to": "n_warmup"
       },
       {
-        "id": "e61",
+        "id": "e63",
         "from": "n_warmup",
         "fromPort": "next",
         "to": "n_warmup_dwell"
       },
       {
-        "id": "e62",
+        "id": "e64",
         "from": "n_warmup_dwell",
         "fromPort": "next",
         "to": "n_done"
       },
       {
-        "id": "e63",
+        "id": "e65",
         "from": "n_warmup_check",
         "fromPort": "false",
         "to": "n_done"

@@ -417,34 +417,50 @@ E("n_click_geo_next", "n_names")
 
 # ---- names ----
 names_script = (
-    "// Names page: firstNameInput + lastNameInput. Block page can appear here too.\n"
+    "// Names page. The field IDs (firstNameInput/lastNameInput) are NOT stable\n"
+    "// across locales - a non-English exit can render different ids, so resolve\n"
+    "// the two name inputs locale-agnostically and hand exact selectors back.\n"
+    "// Priority: known ids -> autocomplete given/family-name -> name/aria hints ->\n"
+    "// the only two visible text inputs on the page (first = first name).\n"
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
-    "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
+    "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none'&&el.offsetParent!==null;}\n"
+    "function uniq(el, base){ if(!el) return \"\"; if(el.id) return \"#\" + el.id; var nm=el.getAttribute(\"name\"); if(nm) return \"input[name='\" + nm + \"']\"; return base; }\n"
+    "function findNames(){\n"
+    "  var f = document.querySelector(\"input#firstNameInput, input[autocomplete='given-name'], input[name*='first' i], input[id*='first' i]\");\n"
+    "  var l = document.querySelector(\"input#lastNameInput, input[autocomplete='family-name'], input[name*='last' i], input[id*='last' i]\");\n"
+    "  if (vis(f) && vis(l)) return { f: f, l: l };\n"
+    "  // fallback: the two visible text inputs (exclude email/password/hidden)\n"
+    "  var all = document.querySelectorAll(\"input[type='text'], input:not([type])\");\n"
+    "  var vis2 = [];\n"
+    "  for (var i=0;i<all.length;i++){var e=all[i];if(!vis(e))continue;var t=(e.type||'').toLowerCase();if(t==='email'||t==='password'||t==='hidden'||t==='checkbox')continue;vis2.push(e);}\n"
+    "  if (vis2.length >= 2) return { f: vis2[0], l: vis2[1] };\n"
+    "  return null;\n"
+    "}\n"
     "var deadline = Date.now() + 45000;\n"
     "while (Date.now() < deadline) {\n"
-    "  var f = document.querySelector(\"input#firstNameInput\");\n"
-    "  if (vis(f)) {\n"
-    "    var l = document.querySelector(\"input#lastNameInput\");\n"
-    "    return \"ready\";\n"
-    "  }\n"
     "  var body = (document.body && document.body.innerText || \"\");\n"
     "  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + body)) throw new Error(\"Account creation blocked before names step\");\n"
-    "  // NOTE: a captcha can appear before names on some exits. We keep waiting\n"
-    "  // for the name fields regardless - the captcha block downstream solves any\n"
-    "  // challenge that is up, and names still must be filled before it submits.\n"
+    "  var r = findNames();\n"
+    "  if (r) {\n"
+    "    return { first: uniq(r.f, \"input[autocomplete='given-name']\"), last: uniq(r.l, \"input[autocomplete='family-name']\") };\n"
+    "  }\n"
     "  await sleep(500);\n"
     "}\n"
     "throw new Error(\"name fields never appeared after country/DOB\");"
 )
 nodes.append(N("n_names", "evaluate", 40, 1360, {"into": "namesReady", "script": names_script}))
-E("n_names", "n_fill_first")
+E("n_names", "n_s_firstsel")
+nodes.append(N("n_s_firstsel", "setVar", 260, 1250, {"name": "firstSel", "value": "{{namesReady.first}}"}))
+E("n_s_firstsel", "n_s_lastsel")
+nodes.append(N("n_s_lastsel", "setVar", 480, 1250, {"name": "lastSel", "value": "{{namesReady.last}}"}))
+E("n_s_lastsel", "n_fill_first")
 nodes.append(N("n_fill_first", "fill", 260, 1360, {
-    "selector": "input#firstNameInput:visible", "value": "{{identity.firstName}}",
+    "selector": "{{firstSel}}", "value": "{{identity.firstName}}",
     "speed": "natural", "typos": False, "instant": False, "timeoutMs": 60000
 }))
 E("n_fill_first", "n_fill_last")
 nodes.append(N("n_fill_last", "fill", 480, 1360, {
-    "selector": "input#lastNameInput:visible", "value": "{{identity.lastName}}",
+    "selector": "{{lastSel}}", "value": "{{identity.lastName}}",
     "speed": "natural", "typos": False, "instant": False, "timeoutMs": 60000
 }))
 E("n_fill_last", "n_click_names_next")
@@ -653,7 +669,7 @@ meta_desc = (
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.3.4"
+graph["version"] = "2.3.5"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
