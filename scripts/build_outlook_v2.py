@@ -40,11 +40,31 @@ nodes += [
 E("n_start", "n_prep")
 
 prep_script = (
-    "// Build the identity pieces the form needs.\n"
-    "// identity.* and addresses.0.* come from the scrolls SDK runtime.\n"
-    "var email = (\"{{identity.email}}\" || \"\").trim();\n"
-    "var local = email.indexOf(\"@\") > 0 ? email.split(\"@\")[0] : email;\n"
-    "var dom = (email.indexOf(\"@hotmail.com\") !== -1) ? \"hotmail.com\" : \"outlook.com\";\n"
+    "// Build the identity pieces the form needs. Like solar2, we GENERATE the\n"
+    "// email local part ourselves (human-looking: first+last+random digits) rather\n"
+    "// than asking for an address - a generator mints its own usernames. Names and\n"
+    "// password come from the SDK identity; domain rotates over solar2's regional\n"
+    "// table unless hotmailDomain is set. identity.* / addresses.0.* come from the\n"
+    "// scrolls SDK runtime.\n"
+    "function rnd(n){ return Math.floor(Math.random() * n); }\n"
+    "var first = (\"{{identity.firstName}}\" || \"user\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
+    "var last = (\"{{identity.lastName}}\" || \"account\").trim().toLowerCase().replace(/[^a-z]/g, \"\");\n"
+    "if (!first) first = \"user\";\n"
+    "if (!last) last = \"account\";\n"
+    "// solar2 GetRandomUsername: random local part. Build a few human shapes and pick one.\n"
+    "var digits = String(rnd(900) + 100);\n"
+    "var shapes = [\n"
+    "  first + last + digits,\n"
+    "  first + \".\" + last + digits,\n"
+    "  first + last.charAt(0) + digits,\n"
+    "  first.charAt(0) + last + digits,\n"
+    "  first + digits + last\n"
+    "];\n"
+    "var local = shapes[rnd(shapes.length)];\n"
+    "// solar2 regional domain table; hotmailDomain flips to hotmail.com\n"
+    "var outlookDomains = [\"outlook.com\", \"outlook.co.uk\", \"outlook.de\", \"outlook.es\", \"outlook.fr\", \"outlook.jp\", \"outlook.com.vn\", \"outlook.it\", \"outlook.my\", \"outlook.cz\", \"outlook.pt\", \"outlook.kr\"];\n"
+    "var hotmail = String(\"{{inputs.hotmailDomain}}\").toLowerCase() === \"true\";\n"
+    "var dom = hotmail ? \"hotmail.com\" : outlookDomains[rnd(outlookDomains.length)];\n"
     "var dob = \"{{identity.dob}}\";\n"
     "var y = \"\", m = \"\", d = \"\";\n"
     "var mm = dob.match(/(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})/);\n"
@@ -394,7 +414,7 @@ backup_script = (
     "function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\n"
     "function vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\n"
     "function setVal(el,val){el.focus();el.value=val;el.dispatchEvent(new Event(\"input\",{bubbles:true}));el.dispatchEvent(new Event(\"change\",{bubbles:true}));el.dispatchEvent(new Event(\"blur\",{bubbles:true}));}\n"
-    "var want = (\"{{backupEmail}}\" || \"\").trim();\n"
+    "var want = (\"{{inputs.backupEmail}}\" || \"\").trim();\n"
     "var deadline = Date.now() + 15000;\n"
     "while (Date.now() < deadline) {\n"
     "  if (/account creation has been blocked/i.test((document.title||\"\") + \" \" + (document.body && document.body.innerText || \"\"))) throw new Error(\"Account creation blocked at backup-email step\");\n"
@@ -473,7 +493,7 @@ nodes.append(N("n_save", "accounts.save", 1140, 1740, {
     "site": "outlook.com", "status": "active", "label": "Outlook"
 }))
 E("n_save", "n_warmup_check")
-nodes.append(N("n_warmup_check", "branch", 1360, 1740, {"op": "==", "left": "{{warmupInbox}}", "right": "yes"}))
+nodes.append(N("n_warmup_check", "branch", 1360, 1740, {"op": "==", "left": "{{inputs.warmupInbox}}", "right": "true"}))
 E("n_warmup_check", "n_warmup", "true")
 nodes.append(N("n_warmup", "goto", 1360, 1600, {"url": "https://outlook.live.com/mail/0/inbox", "waitUntil": "domcontentloaded", "timeoutMs": 120000}))
 E("n_warmup", "n_warmup_dwell")
@@ -484,33 +504,56 @@ nodes.append(N("n_done", "noop", 1780, 1740, {}))
 
 # ---- assemble ----
 meta_desc = (
-    "Creates an Outlook/Hotmail account on the profile's own browser engine (proxy + "
-    "fingerprint + human input, to pass Microsoft's Arkose signals). Uses the current "
-    "create-account surface (outlook.live.com/mail/?prompt=create_account, fluent=2): "
-    "email + domain dropdown -> password -> country/birthdate (Fluent dropdowns) -> "
-    "first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose data[blob] in-page, "
-    "gets the token from the configured solver, and submits it through the "
-    "challenge-complete postMessage so the cross-origin enforcement frame is never a "
-    "problem. Fails fast on taken emails, SMS gates, and flagged exit IPs (blocked page). "
-    "Saves to the Database and opens the inbox once to warm the account. Needs an email "
-    "source for the identity address and a captcha key in Key Vault; proxies recommended. "
-    "Outlook gen."
+    "Creates Outlook/Hotmail accounts on the profile's own browser engine (proxy + "
+    "fingerprint + human input, to pass Microsoft's Arkose signals). A generator, not an "
+    "entry tool: it mints its own human-looking usernames (first+last+random digits) and "
+    "rotates solar's regional outlook.* domain table - no email list needed. Uses the "
+    "current create-account surface (outlook.live.com/mail/?prompt=create_account, "
+    "fluent=2): email + domain dropdown -> password -> country/birthdate (Fluent "
+    "dropdowns) -> first/last name -> FunCaptcha (Arkose) solve. Captures the Arkose "
+    "data[blob] in-page, gets the token from the configured solver, and submits it "
+    "through the challenge-complete postMessage so the cross-origin enforcement frame is "
+    "never a problem. Fails fast on taken emails, SMS gates, and flagged exit IPs. "
+    "Optionally fills a backup email, saves to the Database, and opens the inbox once to "
+    "warm the account. Needs a captcha key in Key Vault; proxies recommended. Outlook gen."
 )
 
 graph = collections.OrderedDict()
 graph["schemaVersion"] = 1
-graph["version"] = "2.1.0"
+graph["version"] = "2.2.0"
 graph["metadata"] = {
     "id": "outlook",
     "name": "Outlook Account Generator",
     "description": meta_desc,
-    "tags": ["outlook", "hotmail", "microsoft", "account-generator", "signup"]
+    "tags": ["outlook", "hotmail", "microsoft", "account-generator", "signup"],
+    "inputs": [
+        {
+            "id": "hotmailDomain",
+            "label": "Mint @hotmail.com instead of outlook.*",
+            "type": "boolean",
+            "defaultValue": False,
+            "hint": "Off: rotate the local part across solar's regional outlook.* table (outlook.com, .co.uk, .de, ...). On: every account is minted @hotmail.com."
+        },
+        {
+            "id": "backupEmail",
+            "label": "Backup email (optional)",
+            "type": "string",
+            "defaultValue": "",
+            "placeholder": "recovery@your-catchall.com",
+            "hint": "Filled on the backup/verify-email page when Microsoft asks for one. Leave empty to skip that page."
+        },
+        {
+            "id": "warmupInbox",
+            "label": "Open inbox after generation",
+            "type": "boolean",
+            "defaultValue": True,
+            "hint": "Open the mailbox once after the account is created to warm the session."
+        }
+    ]
 }
 graph["permissions"] = ["accounts", "browser", "captcha", "evaluate"]
 graph["variables"] = [
-    {"name": "gateTries", "value": "0"},
-    {"name": "warmupInbox", "value": "yes"},
-    {"name": "backupEmail", "value": ""}
+    {"name": "gateTries", "value": "0"}
 ]
 graph["start"] = "n_start"
 graph["nodes"] = nodes
@@ -537,7 +580,13 @@ unreached = [i for i in (ids - seen) if not i.startswith("n_c_")]
 branches = [n["id"] for n in nodes if n["kind"] == "branch"]
 badbranch = [b for b in branches for port in ("true", "false") if not any(e["from"] == b and e["fromPort"] == port for e in edges)]
 print("nodes:", len(nodes), "edges:", len(edges), "dangling:", len(bad), "unreachable:", unreached, "badbranch:", badbranch)
-if bad or unreached or badbranch:
+refs = set()
+for n in nodes:
+    for part in json.dumps(n["config"]).split("{{")[1:]:
+        refs.add(part.split("}}")[0].strip())
+stale = [r for r in refs if r in ("backupEmail", "warmupInbox", "hotmailDomain", "msDomain")]
+print("stale refs (should be none):", stale)
+if bad or unreached or badbranch or stale:
     raise SystemExit("graph invalid")
 
 io.open(P, "w", encoding="utf-8", newline="\n").write(json.dumps(out, indent=2, ensure_ascii=False))
