@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.3",
+    "version": "1.0.4",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -319,6 +319,18 @@
         }
       },
       {
+        "id": "n_resolve_email_sel",
+        "kind": "evaluate",
+        "position": {
+          "x": 40,
+          "y": 660
+        },
+        "config": {
+          "into": "emailSel",
+          "script": "// Resolve which email input actually exists once the page settles.\n// signup.live.com redirects/re-renders after first paint, so a fixed\n// comma-selector fill can time out waiting on a node that flashed and went.\n// Wait for a stable input, then hand the fill step the exact selector.\nfunction sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}\nfunction vis(el){if(!el)return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>1&&r.height>1&&s.visibility!=='hidden'&&s.display!=='none';}\nvar deadline = Date.now() + 90000;\nvar lastUrl = \"\";\nwhile (Date.now() < deadline) {\n  var legacy = document.querySelector(\"#MemberName\");\n  var modern = document.querySelector(\"#usernameInput\");\n  if (vis(legacy)) return \"input#MemberName\";\n  if (vis(modern)) return \"input#usernameInput\";\n  try { lastUrl = location.href; } catch (e) {}\n  // bounced to a sign-in page instead of signup - wrong landing\n  if (/login\\.live\\.com|login\\.microsoftonline\\.com/i.test(lastUrl)) throw new Error(\"signup.live.com redirected to a sign-in page (\" + lastUrl.slice(0, 70) + \") - exit IP is being deflected\");\n  await sleep(400);\n}\nvar t = (document.title || \"\").slice(0, 60);\nthrow new Error(\"email input never became visible. title='\" + t + \"' url=\" + lastUrl.slice(0, 70));"
+        }
+      },
+      {
         "id": "n_fill_email",
         "kind": "fill",
         "position": {
@@ -326,12 +338,12 @@
           "y": 780
         },
         "config": {
-          "selector": "input#MemberName:visible, input#usernameInput:visible",
+          "selector": "{{emailSel}}",
           "value": "{{emailLocal}}",
           "speed": "natural",
           "typos": false,
           "instant": false,
-          "timeoutMs": 120000
+          "timeoutMs": 60000
         }
       },
       {
@@ -802,6 +814,12 @@
       {
         "id": "e16",
         "from": "n_s_flow",
+        "fromPort": "next",
+        "to": "n_resolve_email_sel"
+      },
+      {
+        "id": "e16b",
+        "from": "n_resolve_email_sel",
         "fromPort": "next",
         "to": "n_fill_email"
       },
