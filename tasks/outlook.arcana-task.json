@@ -3,7 +3,7 @@
   "exportedAt": "2026-09-30T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.0",
+    "version": "1.0.1",
     "metadata": {
       "id": "outlook",
       "name": "Outlook Account Generator",
@@ -204,6 +204,15 @@
         }
       },
       {
+        "id": "n_dup_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 40,
+          "y": 140
+        },
+        "config": {}
+      },
+      {
         "id": "n_dup",
         "kind": "inventory.pick",
         "position": {
@@ -225,7 +234,7 @@
         },
         "config": {
           "op": "truthy",
-          "left": "{{dupHit}}"
+          "left": "{{WAS_ERROR}}"
         }
       },
       {
@@ -746,24 +755,24 @@
         "id": "e7",
         "from": "n_s_country",
         "fromPort": "next",
-        "to": "n_dup"
+        "to": "n_dup_tc"
       },
       {
         "id": "e8",
         "from": "n_dup",
         "fromPort": "next",
-        "to": "n_dup_branch"
+        "to": "n_dup_tc"
       },
       {
         "id": "e9",
         "from": "n_dup_branch",
-        "fromPort": "false",
+        "fromPort": "true",
         "to": "n_goto"
       },
       {
         "id": "e10",
         "from": "n_dup_branch",
-        "fromPort": "true",
+        "fromPort": "false",
         "to": "n_dup_fail"
       },
       {
@@ -999,6 +1008,18 @@
         "from": "n_gate_retry",
         "fromPort": "next",
         "to": "n_goto"
+      },
+      {
+        "id": "e_dup_tc_loop",
+        "from": "n_dup_tc",
+        "fromPort": "loop",
+        "to": "n_dup"
+      },
+      {
+        "id": "e_dup_tc_exit",
+        "from": "n_dup_tc",
+        "fromPort": "exit",
+        "to": "n_dup_branch"
       }
     ],
     "author": {
