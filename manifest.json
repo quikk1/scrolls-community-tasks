@@ -64,6 +64,7 @@
       "name": "Travis Scott — Browser Entry",
       "tags": [
         "travis-scott",
+        "victor-victor",
         "superswipe",
         "browser",
         "raffle"
@@ -80,8 +81,8 @@
         "email",
         "turnstile"
       ],
-      "version": "0.3.4",
-      "description": "Oasis-style browser flow for SuperSwipe no-payment draws. Selects your size, accepts the cookie banner, checks five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. 0.3.4: the run dialog now ships with the module, so its fields no longer depend on the app version.",
+      "version": "0.4.0",
+      "description": "Oasis-style browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. 0.4.0: Victor Victor store support, optional product title when the page has one draw, apparel and one-size drops.",
       "author": {
         "name": "Scrolls",
         "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E="

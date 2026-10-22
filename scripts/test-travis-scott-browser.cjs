@@ -18,7 +18,7 @@ registerNode({ kind: 'captcha.solveTurnstile', permissions: ['captcha', 'browser
     solve: async challenge => {
       solverCalls.push(challenge);
       assert.equal(challenge.siteKey, '0xOFFLINE_TEST_SITEKEY');
-      assert.equal(challenge.url, 'https://captcha.superswipe.com/?o=https%3A%2F%2Fshop.travisscott.com');
+      assert.equal(challenge.url, 'https://captcha.superswipe.com/?o=' + encodeURIComponent(new URL(currentOptions.url || 'https://shop.travisscott.com/').origin));
       if (currentOptions.providerFailure) throw new Error('Mock provider failure');
       if (currentOptions.cancel) {
         currentController.abort();
@@ -37,11 +37,19 @@ const graph = JSON.parse(fs.readFileSync(path.join(__dirname, '../tasks/travis-s
 assert.deepEqual(validateGraph(graph), []);
 assert.deepEqual(requiredPermissions(graph), [...graph.permissions].sort());
 const product = "AIR FORCE 1 '07 LOW CACTUS JACK";
-function fixture({ mode = 'pay_after', stale = false, hiddenRegion = false, closed = false, statusDelay = 0, hiddenButton = false, noSuccess = false, rejectEntry = false, unavailableNine = false, termsCount = 5, precheckedTerms = false, disabledTerms = false, rejectTerms = false, stateSelect = false, phonePrefix = false, cookie = '', rejectField = false } = {}) {
-  const blocks = ['OTHER PRODUCT', product].map((title, i) => `
-    <section class="superswipe-block" data-release-mode="${mode}" data-superswipe-launch-id="release-${i}">
-      <script type="application/json" data-superswipe-config>${JSON.stringify({ title })}</script>
-      <script type="application/json" data-superswipe-variants>${JSON.stringify([{ id: 101 + i * 100, title: '9', available: !unavailableNine }, { id: 102 + i * 100, title: '10.5', available: true }, { id: 103 + i * 100, title: '13.5', available: true }])}</script>
+const VARIANT_SETS = {
+  shoe: i => [{ id: 101 + i * 100, title: '9' }, { id: 102 + i * 100, title: '10.5' }, { id: 103 + i * 100, title: '13.5' }],
+  apparel: i => [{ id: 101 + i * 100, title: 'Small' }, { id: 102 + i * 100, title: 'Medium' }, { id: 103 + i * 100, title: 'X-Large' }],
+  oneSize: i => [{ id: 102 + i * 100, title: 'Default Title' }],
+  options: i => [['Black', 'S'], ['Black', 'M'], ['Black', 'L']].map((options, v) => ({ id: 101 + i * 100 + v, title: options.join(' / '), options })),
+  colours: i => [['Black', 'M'], ['White', 'M']].map((options, v) => ({ id: 101 + i * 100 + v, title: options.join(' / '), options })),
+};
+function fixture({ variantSet = 'shoe', optionNames, oneDraw = false, duplicate = false, consentmo = false, klaviyo = false, pickup = false, mode = 'pay_after', stale = false, hiddenRegion = false, closed = false, statusDelay = 0, hiddenButton = false, noSuccess = false, rejectEntry = false, unavailableNine = false, termsCount = 5, precheckedTerms = false, disabledTerms = false, rejectTerms = false, stateSelect = false, phonePrefix = false, cookie = '', rejectField = false } = {}) {
+  const draws = [['OTHER PRODUCT', 0, false], ...(duplicate ? [[product, 1, true]] : []), [product, 1, false]].filter(([, i]) => !oneDraw || i === 1);
+  const blocks = draws.map(([title, i, hiddenCopy]) => `
+    <section class="superswipe-block" ${hiddenCopy ? 'hidden' : ''} data-index="${i}" data-release-mode="${mode}" data-superswipe-launch-id="release-${i}">
+      <script type="application/json" data-superswipe-config>${JSON.stringify({ title, ...(optionNames ? { optionNames } : {}) })}</script>
+      <script type="application/json" data-superswipe-variants>${JSON.stringify(VARIANT_SETS[variantSet](i).map(v => ({ ...v, available: !(unavailableNine && v.title === '9') })))}</script>
       <button class="superswipe-button" ${(closed || statusDelay) && i === 1 ? 'disabled' : ''} ${hiddenButton && i === 1 ? 'hidden' : ''}>${title}</button>
     </section>`).join('');
   return `<!doctype html><style>[hidden]{display:none!important} .superswipe-modal{border:1px solid;padding:15px}input,select{display:block;margin:4px}</style>${blocks}
@@ -54,11 +62,28 @@ function fixture({ mode = 'pay_after', stale = false, hiddenRegion = false, clos
       document.body.append(banner);
     }
     if (${JSON.stringify(cookie)} === 'early') showCookie();
-    for (const [i, block] of [...document.querySelectorAll('.superswipe-block')].entries()) {
+    if (${consentmo}) {
+      const host = document.createElement('csm-cookie-consent');
+      host.attachShadow({ mode: 'open' }).innerHTML = '<div style="position:fixed;inset:0;z-index:9999;background:#3338"><button>Decline</button><button>Accept</button></div>';
+      host.shadowRoot.querySelectorAll('button')[1].onclick = () => { host.remove(); document.body.dataset.cookieAccepted = 'true'; };
+      document.body.append(host);
+    }
+    function showPopup() {
+      const popup = document.createElement('div'); popup.setAttribute('role', 'dialog'); popup.style = 'position:fixed;inset:0;z-index:9999;background:#fff8';
+      popup.innerHTML = '<button class="klaviyo-close-form" aria-label="Close dialog">x</button>';
+      popup.querySelector('button').onclick = () => { popup.remove(); document.body.dataset.popupClosed = 'true'; };
+      document.body.append(popup);
+    }
+    for (const block of document.querySelectorAll('.superswipe-block')) {
+      const i = Number(block.dataset.index);
+      const variants = JSON.parse(block.querySelector('[data-superswipe-variants]').textContent);
+      const names = JSON.parse(block.querySelector('[data-superswipe-config]').textContent).optionNames || [];
+      const picker = variants.length === 1 ? '' : names.length > 1
+        ? '<select class="superswipe-size" name="superswipe-size" hidden>' + variants.map(v => '<option value="' + v.id + '">' + v.title + '</option>').join('') + '</select>' +
+          names.map((name, n) => [...new Set(variants.map(v => v.options[n]))].map(value => '<button class="superswipe-option-chip" data-option-index="' + n + '" data-option-value="' + value + '" aria-checked="false">' + value + '</button>').join('')).join('')
+        : variants.map((v, n) => '<button class="superswipe-size-chip" data-variant-id="' + v.id + '" aria-checked="' + (n === 0) + '">' + v.title + '</button>').join('');
       const modal = document.createElement('div'); modal.className='superswipe-modal'; modal.hidden=true; modal.setAttribute('aria-hidden','true');
-      modal.innerHTML = '<div class="superswipe-product"></div>' +
-        '<button class="superswipe-size-chip" data-variant-id="'+(101+i*100)+'" aria-checked="true">9</button>' +
-        '<button class="superswipe-size-chip" data-variant-id="'+(102+i*100)+'" aria-checked="false">10.5</button>' +
+      modal.innerHTML = '<div class="superswipe-product"></div>' + '<div class="superswipe-pickup-main-wrap" ' + (${pickup} ? '' : 'hidden') + '>Pickup location</div>' + picker +
         '<div class="superswipe-terms-accept">' + Array.from({length:${termsCount}}, (_, t) => '<label><input type="checkbox" class="superswipe-checkbox" '+(${precheckedTerms} && t % 2 === 0 ? 'checked' : '')+' '+(${disabledTerms} && t === 4 ? 'disabled' : '')+'>Acknowledgment '+t+'</label>').join('') + '</div><button class="superswipe-continue-button" disabled>Continue</button>' +
         '<div class="superswipe-entry-form" hidden>' +
         ['first_name','last_name','email','phone','address1','address2','city','state','zip'].map(name => '<label '+(${hiddenRegion} && ['state','zip'].includes(name)?'hidden':'')+'>'+name+'<input name="'+name+'"></label>').join('') +
@@ -81,6 +106,16 @@ function fixture({ mode = 'pay_after', stale = false, hiddenRegion = false, clos
         block.querySelector('button').hidden=false;
       }, ${statusDelay});
       modal.querySelectorAll('.superswipe-size-chip').forEach(chip=>chip.onclick=()=>modal.querySelectorAll('.superswipe-size-chip').forEach(c=>c.setAttribute('aria-checked',String(c===chip))));
+      // Like the widget: an option chip resolves the variant and reflects it on every group.
+      const select = modal.querySelector('select.superswipe-size');
+      modal.querySelectorAll('.superswipe-option-chip').forEach(chip => chip.onclick = () => {
+        const current = variants.find(v => String(v.id) === select.value) || variants[0];
+        const desired = current.options.slice(); desired[Number(chip.dataset.optionIndex)] = chip.dataset.optionValue;
+        const next = variants.find(v => v.options.every((value, n) => value === desired[n]));
+        if (next) select.value = String(next.id);
+        const chosen = variants.find(v => String(v.id) === select.value);
+        modal.querySelectorAll('.superswipe-option-chip').forEach(c => c.setAttribute('aria-checked', String(chosen.options[Number(c.dataset.optionIndex)] === c.dataset.optionValue)));
+      });
       modal.querySelectorAll('.superswipe-checkbox').forEach(box => box.onchange=e=>{
         modal.dataset.termTimes=JSON.stringify([...JSON.parse(modal.dataset.termTimes || '[]'),performance.now()]);
         if (${rejectTerms}) e.target.checked=false;
@@ -89,6 +124,7 @@ function fixture({ mode = 'pay_after', stale = false, hiddenRegion = false, clos
       let token=''; let frame;
       modal.querySelector('.superswipe-continue-button').onclick=()=>{
         if (${JSON.stringify(cookie)} === 'late') showCookie();
+        if (${klaviyo}) showPopup();
         modal.querySelector('.superswipe-entry-form').hidden=false;
         frame=document.createElement('iframe');frame.src='https://captcha.superswipe.com/?o='+encodeURIComponent(location.origin);modal.querySelector('.superswipe-turnstile').append(frame);
       };
@@ -109,8 +145,10 @@ async function main() {
       currentOptions = options;
       currentController = new AbortController();
       const context = await browser.newContext();
-      await context.route('**/*', route => route.request().url() === 'https://shop.travisscott.com/'
-        ? route.fulfill({ contentType: 'text/html', body: fixture(options) })
+      const storeUrl = options.url || 'https://shop.travisscott.com/';
+      await context.route('**/*', route => route.request().url() === storeUrl
+        ? route.fulfill(options.password ? { status: 302, headers: { location: new URL('/password', storeUrl).href } } : { contentType: 'text/html', body: fixture(options) })
+        : route.request().url() === new URL('/password', storeUrl).href ? route.fulfill({ contentType: 'text/html', body: '<form action="/password"><input name="password"></form>' })
         : route.request().url().startsWith('https://captcha.superswipe.com/')
           ? route.fulfill({ contentType: 'text/html', body: '<div>Offline verification</div>' + (options.noSiteKey ? '' : '<script type="text/plain">turnstile.render("#w",{sitekey:"0xOFFLINE_TEST_SITEKEY"})</script>') }) : route.abort());
       const page = await context.newPage();
@@ -127,12 +165,12 @@ async function main() {
       const ctx = { page, context, profile: { id: 'offline-profile', name: 'Offline', persona: {
         identity: { email: 'jane@example.com', firstName: 'Jane', lastName: "O'Neil", phone: address.phone },
         addresses: options.noAddress ? [] : [address],
-      } }, inputs: { url: options.url || 'https://shop.travisscott.com/', product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12' }, vars, signal: currentController.signal,
+      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12' }, vars, signal: currentController.signal,
         log: () => {}, onNodeEnter: (id) => {
           const active = '[data-scrolls-travis-dialog="active"]';
           if (id === 'n_wait_terms') actions.push((async () => {
             assert.equal(await page.locator(active + ' .superswipe-checkbox:checked').count(), 5);
-            assert.equal(await page.locator('.superswipe-modal').first().locator('.superswipe-checkbox:checked').count(), options.precheckedTerms ? 3 : 0);
+            if (!options.oneDraw) assert.equal(await page.locator('.superswipe-modal').first().locator('.superswipe-checkbox:checked').count(), options.precheckedTerms ? 3 : 0);
             if (options.naturalInput) {
               const times=JSON.parse(await page.locator(active).getAttribute('data-term-times'));
               assert.equal(times.length, 5);
@@ -145,8 +183,9 @@ async function main() {
             assert.equal(await page.locator(active + ' select[name="country"]').inputValue(), address.country);
             if (options.stateSelect) assert.equal(await page.locator(active + ' select[name="state"]').inputValue(), 'AZ');
             if (options.phonePrefix) assert.equal(await page.locator(active + ' input[name="phone"]').inputValue(), '6025550123');
-            if (options.cookie) assert.equal(await page.locator('body').getAttribute('data-cookie-accepted'), 'true');
-            assert.equal(await page.locator('.superswipe-modal').first().getAttribute('aria-hidden'), 'true');
+            if (options.cookie || options.consentmo) assert.equal(await page.locator('body').getAttribute('data-cookie-accepted'), 'true');
+            if (options.klaviyo) assert.equal(await page.locator('body').getAttribute('data-popup-closed'), 'true');
+            if (!options.oneDraw) assert.equal(await page.locator('.superswipe-modal').first().getAttribute('aria-hidden'), 'true');
           })());
         },
       };
@@ -159,6 +198,7 @@ async function main() {
         } else {
           if (error) throw error;
           assert.equal(recorded.length, 1); assert.equal(recorded[0].productLabel, product);
+          assert.equal(recorded[0].site, options.site || 'shop.travisscott.com');
           assert.equal(recorded[0].email, 'jane@example.com');
           assert.ok((options.expectedVariants || ['202']).includes(recorded[0].metadata.variantId)); assert.equal(recorded[0].metadata.releaseId, 'release-1');
           assert.equal(vars.get('_result').status, 'entered');
@@ -211,6 +251,27 @@ async function main() {
     await scenario('Random excludes unavailable and unsupported sizes', { sizeMode: 'Random', unavailableNine: true });
     await scenario('Reversed range fails before entry', { sizeMode: 'Size range', sizeMinimum: '12', sizeMaximum: '8', error: /valid size range/ });
     await scenario('Empty available range fails without fallback', { sizeMode: 'Size range', sizeMinimum: '14', sizeMaximum: '15', error: /no sizes match/ });
+    const vv = { url: 'https://victorvictor.com/', site: 'victorvictor.com' };
+    await scenario('Victor Victor store records its own site', { ...vv, consentmo: true });
+    await scenario('Victor Victor www host', { ...vv, url: 'https://www.victorvictor.com/' });
+    await scenario('Consentmo banner and Klaviyo popup are dismissed', { ...vv, consentmo: true, klaviyo: true, naturalInput: true });
+    await scenario('Blank title enters the only draw on the page', { ...vv, product: '', oneDraw: true });
+    await scenario('Blank title with several draws asks for one', { ...vv, product: '', error: /enter the exact product title\. Draws on this page: OTHER PRODUCT; AIR FORCE/ });
+    await scenario('Unknown title lists the draws found', { ...vv, product: 'NOT A DRAW', error: /found 0\. Check the product title\. Draws on this page/ });
+    await scenario('Curly apostrophe matches the title', { product: 'AIR FORCE 1 \u201907 LOW CACTUS JACK' });
+    await scenario('Hidden duplicate layout of the same draw', { ...vv, duplicate: true, statusDelay: 300 });
+    await scenario('Locked store fails before waiting for draws', { ...vv, password: true, error: /password-protected/ });
+    assert.equal(solverCalls.length, 0);
+    await scenario('One-size drop needs no size picker', { ...vv, variantSet: 'oneSize' });
+    await scenario('Apparel label Medium matches size M', { ...vv, variantSet: 'apparel', size: 'M' });
+    await scenario('Apparel range S to M', { ...vv, variantSet: 'apparel', sizeMode: 'Size range', sizeMinimum: 'S', sizeMaximum: 'M', expectedVariants: ['201', '202'] });
+    await scenario('Apparel size missing lists available sizes', { ...vv, variantSet: 'apparel', size: 'L', error: /no sizes match the selection\. Available: Small, Medium, X-Large/ });
+    await scenario('Mixed shoe/apparel range fails before entry', { ...vv, sizeMode: 'Size range', sizeMinimum: '10', sizeMaximum: 'L', error: /two shoe sizes or two apparel sizes/ });
+    await scenario('Colour / Size options pick the size chip', { ...vv, variantSet: 'options', optionNames: ['Color', 'Size'], size: 'M', expectedVariants: ['202'] });
+    await scenario('Several colours are not guessed', { ...vv, variantSet: 'colours', optionNames: ['Color', 'Size'], size: 'M', error: /also asks for Color/ });
+    await scenario('Pickup-only draw fails before solving', { ...vv, pickup: true, error: /pickup-only/ });
+    assert.equal(solverCalls.length, 0);
+    await scenario('Other Shopify store is rejected', { url: 'https://victorvictor.example.com/', error: /HTTPS URL on shop\.travisscott\.com or victorvictor\.com/ });
   } finally { await browser.close(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
