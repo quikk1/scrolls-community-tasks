@@ -2304,6 +2304,11 @@
           }
         }
       ]
+    },
+    "author": {
+      "name": "Scrolls",
+      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
+      "signature": "qlx5i2X67RunteNe0hplutfKhVPJ6/nQ/8Fj/kSxT1XYLlLs3m04UQQvvHPVw4hCENoiJXqZWRDs8sEqf0lAAw=="
     }
   }
 }
