@@ -49,7 +49,7 @@ do {
 node('n_start', 'noop', {});
 node('n_settings', 'setVar', { name: 'travisSettings', value: {
   url: '{{inputs.url}}', product: '{{inputs.product}}', size: '{{inputs.size}}',
-  sizeMode: '{{inputs.sizeMode}}', sizeMinimum: '{{inputs.sizeMinimum}}', sizeMaximum: '{{inputs.sizeMaximum}}',
+  sizeMode: '{{inputs.sizeMode}}', sizeMinimum: '{{inputs.sizeMinimum}}', sizeMaximum: '{{inputs.sizeMaximum}}', cardDraws: '{{inputs.cardDraws}}',
   identity: { firstName: '{{profile.identity.firstName}}', lastName: '{{profile.identity.lastName}}', email: '{{profile.identity.email}}', phone: '{{profile.identity.phone}}' }, addresses: '{{addresses}}',
 } });
 evaluate('n_preflight', `
@@ -110,7 +110,12 @@ if (launches.length !== 1) {
 }
 const block = matches.find(visible) || matches[0];
 const cfg = configOf(block);
-if ((block.dataset.releaseMode || cfg.releaseMode) !== 'pay_after') throw new Error('This module supports no-payment entry draws only.');
+const releaseMode = block.dataset.releaseMode || cfg.releaseMode || 'standard';
+const cardDraws = settings.cardDraws === true || settings.cardDraws === 'true';
+// "standard" draws hand off to Shopify checkout with a deferred-payment selling
+// plan: $0 today, charged only if selected. Entering them needs an explicit opt-in.
+if (releaseMode === 'standard' && !cardDraws) throw new Error('This draw needs a card on file ($0 today, charged only if selected). Turn on Card draws to enter it; no-payment entry draws need nothing.');
+if (!['pay_after', 'standard'].includes(releaseMode)) throw new Error('This module supports no-payment and card-on-file entry draws only.');
 const variants = JSON.parse(block.querySelector('[data-superswipe-variants]').textContent);
 const allowedSizes = ${JSON.stringify(SIZES)};
 // Shopify size labels vary by store: "Small", "X-Large", "US 10.5" and so on.
@@ -161,7 +166,7 @@ const variant = sizes[mode === 'Single size' ? 0 : Math.floor(Math.random() * si
 if (!/^\\d+$/.test(String(variant.id))) throw new Error('Invalid product variant.');
 document.querySelectorAll('[data-scrolls-travis-product]').forEach(el => el.removeAttribute('data-scrolls-travis-product'));
 block.setAttribute('data-scrolls-travis-product', 'active');
-return { title: cfg.title, site, releaseId: block.dataset.superswipeLaunchId, variantId: String(variant.id), size: String(sizeOf(variant)), selection,
+return { title: cfg.title, site, releaseMode, releaseId: block.dataset.superswipeLaunchId, variantId: String(variant.id), size: String(sizeOf(variant)), selection,
   options: selection === 'options' ? optionNames.map((_, i) => String(optionAt(variant, i))) : [] };
 `, 'travisProduct');
 // SuperSwipe initially disables the button during its asynchronous status check.
@@ -243,7 +248,9 @@ return true;
 node('n_wait_terms', 'waitFor', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-continue-button:not([disabled])', timeoutMs: 30000 });
 acceptCookies('n_cookies_before_continue');
 node('n_continue', 'click', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-continue-button', instant: true, timeoutMs: 30000 });
-node('n_wait_form', 'waitFor', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-entry-form:not([hidden]) input[name="first_name"]', timeoutMs: 30000 });
+node('n_entry_route', 'branch', { left: '{{vars.travisProduct.releaseMode}}', op: '===', right: 'pay_after' });
+node('n_wait_form', 'waitFor', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-entry-form:not([hidden]) input[name="first_name"]', timeoutMs: 30000 }, { linked: false });
+edge('n_entry_route', 'true', 'n_wait_form');
 acceptCookies('n_cookies_before_form');
 node('n_fill_notice', 'log', { level: 'info', message: 'Filling the selected shipping address and contact details.' });
 node('n_country', 'select', { selector: '[data-scrolls-travis-dialog="active"] select[name="country"]', value: '{{vars.travisFields.country}}', timeoutMs: 30000 });
@@ -311,13 +318,152 @@ return { email: actual, status: 'entered', site: product.site, releaseId: produc
 `, 'travisOutcome');
 node('n_save_entry', 'inventory.record', { site: '{{vars.travisProduct.site}}', productLabel: '{{vars.travisProduct.title}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
 node('n_result', 'setResult', { value: '{{vars.travisOutcome}}' });
-const DESCRIPTION = 'Oasis-style browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. 0.4.0: Victor Victor store support, optional product title when the page has one draw, apparel and one-size drops.';
+// Card-on-file ("standard") draws: SuperSwipe puts the size in a cart with a
+// deferred-payment selling plan and opens Shopify checkout. The order is $0
+// today; the store charges the Key Vault card later only if the entry wins.
+// Selectors follow Shopify's one-page checkout (captured live 22 Oct 2026).
+const CO_FIELD = name => `input[name="${name}"]:not([id^="autofill_"])`;
+const CARD_FRAME = (frame, input) => `iframe[name^="card-fields-${frame}-"] >> internal:control=enter-frame >> input[name="${input}"]`;
+node('n_co_card', 'vault.pick', { cardId: '{{inputs.cardId}}', into: 'travisCard' }, { linked: false });
+edge('n_entry_route', 'false', 'n_co_card');
+// Only non-secret card details go into a script; the number and CVV are typed by fill nodes.
+node('n_co_card_meta', 'setVar', { name: 'travisCardMeta', value: { name: '{{vars.travisCard.cardholderName}}', expMonth: '{{vars.travisCard.expMonth}}', expYear: '{{vars.travisCard.expYear}}' } });
+evaluate('n_co_card_fields', `
+const meta = {{vars.travisCardMeta}};
+const fields = {{vars.travisFields}};
+const month = String(meta.expMonth ?? '').padStart(2, '0'), year = String(meta.expYear ?? '').slice(-2);
+if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\\d{2}$/.test(year)) throw new Error('The Key Vault card has no valid expiry date.');
+const name = String(meta.name || '').trim() || (fields.first_name + ' ' + fields.last_name).trim();
+// Shopify's national phone field: drop the +1 prefix for US and Canada.
+let phone = String(fields.phone).trim();
+const digits = phone.replace(/\\D/g, '');
+if (['US', 'CA'].includes(fields.country) && /^1\\d{10}$/.test(digits)) phone = digits.slice(1);
+else if (['US', 'CA'].includes(fields.country) && /^\\d{10}$/.test(digits)) phone = digits;
+return { expiry: month + ' / ' + year, name, phone };
+`, 'travisCardFields');
+node('n_co_queue_notice', 'log', { level: 'info', message: 'Opening Shopify checkout. Busy drops queue checkouts; waiting up to 90 minutes in line.' });
+node('n_co_wait_checkout', 'waitFor', { selector: '#checkout-pay-button', state: 'attached', timeoutMs: 5400000 });
+node('n_co_wait_email', 'waitFor', { selector: 'input#email', state: 'visible', timeoutMs: 60000 });
+evaluate('n_co_check_page', helpers + `
+const product = {{vars.travisProduct}};
+if (location.hostname.replace(/^www\\./, '') !== product.site || !/\\/checkouts?\\//.test(location.pathname)) throw new Error('Unexpected checkout page: ' + location.hostname + location.pathname);
+const text = norm(document.body.innerText);
+if (!text.includes(norm(product.title))) throw new Error('The checkout cart does not show the selected draw product.');
+const due = document.body.innerText.match(/Due today\\s*(?:[A-Z]{3})?\\s*[^0-9\\s]?\\s*([0-9][0-9.,]*)/i);
+if (!due || Number(due[1].replace(/,/g, '')) !== 0) throw new Error('Checkout does not show $0.00 due today; stopped before entering payment details.');
+return true;
+`, 'travisCheckoutReady');
+node('n_co_fill_notice', 'log', { level: 'info', message: 'Filling checkout contact and shipping details.' });
+node('n_co_email', 'fill', { selector: 'input#email', value: '{{vars.travisFields.email}}', instant: true, timeoutMs: 30000 });
+node('n_co_country', 'select', { selector: 'select[name="countryCode"]', value: '{{vars.travisFields.country}}', timeoutMs: 30000 });
+node('n_co_first_name', 'fill', { selector: CO_FIELD('firstName'), value: '{{vars.travisFields.first_name}}', instant: true, timeoutMs: 30000 });
+node('n_co_last_name', 'fill', { selector: CO_FIELD('lastName'), value: '{{vars.travisFields.last_name}}', instant: true, timeoutMs: 30000 });
+node('n_co_address1', 'fill', { selector: CO_FIELD('address1'), value: '{{vars.travisFields.address1}}', instant: true, timeoutMs: 30000 });
+// Close the address-suggestion list without choosing a suggestion.
+node('n_co_address1_close', 'press', { selector: CO_FIELD('address1'), key: 'Escape', instant: true, timeoutMs: 30000 });
+node('n_co_address2', 'fill', { selector: CO_FIELD('address2'), value: '{{vars.travisFields.address2}}', instant: true, timeoutMs: 30000 });
+node('n_co_city', 'fill', { selector: CO_FIELD('city'), value: '{{vars.travisFields.city}}', instant: true, timeoutMs: 30000 });
+// State and postal code depend on the country; React needs the native value setter.
+evaluate('n_co_regional', helpers + `
+const fields = {{vars.travisFields}};
+const setValue = (el, value) => {
+  const proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  el.dispatchEvent(new Event('blur', { bubbles: true }));
+};
+const zone = document.querySelector('select[name="zone"], input[name="zone"]:not([id^="autofill_"])');
+if (visible(zone)) {
+  if (!String(fields.state).trim()) throw new Error('Fill the profile shipping field: state');
+  if (zone.tagName === 'SELECT') {
+    const option = [...zone.options].find(o => !o.disabled && o.value && (norm(o.value) === norm(fields.state) || norm(o.textContent) === norm(fields.state)));
+    if (!option) throw new Error('Shipping state does not match an available option.');
+    setValue(zone, option.value);
+  } else setValue(zone, fields.state);
+}
+const zip = document.querySelector('input[name="postalCode"]:not([id^="autofill_"])');
+if (visible(zip)) {
+  if (!String(fields.zip).trim()) throw new Error('Fill the profile shipping field: zip');
+  setValue(zip, fields.zip);
+}
+return true;
+`, 'travisCheckoutRegional');
+node('n_co_phone', 'fill', { selector: CO_FIELD('phone'), value: '{{vars.travisCardFields.phone}}', instant: true, timeoutMs: 30000 });
+evaluate('n_co_verify_fields', helpers + `
+const fields = {{vars.travisFields}};
+const card = {{vars.travisCardFields}};
+const value = name => document.querySelector('[name="' + name + '"]:not([id^="autofill_"])');
+const expected = { email: fields.email, firstName: fields.first_name, lastName: fields.last_name, address1: fields.address1, address2: fields.address2, city: fields.city, countryCode: fields.country };
+for (const [name, want] of Object.entries(expected)) {
+  const el = value(name);
+  if (!el || (!visible(el) && name !== 'address2')) throw new Error('Checkout field is missing or hidden: ' + name);
+  if (visible(el) && norm(el.value) !== norm(want)) throw new Error('Checkout field was not filled correctly: ' + name);
+}
+const phone = value('phone');
+if (visible(phone) && phone.value.replace(/\\D/g, '').slice(-10) !== String(card.phone).replace(/\\D/g, '').slice(-10)) throw new Error('Checkout field was not filled correctly: phone');
+return true;
+`, 'travisCheckoutFields');
+evaluate('n_co_wait_shipping', helpers + `
+const deadline = Date.now() + 45000;
+while (Date.now() < deadline) {
+  const text = document.body.innerText;
+  if (/no shipping (rates|options|methods)|can.t ship to|doesn.t ship to|isn.t available for/i.test(text)) throw new Error('The store has no shipping option for this address.');
+  if (!/Enter your shipping address to view available shipping methods|Getting available shipping rates|Calculating/i.test(text)) return true;
+  await new Promise(resolve => setTimeout(resolve, 500));
+}
+throw new Error('Shipping options did not load for this address.');
+`, 'travisShippingReady');
+evaluate('n_co_card_tile', `
+const tile = document.querySelector('#payment-tiles-creditCards');
+if (tile && !tile.checked) tile.click();
+if (tile && !tile.checked) throw new Error('Could not choose credit card payment.');
+return true;
+`, 'travisCardTile');
+node('n_co_card_notice', 'log', { level: 'info', message: 'Entering the Key Vault card ($0 due today).' });
+node('n_co_card_wait', 'waitFor', { selector: CARD_FRAME('number', 'number'), state: 'visible', timeoutMs: 60000 });
+node('n_co_card_number', 'fill', { selector: CARD_FRAME('number', 'number'), value: '{{vars.travisCard.number}}', timeoutMs: 30000 });
+node('n_co_card_expiry', 'fill', { selector: CARD_FRAME('expiry', 'expiry'), value: '{{vars.travisCardFields.expiry}}', timeoutMs: 30000 });
+node('n_co_card_cvv', 'fill', { selector: CARD_FRAME('verification_value', 'verification_value'), value: '{{vars.travisCard.cvv}}', timeoutMs: 30000 });
+node('n_co_card_name', 'fill', { selector: CARD_FRAME('name', 'name'), value: '{{vars.travisCardFields.name}}', timeoutMs: 30000 });
+evaluate('n_co_before_pay', helpers + `
+const due = document.body.innerText.match(/Due today\\s*(?:[A-Z]{3})?\\s*[^0-9\\s]?\\s*([0-9][0-9.,]*)/i);
+if (!due || Number(due[1].replace(/,/g, '')) !== 0) throw new Error('Checkout no longer shows $0.00 due today; stopped before paying.');
+const errors = [...document.querySelectorAll('[id^="error-for-"]')].filter(visible).map(el => el.textContent.trim()).filter(Boolean);
+if (errors.length) throw new Error('Checkout rejected a field: ' + errors.join('; '));
+const pay = document.querySelector('#checkout-pay-button');
+if (!visible(pay) || pay.disabled) throw new Error('The checkout pay button is not available.');
+const later = document.body.innerText.match(/Due [A-Z][a-z]{2} \\d{1,2}, \\d{4}\\s*([^\\n]+)/);
+return { dueToday: 0, dueLater: later ? later[0].replace(/\\s+/g, ' ').trim() : '' };
+`, 'travisCheckoutDue');
+node('n_co_pay_notice', 'log', { level: 'info', message: 'Completing the $0.00 checkout.' });
+node('n_co_pay', 'click', { selector: '#checkout-pay-button', timeoutMs: 30000 });
+node('n_co_wait_result', 'waitFor', { selector: 'h1:has-text("Thank you"), h2:has-text("Thank you"), [id^="error-for-"]:visible, [role="alert"]:visible:not(:empty)', state: 'visible', timeoutMs: 180000 });
+evaluate('n_co_confirm', helpers + `
+const product = {{vars.travisProduct}};
+const fields = {{vars.travisFields}};
+const due = {{vars.travisCheckoutDue}};
+const heading = [...document.querySelectorAll('h1, h2')].find(el => visible(el) && /thank you/i.test(el.textContent));
+if (!/thank[-_]you/i.test(location.pathname) && !heading) {
+  const errors = [...document.querySelectorAll('[id^="error-for-"], [role="alert"]')].filter(visible).map(el => el.textContent.trim()).filter(Boolean);
+  throw new Error('Checkout was not completed: ' + (errors.join('; ') || 'no confirmation page'));
+}
+const text = document.body.innerText;
+const confirmation = (text.match(/Confirmation\\s*#?\\s*([A-Z0-9-]{4,})/i) || text.match(/Order\\s*#\\s*([A-Z0-9-]+)/i) || [])[1] || '';
+return { email: fields.email, status: 'entered', site: product.site, releaseId: product.releaseId, variantId: product.variantId, size: product.size,
+  entry: 'card-on-file', confirmation, dueLater: due.dueLater };
+`, 'travisOutcome');
+node('n_co_save_entry', 'inventory.record', { site: '{{vars.travisProduct.site}}', productLabel: '{{vars.travisProduct.title}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
+node('n_co_result', 'setResult', { value: '{{vars.travisOutcome}}' });
+const DESCRIPTION = 'Oasis-style browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.0: card-on-file draws, Victor Victor store, optional product title, apparel and one-size drops.';
 const URL_HINT = 'shop.travisscott.com or victorvictor.com. A password-protected store fails until the draw is live.';
 const PRODUCT_HINT = 'Leave blank when the page has a single draw. With several draws, enter the title exactly as shown.';
+const CARD_HINT = 'Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today.';
+const CARD_ID_HINT = 'Used only for card draws. Leave blank for the default Key Vault card.';
 const sizeInput = (id, label, defaultValue, equals) => ({ id, type: 'select', label, default: defaultValue, options: SIZES,
   visibleWhen: { input: 'sizeMode', equals }, requiredWhen: { input: 'sizeMode', equals } });
 const graph = {
-  schemaVersion: 1, version: '0.4.0', metadata: {
+  schemaVersion: 1, version: '0.5.0', metadata: {
     id: 'travis-scott-browser', name: 'Travis Scott — Browser Entry', class: 'raffle', description: DESCRIPTION,
     tags: ['travis-scott', 'victor-victor', 'superswipe', 'browser', 'raffle'], inputs: [
       { id: 'url', label: 'Store / product URL', type: 'url', required: true, defaultValue: 'https://shop.travisscott.com/', hint: URL_HINT },
@@ -326,8 +472,10 @@ const graph = {
       { id: 'size', label: 'Size', type: 'select', required: true, defaultValue: '10.5', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Single size' } },
       { id: 'sizeMinimum', label: 'Minimum size', type: 'select', required: true, defaultValue: '8', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
       { id: 'sizeMaximum', label: 'Maximum size', type: 'select', required: true, defaultValue: '12', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
+      { id: 'cardDraws', label: 'Card draws', type: 'boolean', defaultValue: false, hint: CARD_HINT },
+      { id: 'cardId', label: 'Key Vault card ID', type: 'string', required: false, defaultValue: '', hint: CARD_ID_HINT },
     ],
-  }, permissions: ['browser', 'evaluate', 'captcha', 'inventory'], variables: [], start: 'n_start', nodes, edges,
+  }, permissions: ['browser', 'evaluate', 'captcha', 'inventory', 'vault'], variables: [], start: 'n_start', nodes, edges,
   runSchema: {
     schemaVersion: 1, kind: 'graph',
     module: { id: 'travis-scott-browser', name: 'Travis Scott — Browser Entry', site: 'shop.travisscott.com', siteLabel: 'Travis Scott', execution: 'browser' },
@@ -344,6 +492,8 @@ const graph = {
       sizeInput('size', 'Size', '10.5', 'Single size'),
       sizeInput('sizeMinimum', 'Minimum size', '8', 'Size range'),
       sizeInput('sizeMaximum', 'Maximum size', '12', 'Size range'),
+      { id: 'cardDraws', type: 'boolean', label: 'Card draws', default: false, hint: CARD_HINT },
+      { id: 'cardId', type: 'text', label: 'Key Vault card ID', default: '', placeholder: 'Blank: default card', hint: CARD_ID_HINT },
     ],
   },
 };

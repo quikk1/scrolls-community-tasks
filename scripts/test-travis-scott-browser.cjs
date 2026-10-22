@@ -30,6 +30,11 @@ registerNode({ kind: 'captcha.solveTurnstile', permissions: ['captcha', 'browser
   });
   return { setVars: { [c.into]: result } };
 } });
+registerNode({ kind: 'vault.pick', permissions: ['vault'], execute: async ({ config, resolve }) => {
+  const c = resolve(config);
+  if (currentOptions.noCard) throw new Error('vault.pick: no card found');
+  return { setVars: { [c.into]: { id: 'card-1', number: '4242424242424242', cvv: '123', cardholderName: currentOptions.cardName ?? "Jane O'Neil", expMonth: 3, expYear: 2030 } } };
+} });
 registerNode({ kind: 'inventory.record', permissions: ['inventory'], execute: async ({ config, resolve }) => {
   recorded.push(resolve(config)); return {};
 } });
@@ -123,6 +128,7 @@ function fixture({ variantSet = 'shoe', optionNames, oneDraw = false, duplicate 
       });
       let token=''; let frame;
       modal.querySelector('.superswipe-continue-button').onclick=()=>{
+        if (${JSON.stringify(mode)} === 'standard') { location.href = '/checkouts/cn/TEST/en-us'; return; }
         if (${JSON.stringify(cookie)} === 'late') showCookie();
         if (${klaviyo}) showPopup();
         modal.querySelector('.superswipe-entry-form').hidden=false;
@@ -136,21 +142,72 @@ function fixture({ variantSet = 'shoe', optionNames, oneDraw = false, duplicate 
     }
   </script>`;
 }
+const PCI = 'https://checkout.pci.shopifyinc.com';
+function cardFrame(field) {
+  return '<input name="' + field + '" id="' + field + '"><script>document.querySelector("input").addEventListener("input", e => parent.postMessage({ cardField: "' + field + '", value: e.target.value }, "*"));<\/script>';
+}
+function checkoutPage({ dueToday = '0.00', decline = false, noShipping = false } = {}) {
+  const field = (name, label, extra = '') => '<label>' + label + '<input name="' + name + '" id="f-' + name + '" ' + extra + '></label>';
+  return `<!doctype html><title>Checkout</title><style>[hidden]{display:none!important} input,select{display:block;margin:3px}</style>
+  <main>
+  <div role="alert"></div>
+  <section id="decoys" style="position:absolute;left:-9999px">${['firstName','lastName','address1','address2','city','postalCode'].map(n => '<input name="' + n + '" id="autofill_' + n + '">').join('')}</section>
+  <input name="email" id="email" type="email"><input type="checkbox" name="marketing_opt_in" checked>
+  <select name="countryCode"><option value="US">United States</option><option value="HK">Hong Kong</option></select>
+  ${field('firstName', 'First name')}${field('lastName', 'Last name')}${field('address1', 'Address')}${field('address2', 'Apartment')}${field('city', 'City')}
+  <select name="zone"><option value="AK">Alaska</option><option value="AZ">Arizona</option></select>${field('postalCode', 'ZIP code')}${field('phone', 'Phone', 'type="tel"')}
+  <p id="shipping">Enter your shipping address to view available shipping methods.</p>
+  <input type="radio" name="payment-tiles" id="payment-tiles-creditCards" checked>
+  ${['number', 'expiry', 'verification_value', 'name'].map(n => '<iframe name="card-fields-' + n + '-abc123" src="' + PCI + '/' + n + '.html" style="height:40px"></iframe>').join('')}
+  <p>${product}</p><p>Subtotal $150.00</p><p>Due today</p><p>USD ${dueToday}</p><p>Due Oct 22, 2027</p><p>$158.40</p>
+  <button type="submit" id="checkout-pay-button">Pay now$158.40</button>
+  </main>
+  <script>
+    const card = {};
+    window.addEventListener('message', e => { if (e.origin === '${PCI}' && e.data?.cardField) card[e.data.cardField] = e.data.value; });
+    document.querySelector('[name="postalCode"]:not([id^="autofill_"])').addEventListener('change', () => setTimeout(() => {
+      document.querySelector('#shipping').textContent = ${noShipping} ? 'No shipping options are available for this address.' : 'Standard shipping $8.00';
+    }, 200));
+    document.querySelector('#checkout-pay-button').onclick = () => {
+      const v = n => document.querySelector('[name="' + n + '"]:not([id^="autofill_"])').value;
+      const decoyFilled = [...document.querySelectorAll('[id^="autofill_"]')].some(el => el.value);
+      const ok = v('email') === 'jane@example.com' && v('firstName') === 'Jane' && v('lastName') === "O'Neil" && v('address1') === '123 Example St' &&
+        v('city') === 'Test City' && document.querySelector('[name="zone"]').value === 'AZ' && v('postalCode') === '85001' && v('phone') === '6025550123' &&
+        card.number === '4242424242424242' && card.expiry === '03 / 30' && card.verification_value === '123' && card.name === "Jane O'Neil" && !decoyFilled;
+      document.body.dataset.payAttempted = 'true';
+      if (!ok) { document.querySelector('[role="alert"]').textContent = 'Fixture rejected checkout values: ' + JSON.stringify({ card, decoyFilled }); return; }
+      if (${decline}) { document.querySelector('[role="alert"]').textContent = 'Your card was declined.'; return; }
+      location.href = location.pathname.replace(/[/]$/, '') + '/thank-you';
+    };
+  </script>`;
+}
 async function main() {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   try {
     async function scenario(name, options = {}) {
+      if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
       recorded.length = 0;
       solverCalls = [];
       currentOptions = options;
       currentController = new AbortController();
       const context = await browser.newContext();
       const storeUrl = options.url || 'https://shop.travisscott.com/';
+      const origin = new URL(storeUrl).origin;
+      // Last-registered routes win: offline by default, then specific pages.
+      await context.route("**/*", route => route.abort());
+      await context.route(origin + '/checkouts/**', route => {
+        const url = route.request().url();
+        if (url.endsWith('/thank-you')) return route.fulfill({ contentType: 'text/html', body: '<main><h2>Thank you, Jane!</h2><p>Confirmation #VV12345</p></main>' });
+        if (url.endsWith('/throttle')) return route.fulfill({ contentType: 'text/html', body: '<p>You are in line to check out</p><script>setTimeout(() => location.href = "/checkouts/cn/TEST/en-us/", 300)</script>' });
+        if (url.endsWith('/en-us')) return route.fulfill({ contentType: 'text/html', body: '<script>location.replace("/checkouts/cn/TEST/en-us/throttle")</script>' });
+        return route.fulfill({ contentType: 'text/html', body: checkoutPage(options) });
+      });
+      await context.route(PCI + '/**', route => route.fulfill({ contentType: 'text/html', body: cardFrame(route.request().url().split('/').pop().replace('.html', '')) }));
       await context.route('**/*', route => route.request().url() === storeUrl
-        ? route.fulfill(options.password ? { status: 302, headers: { location: new URL('/password', storeUrl).href } } : { contentType: 'text/html', body: fixture(options) })
+        ? route.fulfill({ contentType: 'text/html', body: fixture(options) })
         : route.request().url() === new URL('/password', storeUrl).href ? route.fulfill({ contentType: 'text/html', body: '<form action="/password"><input name="password"></form>' })
         : route.request().url().startsWith('https://captcha.superswipe.com/')
-          ? route.fulfill({ contentType: 'text/html', body: '<div>Offline verification</div>' + (options.noSiteKey ? '' : '<script type="text/plain">turnstile.render("#w",{sitekey:"0xOFFLINE_TEST_SITEKEY"})</script>') }) : route.abort());
+          ? route.fulfill({ contentType: 'text/html', body: '<div>Offline verification</div>' + (options.noSiteKey ? '' : '<script type="text/plain">turnstile.render("#w",{sitekey:"0xOFFLINE_TEST_SITEKEY"})</script>') }) : route.fallback());
       const page = await context.newPage();
       const g = structuredClone(graph);
       for (const n of g.nodes) {
@@ -165,7 +222,7 @@ async function main() {
       const ctx = { page, context, profile: { id: 'offline-profile', name: 'Offline', persona: {
         identity: { email: 'jane@example.com', firstName: 'Jane', lastName: "O'Neil", phone: address.phone },
         addresses: options.noAddress ? [] : [address],
-      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12' }, vars, signal: currentController.signal,
+      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12', cardDraws: options.cardDraws ?? false, cardId: '' }, vars, signal: currentController.signal,
         log: () => {}, onNodeEnter: (id) => {
           const active = '[data-scrolls-travis-dialog="active"]';
           if (id === 'n_wait_terms') actions.push((async () => {
@@ -202,8 +259,16 @@ async function main() {
           assert.equal(recorded[0].email, 'jane@example.com');
           assert.ok((options.expectedVariants || ['202']).includes(recorded[0].metadata.variantId)); assert.equal(recorded[0].metadata.releaseId, 'release-1');
           assert.equal(vars.get('_result').status, 'entered');
-          assert.equal(solverCalls.length, 1);
-          assert.deepEqual(vars.get('travisTurnstile'), { provider: 'capsolver', elapsedMs: 1 });
+          if (options.mode === 'standard') {
+            assert.equal(solverCalls.length, 0);
+            assert.equal(recorded[0].metadata.entry, 'card-on-file');
+            assert.equal(recorded[0].metadata.confirmation, 'VV12345');
+            assert.match(recorded[0].metadata.dueLater, /Due Oct 22, 2027/);
+            assert.ok(!JSON.stringify(recorded[0]).includes('4242424242424242'), 'card number must not reach inventory');
+          } else {
+            assert.equal(solverCalls.length, 1);
+            assert.deepEqual(vars.get('travisTurnstile'), { provider: 'capsolver', elapsedMs: 1 });
+          }
         }
         console.log('PASS ' + name);
       } finally { await context.close(); }
@@ -260,7 +325,7 @@ async function main() {
     await scenario('Unknown title lists the draws found', { ...vv, product: 'NOT A DRAW', error: /found 0\. Check the product title\. Draws on this page/ });
     await scenario('Curly apostrophe matches the title', { product: 'AIR FORCE 1 \u201907 LOW CACTUS JACK' });
     await scenario('Hidden duplicate layout of the same draw', { ...vv, duplicate: true, statusDelay: 300 });
-    await scenario('Locked store fails before waiting for draws', { ...vv, password: true, error: /password-protected/ });
+    await scenario('Locked store fails before waiting for draws', { ...vv, url: 'https://victorvictor.com/password', error: /password-protected/ });
     assert.equal(solverCalls.length, 0);
     await scenario('One-size drop needs no size picker', { ...vv, variantSet: 'oneSize' });
     await scenario('Apparel label Medium matches size M', { ...vv, variantSet: 'apparel', size: 'M' });
@@ -272,6 +337,15 @@ async function main() {
     await scenario('Pickup-only draw fails before solving', { ...vv, pickup: true, error: /pickup-only/ });
     assert.equal(solverCalls.length, 0);
     await scenario('Other Shopify store is rejected', { url: 'https://victorvictor.example.com/', error: /HTTPS URL on shop\.travisscott\.com or victorvictor\.com/ });
+    const card = { url: 'https://victorvictor.com/', site: 'victorvictor.com', mode: 'standard', cardDraws: true, stateSelect: true };
+    await scenario('Card draw needs the opt-in', { ...card, cardDraws: false, error: /Turn on Card draws/ });
+    await scenario('Card draw: queue, checkout, card frames and confirmation', card);
+    await scenario('Card draw with human typing into card frames', { ...card, naturalInput: true });
+    await scenario('Card draw without a cardholder name uses the profile name', { ...card, cardName: '' });
+    await scenario('Card draw stops when money is due today', { ...card, dueToday: '158.40', error: /does not show \$0\.00 due today/ });
+    await scenario('Declined card is reported and not recorded', { ...card, decline: true, error: /Checkout was not completed: Your card was declined/ });
+    await scenario('No shipping option stops before payment', { ...card, noShipping: true, error: /no shipping option/ });
+    await scenario('Missing Key Vault card fails before checkout', { ...card, noCard: true, error: /no card found/ });
   } finally { await browser.close(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

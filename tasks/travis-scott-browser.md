@@ -14,9 +14,21 @@ The solver reads the live verification frame's public site key and URL. Provider
 
 One-size drops (a single variant) have no size picker; the size setting is ignored unless the variant itself is a supported size. Drops with several option groups (for example Color / Size) are supported when only the size varies; the module picks each option chip and verifies the resolved variant. It never guesses a colour or style.
 
-The flow supports no-payment (`pay_after`) shipping draws. It rejects payment-required draws, pickup-only draws, unavailable sizes, ambiguous products and an already-visible prior entry. A password-protected store (Shopify `/password`) fails immediately; run again once the draw page is live. It reports a visible site rejection and does not automatically resubmit. If a solver returns after cancellation or the verification frame changes, the token is discarded. A provider task already created may still complete remotely after cancellation.
+The flow supports no-payment (`pay_after`) shipping draws, and card-on-file (`standard`) draws when **Card draws** is on.
+
+**Card draws.** Some SuperSwipe drops (for example the Victor Victor x Nike Air Force 1 '01 Deep Royal draw, October 2026) keep a card on file: after the acknowledgments, SuperSwipe puts the size in a cart with a deferred-payment plan and opens Shopify checkout. Nothing is due today; the store charges the card later only if the entry is selected. With **Card draws** off (the default) the run stops before checkout. With it on, the module:
+
+- picks the Key Vault card (**Key Vault card ID**, blank for the default card) before checkout;
+- waits in Shopify's checkout queue for up to 90 minutes;
+- checks the cart shows the selected product and **$0.00 due today**, then fills contact and shipping details (ignoring Shopify's hidden autofill fields), waits for shipping options, and types the card into Shopify's secure card frames;
+- re-checks $0.00 due today and field errors immediately before **Pay now**, and stops instead of paying if anything is due;
+- records only a visible Shopify thank-you page, with its confirmation number and the deferred amount. A decline or checkout error is reported and not recorded.
+
+Card number and CVV are typed from Key Vault into the card frames and are never placed in page scripts, logs or inventory. 3-D Secure and Shopify bot challenges are not solved; such checkouts time out without a recorded entry. It rejects payment-required draws, pickup-only draws, unavailable sizes, ambiguous products and an already-visible prior entry. A password-protected store (Shopify `/password`) fails immediately; run again once the draw page is live. It reports a visible site rejection and does not automatically resubmit. If a solver returns after cancellation or the verification frame changes, the token is discarded. A provider task already created may still complete remotely after cancellation.
 
 The selected product's Enter Draw button may initially be disabled while SuperSwipe checks status. The flow waits up to 60 seconds for the site to make it visible and enabled. A button that stays disabled or hidden times out without a solve or submission.
+
+Verification (card draws): the checkout layout and card-frame names were captured read-only from the live Victor Victor checkout on 22 October 2026; offline fixtures cover the queue, decoy autofill fields, cross-origin card frames, $0.00 checks, declines and missing shipping. No live order was placed.
 
 Verification: local Chromium tests exercise the actual graph runtime and token delivery across origins with a mock solver, including delayed draw readiness, permanently disabled buttons, checkbox timing, cookie banners, State dropdowns, phone prefixes and rejected fields. A live form check with synthetic details passed through field verification and stopped before CAPTCHA/submission. Provider API contract tests use mocked responses. No live entry or paid solve was performed. The supplied HAR is reference data only; captured cookies, personal details and tokens are not included.
 

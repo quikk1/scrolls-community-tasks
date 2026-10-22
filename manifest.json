@@ -73,7 +73,8 @@
         "browser",
         "evaluate",
         "captcha",
-        "inventory"
+        "inventory",
+        "vault"
       ],
       "category": "sweepstakes",
       "status": "ready",
@@ -81,8 +82,8 @@
         "email",
         "turnstile"
       ],
-      "version": "0.4.0",
-      "description": "Oasis-style browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. 0.4.0: Victor Victor store support, optional product title when the page has one draw, apparel and one-size drops.",
+      "version": "0.5.0",
+      "description": "Oasis-style browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.0: card-on-file draws, Victor Victor store, optional product title, apparel and one-size drops.",
       "author": {
         "name": "Scrolls",
         "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E="
