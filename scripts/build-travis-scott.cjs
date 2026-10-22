@@ -247,7 +247,38 @@ return true;
 `, 'travisTermsReady');
 node('n_wait_terms', 'waitFor', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-continue-button:not([disabled])', timeoutMs: 30000 });
 acceptCookies('n_cookies_before_continue');
-node('n_continue', 'click', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-continue-button', instant: true, timeoutMs: 30000 });
+// SuperSwipe can re-render its dialog after the acknowledgments, so rebind to
+// the visible dialog for this product before pressing Continue, and report
+// what the page shows if Continue never becomes available.
+evaluate('n_continue', helpers + `
+const product = {{vars.travisProduct}};
+const deadline = Date.now() + 30000;
+const findModal = () => {
+  const active = dialog();
+  if (visible(active)) return active;
+  const modal = [...document.querySelectorAll('.superswipe-modal')].find(el => visible(el) && norm(el.querySelector('.superswipe-product')?.textContent) === norm(product.title));
+  if (modal) {
+    document.querySelectorAll('[data-scrolls-travis-dialog]').forEach(el => el.removeAttribute('data-scrolls-travis-dialog'));
+    modal.setAttribute('data-scrolls-travis-dialog', 'active');
+  }
+  return modal;
+};
+while (true) {
+  const modal = findModal();
+  const button = [...(modal?.querySelectorAll('.superswipe-continue-button') || [])].find(visible);
+  if (button && !button.disabled) {
+    button.scrollIntoView({ block: 'center' });
+    button.click();
+    return true;
+  }
+  if (Date.now() > deadline) {
+    const state = !modal ? 'no visible draw dialog' : !button ? 'Continue is hidden' : 'Continue is disabled';
+    const text = (modal || document.body).innerText.replace(/\\s+/g, ' ').trim().slice(0, 240);
+    throw new Error('Could not press Continue (' + state + '). The page shows: ' + text);
+  }
+  await new Promise(resolve => setTimeout(resolve, 250));
+}
+`, 'travisContinued');
 node('n_entry_route', 'branch', { left: '{{vars.travisProduct.releaseMode}}', op: '===', right: 'pay_after' });
 node('n_wait_form', 'waitFor', { selector: '[data-scrolls-travis-dialog="active"] .superswipe-entry-form:not([hidden]) input[name="first_name"]', timeoutMs: 30000 }, { linked: false });
 edge('n_entry_route', 'true', 'n_wait_form');
@@ -455,7 +486,7 @@ return { email: fields.email, status: 'entered', site: product.site, releaseId: 
 `, 'travisOutcome');
 node('n_co_save_entry', 'inventory.record', { site: '{{vars.travisProduct.site}}', productLabel: '{{vars.travisProduct.title}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
 node('n_co_result', 'setResult', { value: '{{vars.travisOutcome}}' });
-const DESCRIPTION = 'Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.0: card-on-file draws, Victor Victor store, optional product title, apparel and one-size drops.';
+const DESCRIPTION = 'Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.1: steadier Continue step with a clear message when the draw dialog changes; card draws use the Key Vault default card.';
 const URL_HINT = 'shop.travisscott.com or victorvictor.com. A password-protected store fails until the draw is live.';
 const PRODUCT_HINT = 'Leave blank when the page has a single draw. With several draws, enter the title exactly as shown.';
 const CARD_HINT = 'Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today.';
@@ -463,7 +494,7 @@ const CARD_ID_HINT = 'Used only for card draws. Leave blank for the default Key 
 const sizeInput = (id, label, defaultValue, equals) => ({ id, type: 'select', label, default: defaultValue, options: SIZES,
   visibleWhen: { input: 'sizeMode', equals }, requiredWhen: { input: 'sizeMode', equals } });
 const graph = {
-  schemaVersion: 1, version: '0.5.0', metadata: {
+  schemaVersion: 1, version: '0.5.1', metadata: {
     id: 'travis-scott-browser', name: 'SuperSwipe — Browser Entry', class: 'raffle', description: DESCRIPTION,
     tags: ['travis-scott', 'victor-victor', 'superswipe', 'browser', 'raffle'], inputs: [
       { id: 'url', label: 'Store / product URL', type: 'url', required: true, defaultValue: 'https://shop.travisscott.com/', hint: URL_HINT },

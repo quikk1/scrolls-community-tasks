@@ -3,12 +3,12 @@
   "exportedAt": "2026-10-22T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.5.0",
+    "version": "0.5.1",
     "metadata": {
       "id": "travis-scott-browser",
       "name": "SuperSwipe — Browser Entry",
       "class": "raffle",
-      "description": "Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.0: card-on-file draws, Victor Victor store, optional product title, apparel and one-size drops.",
+      "description": "Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.1: steadier Continue step with a clear message when the draw dialog changes; card draws use the Key Vault default card.",
       "tags": [
         "travis-scott",
         "victor-victor",
@@ -614,15 +614,14 @@
       },
       {
         "id": "n_continue",
-        "kind": "click",
+        "kind": "evaluate",
         "position": {
           "x": 160,
           "y": 4620
         },
         "config": {
-          "selector": "[data-scrolls-travis-dialog=\"active\"] .superswipe-continue-button",
-          "instant": true,
-          "timeoutMs": 30000
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst product = {{vars.travisProduct}};\nconst deadline = Date.now() + 30000;\nconst findModal = () => {\n  const active = dialog();\n  if (visible(active)) return active;\n  const modal = [...document.querySelectorAll('.superswipe-modal')].find(el => visible(el) && norm(el.querySelector('.superswipe-product')?.textContent) === norm(product.title));\n  if (modal) {\n    document.querySelectorAll('[data-scrolls-travis-dialog]').forEach(el => el.removeAttribute('data-scrolls-travis-dialog'));\n    modal.setAttribute('data-scrolls-travis-dialog', 'active');\n  }\n  return modal;\n};\nwhile (true) {\n  const modal = findModal();\n  const button = [...(modal?.querySelectorAll('.superswipe-continue-button') || [])].find(visible);\n  if (button && !button.disabled) {\n    button.scrollIntoView({ block: 'center' });\n    button.click();\n    return true;\n  }\n  if (Date.now() > deadline) {\n    const state = !modal ? 'no visible draw dialog' : !button ? 'Continue is hidden' : 'Continue is disabled';\n    const text = (modal || document.body).innerText.replace(/\\s+/g, ' ').trim().slice(0, 240);\n    throw new Error('Could not press Continue (' + state + '). The page shows: ' + text);\n  }\n  await new Promise(resolve => setTimeout(resolve, 250));\n}\n",
+          "into": "travisContinued"
         }
       },
       {
@@ -2272,7 +2271,7 @@
     "author": {
       "name": "Scrolls",
       "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "ec7Ww2e172pNpRliff+ecNaXv8tFpePP1Us9z+jYAXh6Wlpo8cUC5wxe3QIpMvC21Wqj2zOBFQEunLRrGGwNDQ=="
+      "signature": "60uC7e1WvEKbt43HjMe/RU44ttALEZxBcxftANwfQ0rVMbodYCJsFGr9LyRVyb4q3LTWnTbebUwR7sp6BU87CQ=="
     }
   }
 }

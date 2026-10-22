@@ -225,6 +225,8 @@ async function main() {
       } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12', cardDraws: options.cardDraws ?? false, cardId: '' }, vars, signal: currentController.signal,
         log: () => {}, onNodeEnter: (id) => {
           const active = '[data-scrolls-travis-dialog="active"]';
+          // Simulates SuperSwipe re-rendering its dialog just before Continue (seen live).
+          if (id === 'n_continue' && options.rebind) actions.push(page.evaluate(() => document.querySelector('[data-scrolls-travis-dialog]')?.removeAttribute('data-scrolls-travis-dialog')));
           if (id === 'n_wait_terms') actions.push((async () => {
             assert.equal(await page.locator(active + ' .superswipe-checkbox:checked').count(), 5);
             if (!options.oneDraw) assert.equal(await page.locator('.superswipe-modal').first().locator('.superswipe-checkbox:checked').count(), options.precheckedTerms ? 3 : 0);
@@ -345,6 +347,8 @@ async function main() {
     await scenario('Card draw stops when money is due today', { ...card, dueToday: '158.40', error: /does not show \$0\.00 due today/ });
     await scenario('Declined card is reported and not recorded', { ...card, decline: true, error: /Checkout was not completed: Your card was declined/ });
     await scenario('No shipping option stops before payment', { ...card, noShipping: true, error: /no shipping option/ });
+    await scenario('Dialog re-rendered after acknowledgments still continues', { ...card, rebind: true });
+    await scenario('No-payment draw continues after a dialog re-render', { rebind: true });
     await scenario('Missing Key Vault card fails before checkout', { ...card, noCard: true, error: /no card found/ });
   } finally { await browser.close(); }
 }
