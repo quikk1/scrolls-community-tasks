@@ -455,7 +455,7 @@ return { email: fields.email, status: 'entered', site: product.site, releaseId: 
 `, 'travisOutcome');
 node('n_co_save_entry', 'inventory.record', { site: '{{vars.travisProduct.site}}', productLabel: '{{vars.travisProduct.title}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
 node('n_co_result', 'setResult', { value: '{{vars.travisOutcome}}' });
-const DESCRIPTION = 'Oasis-style browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.0: card-on-file draws, Victor Victor store, optional product title, apparel and one-size drops.';
+const DESCRIPTION = 'Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.0: card-on-file draws, Victor Victor store, optional product title, apparel and one-size drops.';
 const URL_HINT = 'shop.travisscott.com or victorvictor.com. A password-protected store fails until the draw is live.';
 const PRODUCT_HINT = 'Leave blank when the page has a single draw. With several draws, enter the title exactly as shown.';
 const CARD_HINT = 'Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today.';
@@ -464,7 +464,7 @@ const sizeInput = (id, label, defaultValue, equals) => ({ id, type: 'select', la
   visibleWhen: { input: 'sizeMode', equals }, requiredWhen: { input: 'sizeMode', equals } });
 const graph = {
   schemaVersion: 1, version: '0.5.0', metadata: {
-    id: 'travis-scott-browser', name: 'Travis Scott — Browser Entry', class: 'raffle', description: DESCRIPTION,
+    id: 'travis-scott-browser', name: 'SuperSwipe — Browser Entry', class: 'raffle', description: DESCRIPTION,
     tags: ['travis-scott', 'victor-victor', 'superswipe', 'browser', 'raffle'], inputs: [
       { id: 'url', label: 'Store / product URL', type: 'url', required: true, defaultValue: 'https://shop.travisscott.com/', hint: URL_HINT },
       { id: 'product', label: 'Exact product title', type: 'string', required: false, defaultValue: '', hint: PRODUCT_HINT },
@@ -478,7 +478,7 @@ const graph = {
   }, permissions: ['browser', 'evaluate', 'captcha', 'inventory', 'vault'], variables: [], start: 'n_start', nodes, edges,
   runSchema: {
     schemaVersion: 1, kind: 'graph',
-    module: { id: 'travis-scott-browser', name: 'Travis Scott — Browser Entry', site: 'shop.travisscott.com', siteLabel: 'Travis Scott', execution: 'browser' },
+    module: { id: 'travis-scott-browser', name: 'SuperSwipe — Browser Entry', site: 'shop.travisscott.com', siteLabel: 'SuperSwipe', execution: 'browser' },
     tabs: { identity: { kinds: ['saved', 'generated'] }, network: { proxy: 'optional' }, api: { captcha: [{ type: 'turnstile', mode: 'token', label: 'Turnstile solver' }] } },
     threads: { default: 1, max: 20 }, runCount: 'identity',
     inputs: [

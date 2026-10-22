@@ -1,6 +1,6 @@
-# Travis Scott browser entry
+# SuperSwipe browser entry
 
-Available in **Library → Travis Scott — Browser Entry**. Requires **Scrolls 1.6.0 or newer**.
+Available in **Library → SuperSwipe — Browser Entry (formerly Travis Scott — Browser Entry)**. Requires **Scrolls 1.6.0 or newer**.
 
 1. Set up a Turnstile-capable service key in **Key Vault** and put it in the Turnstile solver order. Existing adapters include CapSolver, 2Captcha, Anti-Captcha, CapMonster and others.
 2. On **Addresses**, choose **Profiles** (records with email) or **Generated addresses** (street-address records without email), then choose a group or individual address. On **Email**, use the selected records' own emails, an email list, or catch-all aliases. Generated addresses require a list or catch-all. Records and emails pair one-to-one; extra emails/addresses are not run or recycled.
