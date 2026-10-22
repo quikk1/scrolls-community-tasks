@@ -1,16 +1,16 @@
 {
   "format": "arcana-marketplace/v1",
   "repository": "quikk1/scrolls-community-tasks",
-  "updatedAt": "2026-09-30",
+  "updatedAt": "2026-10-21",
   "tasks": [
     {
       "id": "tm",
       "name": "Ticketmaster Account Generator",
-      "description": "Ticketmaster account generator: signup -> email verification -> SMS verification, then re-reads the saved email in account settings to confirm the account exists before saving it.",
-      "version": "0.1.4",
+      "description": "Ticketmaster account generator: signup -> email verification -> SMS verification, then confirms the signed-in account (email + phone verified) from the identity token and saves the session cookies with the account.",
+      "version": "0.3.23",
       "author": {
         "name": "Sete_",
-        "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM="
+        "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E="
       },
       "downloadPath": "tasks/tm.arcana-task.json",
       "tags": [
@@ -21,9 +21,9 @@
       "permissions": [
         "accounts",
         "browser",
+        "evaluate",
         "imap",
-        "sms",
-        "inventory"
+        "sms"
       ],
       "category": "account-generator",
       "status": "ready",

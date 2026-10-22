@@ -1,6 +1,6 @@
 {
   "format": "arcana-task/v1",
-  "exportedAt": "2026-07-10T23:44:42.922Z",
+  "exportedAt": "2026-10-22T03:06:40.251Z",
   "graph": {
     "schemaVersion": 1,
     "metadata": {
@@ -18,13 +18,75 @@
     "permissions": [
       "accounts",
       "browser",
+      "evaluate",
       "imap",
-      "sms",
-      "inventory",
-      "webhook"
+      "sms"
     ],
-    "version": "0.1.4",
+    "version": "0.3.23",
     "variables": [],
+    "runSchema": {
+      "schemaVersion": 1,
+      "kind": "graph",
+      "module": {
+        "id": "tm",
+        "name": "Ticketmaster Account Generator",
+        "site": "ticketmaster.com",
+        "siteLabel": "Ticketmaster",
+        "execution": "browser"
+      },
+      "tabs": {
+        "identity": {
+          "kinds": [
+            "saved",
+            "generated"
+          ]
+        },
+        "email": {
+          "sources": [
+            "list",
+            "catchall"
+          ],
+          "defaultSource": "list",
+          "domains": true,
+          "inboxes": [
+            {}
+          ]
+        },
+        "network": {
+          "proxy": "optional",
+          "browser": true
+        },
+        "api": {
+          "sms": {
+            "catalog": true,
+            "region": true
+          }
+        },
+        "options": {
+          "retries": {
+            "label": "Retries per account",
+            "max": 5
+          },
+          "headed": {
+            "label": "Show browser windows",
+            "default": false
+          }
+        }
+      },
+      "threads": {
+        "default": 1,
+        "max": 10
+      },
+      "runCount": "identity-paired-with-email",
+      "inputs": [
+        {
+          "type": "section",
+          "id": "about",
+          "label": "One account per address and email",
+          "hint": "Creates and verifies one Ticketmaster account per run, then saves it to the Database. Pair addresses on Identity with emails on Email; Run limit on the Email tab caps how many emails this batch takes, and Order shuffles them first. The SMS tab picks the number provider, its service and country, and the price cap."
+        }
+      ]
+    },
     "nodes": [
       {
         "id": "n_1",
@@ -43,7 +105,45 @@
           "y": 316.75934388103053
         },
         "config": {
-          "url": "https://www.ticketmaster.com/"
+          "url": "https://www.ticketmaster.com/",
+          "statusText": "Opening ticketmaster.com"
+        }
+      },
+      {
+        "id": "n_anti_check",
+        "kind": "elementExists",
+        "position": {
+          "x": 430,
+          "y": 220
+        },
+        "config": {
+          "selector": ":text-matches(\"Access Denied|browsing activity|Reference #\", \"i\"):visible",
+          "timeoutMs": 4000,
+          "into": "pausedBot",
+          "statusText": "Checking for a Ticketmaster block page"
+        }
+      },
+      {
+        "id": "n_anti_branch",
+        "kind": "branch",
+        "position": {
+          "x": 530,
+          "y": 220
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{pausedBot}}"
+        }
+      },
+      {
+        "id": "n_anti_fail",
+        "kind": "fail",
+        "position": {
+          "x": 630,
+          "y": 150
+        },
+        "config": {
+          "message": "Ticketmaster displayed a visible blocking message; stopping this run. Page evidence: {{blockMessage}}"
         }
       },
       {
@@ -54,7 +154,35 @@
           "y": 316.75934388103053
         },
         "config": {
-          "selector": "[data-testid=\"accountLink\"]"
+          "selector": "[data-testid=\"accountLink\"]",
+          "timeoutMs": 10000,
+          "statusText": "Opening the sign-in page"
+        }
+      },
+      {
+        "id": "n_anti2_check",
+        "kind": "elementExists",
+        "position": {
+          "x": 700,
+          "y": 300
+        },
+        "config": {
+          "selector": ":text-matches(\"Access Denied|browsing activity|Reference #\", \"i\"):visible",
+          "timeoutMs": 4000,
+          "into": "pausedBot2",
+          "statusText": "Checking for a Ticketmaster block page"
+        }
+      },
+      {
+        "id": "n_anti2_branch",
+        "kind": "branch",
+        "position": {
+          "x": 800,
+          "y": 300
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{pausedBot2}}"
         }
       },
       {
@@ -68,7 +196,8 @@
           "timeoutMs": 120000,
           "selector": "input#email-input",
           "value": "{{identity.email}}",
-          "cadenceMs": 90
+          "cadenceMs": 90,
+          "statusText": "Entering the email address"
         }
       },
       {
@@ -82,7 +211,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#scrollContent > div.sc-bbxCTN.sc-jPQLIs:nth-of-type(3) > div.sc-eMklSO.fplsqP > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+          "selector": "button[type=\"submit\"]:visible",
+          "statusText": "Continuing with the email address"
         }
       },
       {
@@ -96,7 +226,8 @@
           "timeoutMs": 120000,
           "selector": "input#password-input",
           "value": "{{identity.password}}",
-          "cadenceMs": 90
+          "cadenceMs": 90,
+          "statusText": "Signup form: entering the password"
         }
       },
       {
@@ -110,7 +241,8 @@
           "timeoutMs": 120000,
           "selector": "input#firstName-input",
           "value": "{{identity.firstName}}",
-          "cadenceMs": 90
+          "cadenceMs": 90,
+          "statusText": "Signup form: entering the first name"
         }
       },
       {
@@ -124,7 +256,8 @@
           "timeoutMs": 120000,
           "selector": "input#lastName-input",
           "value": "{{identity.lastName}}",
-          "cadenceMs": 90
+          "cadenceMs": 90,
+          "statusText": "Signup form: entering the last name"
         }
       },
       {
@@ -138,7 +271,8 @@
           "timeoutMs": 120000,
           "selector": "input#postalCode-input",
           "value": "{{addresses.0.postalCode}}",
-          "cadenceMs": 90
+          "cadenceMs": 90,
+          "statusText": "Signup form: entering the postal code"
         }
       },
       {
@@ -152,7 +286,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#privacyPolicyCheckbox-checkbox > label.indexstyles__Label-sc-ruvmzp-1.dsUHDY > div.Checkbox__CheckboxWrapper-sc-14qdpwd-2.gNjCSj > span.indexstyles__CustomCheckbox-sc-ruvmzp-8.iOwkUf"
+          "selector": "#privacyPolicyCheckbox-checkbox label",
+          "statusText": "Signup form: accepting the privacy policy"
         }
       },
       {
@@ -166,7 +301,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#scrollContent > div.sc-bbxCTN.sc-jPQLIs:nth-of-type(3) > div.sc-eMklSO.fplsqP:nth-of-type(2) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+          "selector": "button[type=\"submit\"]:visible",
+          "statusText": "Submitting the signup form"
         }
       },
       {
@@ -179,8 +315,9 @@
         "config": {
           "delayMs": 0,
           "force": false,
-          "timeoutMs": 120000,
-          "selector": "div#Main > div.Stack-sc-br1alc-0.jevrdE > div.sc-fnfFzz.kJvBiO:nth-of-type(1) > div.sc-jIYCmC.gpuWKb:nth-of-type(2) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+          "timeoutMs": 15000,
+          "selector": "[data-bdd=\"verify-email-button\"]",
+          "statusText": "Account created; starting email verification"
         }
       },
       {
@@ -197,7 +334,10 @@
           "intervalMs": 5000,
           "into": "emailCode",
           "subjectMatch": "ticketmaster|verif|confirm|code|one[- ]?time|otp",
-          "mailboxLabel": "Primary"
+          "codeRegex": "\\b\\d{6}\\b",
+          "recipient": "{{identity.email}}",
+          "mailboxLabel": "Primary",
+          "statusText": "Waiting for the Ticketmaster verification email (up to 180s)"
         }
       },
       {
@@ -213,7 +353,8 @@
           "instant": false,
           "timeoutMs": 120000,
           "selector": "input#otp-input-input",
-          "value": "{{emailCode}}"
+          "value": "{{emailCode}}",
+          "statusText": "Entering the email verification code"
         }
       },
       {
@@ -227,7 +368,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#ppc_widget_container > main.styles__ContentWrapper-bMNGNz.eySxOb > div.styles__FormContainer-lnocHA.dBhWys > form.styles__StyledForm-gAvZMs.cnpKiS > div:nth-of-type(3) > button.indexstyles__StyledButton-sc-83qv1q-0.bsvANV:nth-of-type(1)"
+          "selector": "[data-bdd=\"asvd-submit-button\"]",
+          "statusText": "Submitting the email code"
         }
       },
       {
@@ -285,7 +427,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#Main > div.Stack-sc-br1alc-0.jevrdE > div.sc-fnfFzz.kJvBiO:nth-of-type(1) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE > span.indexstyles__FlexWrapper-sc-83qv1q-1.bGoQpV"
+          "selector": "[data-bdd=\"verify-phone-button\"]",
+          "statusText": "Email verified; starting phone verification"
         }
       },
       {
@@ -296,10 +439,7 @@
           "y": 592.551388134192
         },
         "config": {
-          "service": "gp",
-          "country": "187",
-          "into": "phoneRent",
-          "operator": ""
+          "into": "phoneRent"
         }
       },
       {
@@ -313,7 +453,8 @@
           "rental": "{{phoneRent}}",
           "timeoutMs": 180000,
           "intervalMs": 5000,
-          "into": "smsCode"
+          "into": "smsCode",
+          "statusText": "Waiting for the SMS code (up to 180s)"
         }
       },
       {
@@ -328,8 +469,9 @@
           "typos": false,
           "instant": false,
           "timeoutMs": 120000,
-          "selector": "[aria-label=\"Phone number\"]",
-          "value": "{{phoneRent.phone}}"
+          "selector": "input[type=\"tel\"]",
+          "value": "+{{phoneRent.phoneNational}}",
+          "statusText": "Entering the rented phone number"
         }
       },
       {
@@ -343,7 +485,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#ppc_widget_container > main.styles__ContentWrapper-bMNGNz.eySxOb > div.styles__FormContainer-lnocHA.dBhWys > form.styles__StyledForm-gAvZMs.cnpKiS > div.styles__ButtonContainer-jJEBlI.dGrpYH:nth-of-type(3) > button.indexstyles__StyledButton-sc-83qv1q-0.bsvANV:nth-of-type(1)"
+          "selector": "[data-bdd=\"asvd-submit-button\"]",
+          "statusText": "Submitting the phone number"
         }
       },
       {
@@ -357,7 +500,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#ppc_widget_container > main.styles__ContentWrapper-bMNGNz.eySxOb > div.styles__FormContainer-lnocHA.dBhWys > form.styles__StyledForm-gAvZMs.cnpKiS > div:nth-of-type(3) > button.indexstyles__StyledButton-sc-83qv1q-0.bsvANV:nth-of-type(1)"
+          "selector": "[data-bdd=\"asvd-submit-button\"]",
+          "statusText": "Submitting the SMS code"
         }
       },
       {
@@ -373,7 +517,8 @@
           "instant": false,
           "timeoutMs": 120000,
           "selector": "input#otp-input-input",
-          "value": "{{smsCode}}"
+          "value": "{{smsCode}}",
+          "statusText": "Entering the SMS code"
         }
       },
       {
@@ -387,7 +532,8 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#scrollContent > div.sc-bbxCTN.sc-jPQLIs:nth-of-type(4) > div:nth-of-type(1) > button.indexstyles__StyledButton-sc-83qv1q-0.elDqHE"
+          "selector": "[data-bdd=\"next-button\"]",
+          "statusText": "Continuing past the verification screen"
         }
       },
       {
@@ -401,7 +547,20 @@
           "delayMs": 0,
           "force": false,
           "timeoutMs": 120000,
-          "selector": "div#scrollContent > div.sc-dlDPdS.gFzWUB:nth-of-type(5) > button.indexstyles__StyledButton-sc-83qv1q-0.dvQlLD:nth-of-type(2)"
+          "selector": "button:has-text(\"Not Right Now\")",
+          "statusText": "Dismissing the \"Not Right Now\" prompt"
+        }
+      },
+      {
+        "id": "n_pk_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 600,
+          "y": 790
+        },
+        "config": {
+          "catchLog": "No more \"Not Right Now\" prompts",
+          "catchLevel": "info"
         }
       },
       {
@@ -412,34 +571,35 @@
           "y": 697.4643666713766
         },
         "config": {
-          "url": "https://my.ticketmaster.com/settings",
+          "url": "https://www.ticketmaster.com/",
           "waitUntil": "domcontentloaded",
-          "timeoutMs": 120000
+          "timeoutMs": 60000,
+          "statusText": "Opening ticketmaster.com to confirm the signed-in account"
         }
       },
       {
         "id": "n_oxam0g94",
-        "kind": "waitFor",
+        "kind": "evaluate",
         "position": {
           "x": 599.3508694763984,
           "y": 696.4643666713766
         },
         "config": {
-          "selector": "input#email-address-input",
-          "state": "visible",
-          "timeoutMs": 120000
+          "script": "const COOKIE = \"id-token=\";\nfunction fromCookie() {\n  const all = document.cookie ? document.cookie.split(\";\").map((s) => s.trim()) : [];\n  const hit = all.find((c) => c.indexOf(COOKIE) === 0);\n  if (!hit) return { error: \"no id-token cookie\" };\n  let token = hit.slice(COOKIE.length);\n  try { token = decodeURIComponent(token); } catch (e) {}\n  const part = token.split(\".\")[1] || \"\";\n  if (!part) return { error: \"id-token is not a JWT\" };\n  const padded = part.replace(/-/g, \"+\").replace(/_/g, \"/\") + \"===\".slice((part.length + 3) % 4);\n  let claims = null;\n  try { claims = JSON.parse(atob(padded)); } catch (e) { return { error: \"id-token payload: \" + (e && e.message ? e.message : e) }; }\n  if (!claims || !claims.email) return { error: \"id-token has no email claim\" };\n  return {\n    found: true,\n    source: \"id-token cookie\",\n    email: claims.email,\n    firstName: claims.given_name || \"\",\n    lastName: claims.family_name || \"\",\n    phone: claims.phone_number || \"\",\n    emailVerified: !!claims.email_verified_at,\n    phoneVerified: !!claims.phone_number_verified_at,\n    expiresAt: claims.exp ? claims.exp * 1000 : 0\n  };\n}\nconst deadline = Date.now() + 10000;\nlet result = fromCookie();\nwhile (!result.found && Date.now() < deadline) {\n  await new Promise((r) => setTimeout(r, 1000));\n  result = fromCookie();\n}\nif (result.found) return result;\ntry {\n  const res = await fetch(\"https://identity.ticketmaster.com/json/user?hard=false&doNotTrack=false\", {\n    credentials: \"include\",\n    headers: { accept: \"application/json\" }\n  });\n  if (res.ok) {\n    const u = await res.json();\n    if (u && u.emailAddress) {\n      return {\n        found: true,\n        source: \"identity user endpoint\",\n        email: u.emailAddress,\n        firstName: u.firstName || \"\",\n        lastName: u.lastName || \"\",\n        phone: u.phoneNumber || \"\",\n        emailVerified: !!u.emailVerifiedAt,\n        phoneVerified: !!u.phoneNumberVerifiedAt,\n        expiresAt: 0\n      };\n    }\n    return { found: false, error: \"identity endpoint returned no email\" };\n  }\n  return { found: false, error: (result.error || \"\") + \"; identity HTTP \" + res.status + \" at \" + location.href };\n} catch (e) {\n  return { found: false, error: (result.error || \"\") + \"; identity fetch: \" + (e && e.message ? e.message : e) + \" at \" + location.href };\n}",
+          "into": "tmUser",
+          "statusText": "Reading the signed-in account from the Ticketmaster session"
         }
       },
       {
         "id": "n_xqa6szaz",
-        "kind": "extract",
+        "kind": "log",
         "position": {
           "x": 946.3508694763984,
           "y": 696.4643666713766
         },
         "config": {
-          "into": "emailGet",
-          "selector": "input#email-address-input"
+          "level": "info",
+          "message": "Ticketmaster signed-in account: {{tmUser.email}} · email verified: {{tmUser.emailVerified}} · phone verified: {{tmUser.phoneVerified}}{{tmUser.error}}"
         }
       },
       {
@@ -450,8 +610,8 @@
           "y": 687.4643666713766
         },
         "config": {
-          "op": "==",
-          "left": "{{emailGet}}",
+          "op": "ieq",
+          "left": "{{tmUser.email}}",
           "right": "{{identity.email}}"
         }
       },
@@ -465,8 +625,10 @@
         "config": {
           "email": "{{identity.email}}",
           "password": "{{identity.password}}",
-          "status": "active",
-          "site": "ticketmaster.com"
+          "status": "verified",
+          "site": "ticketmaster.com",
+          "session": true,
+          "statusText": "Saving the verified account and its browser session"
         }
       },
       {
@@ -477,7 +639,7 @@
           "y": 783.829619256399
         },
         "config": {
-          "message": "Failed to create account"
+          "message": "Ticketmaster did not confirm the account: the signed-in session reports '{{tmUser.email}}' ({{tmUser.error}}), signup used '{{identity.email}}'."
         }
       },
       {
@@ -487,7 +649,10 @@
           "x": -11.5,
           "y": 989
         },
-        "config": {}
+        "config": {
+          "catchLog": "Phone verification failed; cancelling the rented number",
+          "catchLevel": "warn"
+        }
       },
       {
         "id": "n_smsfinish",
@@ -497,7 +662,8 @@
           "y": 500
         },
         "config": {
-          "rental": "{{phoneRent}}"
+          "rental": "{{phoneRent}}",
+          "statusText": "Phone verified; completing the number rental"
         }
       },
       {
@@ -508,7 +674,8 @@
           "y": 790
         },
         "config": {
-          "rental": "{{phoneRent}}"
+          "rental": "{{phoneRent}}",
+          "statusText": "Cancelling the rented number"
         }
       },
       {
@@ -519,7 +686,7 @@
           "y": 790
         },
         "config": {
-          "message": "SMS verification failed - rented number cancelled"
+          "message": "SMS verification failed ({{phoneRent.phone}}). Ticketmaster showed: {{smsPageError}}. Cause: {{LAST_ERROR}}"
         }
       },
       {
@@ -529,19 +696,23 @@
           "x": 232,
           "y": 170
         },
-        "config": {}
+        "config": {
+          "catchLog": "No saved Ticketmaster account for {{identity.email}}; creating a new one",
+          "catchLevel": "info"
+        }
       },
       {
         "id": "n_pre_pick",
-        "kind": "inventory.pick",
+        "kind": "accounts.pick",
         "position": {
           "x": 432,
           "y": 170
         },
         "config": {
           "site": "ticketmaster.com",
-          "email": "{{identity.email}}",
-          "into": "dbHit"
+          "emailLike": "{{identity.email}}",
+          "into": "dbHit",
+          "statusText": "Checking the Database for an existing Ticketmaster account"
         }
       },
       {
@@ -577,7 +748,8 @@
         "config": {
           "selector": "input#firstName-input",
           "timeoutMs": 25000,
-          "into": "hasFirstName"
+          "into": "hasFirstName",
+          "statusText": "Waiting for the signup form (a new email shows it)"
         }
       },
       {
@@ -602,7 +774,8 @@
         "config": {
           "selector": "input#password-input, input[type=\"password\"]",
           "timeoutMs": 5000,
-          "into": "hasPassword"
+          "into": "hasPassword",
+          "statusText": "No signup form; checking whether this email already has an account"
         }
       },
       {
@@ -627,7 +800,8 @@
         "config": {
           "selector": "div[data-bdd=\"error-banner\"]:visible",
           "timeoutMs": 3000,
-          "into": "hasErrorBanner"
+          "into": "hasErrorBanner",
+          "statusText": "Checking for an error banner"
         }
       },
       {
@@ -644,17 +818,19 @@
       },
       {
         "id": "n_ar_save",
-        "kind": "inventory.record",
+        "kind": "accounts.save",
         "position": {
           "x": 520,
           "y": 820
         },
         "config": {
-          "site": "ticketmaster.com",
-          "productLabel": "Ticketmaster",
-          "status": "entered",
           "email": "{{identity.email}}",
-          "notes": "Already registered (detected at signup)"
+          "password": "",
+          "site": "ticketmaster.com",
+          "status": "active",
+          "label": "Ticketmaster.com",
+          "notes": "Already registered (detected at signup)",
+          "statusText": "Email is already registered; saving it to the Database"
         }
       },
       {
@@ -669,35 +845,675 @@
         }
       },
       {
-        "id": "n_entry_webhook",
-        "kind": "webhook.fire",
+        "id": "n_otp_dwell",
+        "kind": "dwell",
         "position": {
-          "x": 1325.7955208014423,
-          "y": 809.4825665587598
+          "x": 700,
+          "y": 500
         },
         "config": {
-          "event": "raffle.entry.succeeded",
-          "data": {
-            "tool": "tm",
-            "email": "{{identity.email}}",
-            "site": "ticketmaster.com"
-          }
+          "ms": 700
         }
       },
       {
-        "id": "n_entry_result",
-        "kind": "setResult",
+        "id": "n_otp_read",
+        "kind": "extract",
         "position": {
-          "x": 1325.7955208014423,
-          "y": 929.4825665587598
+          "x": 800,
+          "y": 500
         },
         "config": {
-          "value": {
-            "status": "entered",
-            "email": "{{identity.email}}",
-            "suppressSuccessWebhook": true,
-            "site": "ticketmaster.com"
-          }
+          "selector": "input#otp-input-input",
+          "attr": "value",
+          "into": "otpTyped",
+          "statusText": "Checking the email code was typed correctly"
+        }
+      },
+      {
+        "id": "n_otp_branch",
+        "kind": "branch",
+        "position": {
+          "x": 900,
+          "y": 500
+        },
+        "config": {
+          "op": "==",
+          "left": "{{otpTyped}}",
+          "right": "{{emailCode}}"
+        }
+      },
+      {
+        "id": "n_otp_fail",
+        "kind": "fail",
+        "position": {
+          "x": 1000,
+          "y": 420
+        },
+        "config": {
+          "message": "Email OTP did not register - the field reads '{{otpTyped}}' but the code is '{{emailCode}}'."
+        }
+      },
+      {
+        "id": "n_sms_dwell",
+        "kind": "dwell",
+        "position": {
+          "x": 700,
+          "y": 600
+        },
+        "config": {
+          "ms": 700
+        }
+      },
+      {
+        "id": "n_sms_read",
+        "kind": "extract",
+        "position": {
+          "x": 800,
+          "y": 600
+        },
+        "config": {
+          "selector": "input#otp-input-input",
+          "attr": "value",
+          "into": "smsTyped",
+          "statusText": "Checking the SMS code was typed correctly"
+        }
+      },
+      {
+        "id": "n_sms_branch",
+        "kind": "branch",
+        "position": {
+          "x": 900,
+          "y": 600
+        },
+        "config": {
+          "op": "==",
+          "left": "{{smsTyped}}",
+          "right": "{{smsCode}}"
+        }
+      },
+      {
+        "id": "n_sms_fail",
+        "kind": "fail",
+        "position": {
+          "x": 1000,
+          "y": 620
+        },
+        "config": {
+          "message": "SMS OTP did not register - the field reads '{{smsTyped}}' but the code is '{{smsCode}}'."
+        }
+      },
+      {
+        "id": "n_smsdeliv_check",
+        "kind": "elementExists",
+        "position": {
+          "x": 700,
+          "y": 700
+        },
+        "config": {
+          "selector": "[data-bdd=\"asvd-verify-button\"]",
+          "timeoutMs": 5000,
+          "into": "hasSmsDeliveryScreen",
+          "statusText": "Checking whether Ticketmaster asks how to send the code"
+        }
+      },
+      {
+        "id": "n_smsdeliv_branch",
+        "kind": "branch",
+        "position": {
+          "x": 800,
+          "y": 700
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{hasSmsDeliveryScreen}}"
+        }
+      },
+      {
+        "id": "n_smsdeliv_click",
+        "kind": "click",
+        "position": {
+          "x": 900,
+          "y": 700
+        },
+        "config": {
+          "timeoutMs": 120000,
+          "selector": "[data-bdd=\"asvd-sms-radio\"]",
+          "statusText": "Choosing text-message delivery"
+        }
+      },
+      {
+        "id": "n_smsdeliv_send",
+        "kind": "click",
+        "position": {
+          "x": 1000,
+          "y": 700
+        },
+        "config": {
+          "timeoutMs": 120000,
+          "selector": "[data-bdd=\"asvd-verify-button\"]",
+          "statusText": "Sending the code by text message"
+        }
+      },
+      {
+        "id": "n_phone_cc_us_ca",
+        "kind": "branch",
+        "position": {
+          "x": 400,
+          "y": 620
+        },
+        "config": {
+          "op": "matches",
+          "left": "{{smsRegion}}",
+          "right": "^(US|CA)$"
+        }
+      },
+      {
+        "id": "n_phone_cc_ca_branch",
+        "kind": "branch",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "config": {
+          "op": "==",
+          "left": "{{smsRegion}}",
+          "right": "CA"
+        }
+      },
+      {
+        "id": "n_phone_cc_open",
+        "kind": "click",
+        "position": {
+          "x": 500,
+          "y": 620
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 15000,
+          "selector": "[aria-haspopup=\"listbox\"]",
+          "statusText": "Phone country: opening the country menu"
+        }
+      },
+      {
+        "id": "n_phone_cc_pick",
+        "kind": "click",
+        "position": {
+          "x": 600,
+          "y": 620
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 15000,
+          "selector": "[role=\"option\"]:visible:has-text(\"Canada\")",
+          "statusText": "Phone country: selecting the visible Canada option"
+        }
+      },
+      {
+        "id": "n_phone_other_open",
+        "kind": "click",
+        "position": {
+          "x": 500,
+          "y": 760
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 15000,
+          "selector": "[aria-haspopup=\"listbox\"]",
+          "statusText": "Phone country: opening the country menu"
+        }
+      },
+      {
+        "id": "n_phone_other_pick",
+        "kind": "click",
+        "position": {
+          "x": 600,
+          "y": 760
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 15000,
+          "selector": "[role=\"option\"]:visible:has-text(\"Other\")",
+          "statusText": "Phone country: selecting the visible Other option"
+        }
+      },
+      {
+        "id": "n_sms_otp_ready",
+        "kind": "waitFor",
+        "position": {
+          "x": 930,
+          "y": 650
+        },
+        "config": {
+          "selector": "input#otp-input-input:visible",
+          "state": "visible",
+          "timeoutMs": 15000,
+          "statusText": "Confirming the phone-code form opened before waiting for SMS"
+        }
+      },
+      {
+        "id": "n_sms_wait_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 950,
+          "y": 650
+        },
+        "config": {
+          "catchLog": "The SMS wait ended without a code: {{LAST_ERROR}}",
+          "catchLevel": "info"
+        }
+      },
+      {
+        "id": "n_sms_resend_branch",
+        "kind": "branch",
+        "position": {
+          "x": 960,
+          "y": 750
+        },
+        "config": {
+          "op": "matches",
+          "left": "{{LAST_ERROR}}",
+          "right": "sms\\.waitForCode: timeout after \\d+ms"
+        }
+      },
+      {
+        "id": "n_sms_resend_log",
+        "kind": "log",
+        "position": {
+          "x": 980,
+          "y": 750
+        },
+        "config": {
+          "message": "No SMS arrived during the first wait; requesting one new code on the same rental."
+        }
+      },
+      {
+        "id": "n_sms_resend",
+        "kind": "click",
+        "position": {
+          "x": 1000,
+          "y": 750
+        },
+        "config": {
+          "selector": "[data-bdd=\"asvd-request-code-link\"]:visible",
+          "timeoutMs": 15000,
+          "statusText": "Requesting one replacement phone code"
+        }
+      },
+      {
+        "id": "n_sms_wait_retry",
+        "kind": "sms.waitForCode",
+        "position": {
+          "x": 1020,
+          "y": 750
+        },
+        "config": {
+          "rental": "{{phoneRent}}",
+          "timeoutMs": 180000,
+          "intervalMs": 5000,
+          "into": "smsCode",
+          "statusText": "Waiting for the replacement SMS code on the same rental"
+        }
+      },
+      {
+        "id": "n_sms_wait_error",
+        "kind": "fail",
+        "position": {
+          "x": 1020,
+          "y": 820
+        },
+        "config": {
+          "message": "{{LAST_ERROR}}"
+        }
+      },
+      {
+        "id": "n_anti_evidence",
+        "kind": "extractAll",
+        "position": {
+          "x": 580,
+          "y": 150
+        },
+        "config": {
+          "selector": ":text-matches(\"Access Denied|browsing activity|Reference #\", \"i\"):visible",
+          "into": "blockMessage",
+          "statusText": "Recording the visible page message that stopped this run"
+        }
+      },
+      {
+        "id": "n_anti2_evidence",
+        "kind": "extractAll",
+        "position": {
+          "x": 860,
+          "y": 150
+        },
+        "config": {
+          "selector": ":text-matches(\"Access Denied|browsing activity|Reference #\", \"i\"):visible",
+          "into": "blockMessage",
+          "statusText": "Recording the visible page message that stopped this run"
+        }
+      },
+      {
+        "id": "n_phone_ca_options_wait",
+        "kind": "waitFor",
+        "position": {
+          "x": 540,
+          "y": 650
+        },
+        "config": {
+          "selector": "[role=\"option\"]:visible",
+          "state": "visible",
+          "timeoutMs": 10000,
+          "statusText": "Phone country: waiting for the open country menu"
+        }
+      },
+      {
+        "id": "n_phone_ca_options_read",
+        "kind": "extractAll",
+        "position": {
+          "x": 560,
+          "y": 650
+        },
+        "config": {
+          "selector": "[role=\"option\"]:visible",
+          "into": "phoneCountryOptions",
+          "progress": false
+        }
+      },
+      {
+        "id": "n_phone_ca_options_log",
+        "kind": "log",
+        "position": {
+          "x": 580,
+          "y": 650
+        },
+        "config": {
+          "message": "Phone country: requested {{smsRegion}}, selecting Canada; visible options: {{phoneCountryOptions}}"
+        }
+      },
+      {
+        "id": "n_phone_ca_selected",
+        "kind": "waitFor",
+        "position": {
+          "x": 620,
+          "y": 650
+        },
+        "config": {
+          "selector": "[aria-haspopup=\"listbox\"][aria-expanded=\"false\"]:visible:has-text(\"Canada\")",
+          "state": "visible",
+          "timeoutMs": 10000,
+          "statusText": "Phone country: confirming Canada is selected before renting a number"
+        }
+      },
+      {
+        "id": "n_phone_other_options_wait",
+        "kind": "waitFor",
+        "position": {
+          "x": 540,
+          "y": 790
+        },
+        "config": {
+          "selector": "[role=\"option\"]:visible",
+          "state": "visible",
+          "timeoutMs": 10000,
+          "statusText": "Phone country: waiting for the open country menu"
+        }
+      },
+      {
+        "id": "n_phone_other_options_read",
+        "kind": "extractAll",
+        "position": {
+          "x": 560,
+          "y": 790
+        },
+        "config": {
+          "selector": "[role=\"option\"]:visible",
+          "into": "phoneCountryOptions",
+          "progress": false
+        }
+      },
+      {
+        "id": "n_phone_other_options_log",
+        "kind": "log",
+        "position": {
+          "x": 580,
+          "y": 790
+        },
+        "config": {
+          "message": "Phone country: requested {{smsRegion}}, selecting Other; visible options: {{phoneCountryOptions}}"
+        }
+      },
+      {
+        "id": "n_phone_other_selected",
+        "kind": "waitFor",
+        "position": {
+          "x": 620,
+          "y": 790
+        },
+        "config": {
+          "selector": "[aria-haspopup=\"listbox\"][aria-expanded=\"false\"]:visible:has-text(\"Other\")",
+          "state": "visible",
+          "timeoutMs": 10000,
+          "statusText": "Phone country: confirming Other is selected before renting a number"
+        }
+      },
+      {
+        "id": "n_ve_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 640,
+          "y": 420
+        },
+        "config": {
+          "catchLog": "The email verification form did not open; reloading the verification page",
+          "catchLevel": "warn"
+        }
+      },
+      {
+        "id": "n_ve_url",
+        "kind": "getCurrentUrl",
+        "position": {
+          "x": 640,
+          "y": 300
+        },
+        "config": {
+          "into": "authUrl"
+        }
+      },
+      {
+        "id": "n_ve_reload",
+        "kind": "goto",
+        "position": {
+          "x": 740,
+          "y": 300
+        },
+        "config": {
+          "url": "{{authUrl}}",
+          "waitUntil": "domcontentloaded",
+          "timeoutMs": 60000,
+          "statusText": "Reloading the verification page"
+        }
+      },
+      {
+        "id": "n_ve_wait",
+        "kind": "waitFor",
+        "position": {
+          "x": 840,
+          "y": 300
+        },
+        "config": {
+          "selector": "[data-bdd=\"verify-email-button\"]",
+          "state": "visible",
+          "timeoutMs": 60000,
+          "statusText": "Waiting for the Verify My Email button after the reload"
+        }
+      },
+      {
+        "id": "n_ve_click2",
+        "kind": "click",
+        "position": {
+          "x": 940,
+          "y": 300
+        },
+        "config": {
+          "delayMs": 0,
+          "force": false,
+          "timeoutMs": 60000,
+          "selector": "[data-bdd=\"verify-email-button\"]",
+          "statusText": "Starting email verification again"
+        }
+      },
+      {
+        "id": "n_ve_ready1",
+        "kind": "waitFor",
+        "position": {
+          "x": 740,
+          "y": 420
+        },
+        "config": {
+          "selector": "input#otp-input-input",
+          "state": "visible",
+          "timeoutMs": 15000,
+          "statusText": "Waiting for the email verification code form"
+        }
+      },
+      {
+        "id": "n_ve_ready2",
+        "kind": "waitFor",
+        "position": {
+          "x": 1040,
+          "y": 300
+        },
+        "config": {
+          "selector": "input#otp-input-input",
+          "state": "visible",
+          "timeoutMs": 30000,
+          "statusText": "Waiting for the email verification code form after refresh"
+        }
+      },
+      {
+        "id": "n_signin_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 700,
+          "y": 180
+        },
+        "config": {
+          "catchLog": "The Sign In link did not appear; checking whether Ticketmaster blocked this browser",
+          "catchLevel": "warn"
+        }
+      },
+      {
+        "id": "n_anti3_check",
+        "kind": "elementExists",
+        "position": {
+          "x": 800,
+          "y": 180
+        },
+        "config": {
+          "selector": ":text-matches(\"Access Denied|browsing activity|Reference #\", \"i\"):visible",
+          "timeoutMs": 3000,
+          "into": "pausedBot3",
+          "statusText": "Checking for a Ticketmaster block page"
+        }
+      },
+      {
+        "id": "n_anti3_branch",
+        "kind": "branch",
+        "position": {
+          "x": 900,
+          "y": 180
+        },
+        "config": {
+          "op": "truthy",
+          "left": "{{pausedBot3}}"
+        }
+      },
+      {
+        "id": "n_signin_fail",
+        "kind": "fail",
+        "position": {
+          "x": 1000,
+          "y": 180
+        },
+        "config": {
+          "message": "The Ticketmaster sign-in page did not open (accountLink never appeared). A retry starts a fresh device and proxy."
+        }
+      },
+      {
+        "id": "n_sms_evidence",
+        "kind": "extractAll",
+        "position": {
+          "x": 420,
+          "y": 880
+        },
+        "config": {
+          "selector": "[role=\"alert\"]:visible, [aria-live=\"assertive\"]:visible, [id*=\"error\" i]:visible, [class*=\"error\" i]:visible, [data-bdd*=\"error\" i]:visible",
+          "into": "smsPageError",
+          "statusText": "Recording what Ticketmaster showed instead of the phone-code form"
+        }
+      },
+      {
+        "id": "n_saved_log",
+        "kind": "log",
+        "position": {
+          "x": 1325.7955208014423,
+          "y": 779.4825665587598
+        },
+        "config": {
+          "level": "info",
+          "message": "Account saved to the Database: {{identity.email}} (verified)"
+        }
+      },
+      {
+        "id": "n_home_tc",
+        "kind": "tryCatch",
+        "position": {
+          "x": 518.3508694763984,
+          "y": 697.4643666713766
+        },
+        "config": {
+          "catchLog": "Ticketmaster did not return to the homepage on its own; opening it",
+          "catchLevel": "info"
+        }
+      },
+      {
+        "id": "n_home_wait",
+        "kind": "waitForUrl",
+        "position": {
+          "x": 518.3508694763984,
+          "y": 807.4643666713766
+        },
+        "config": {
+          "url": "https://www.ticketmaster.com/**",
+          "timeoutMs": 30000,
+          "statusText": "Waiting for Ticketmaster to finish signing in"
+        }
+      },
+      {
+        "id": "n_unconf_branch",
+        "kind": "branch",
+        "position": {
+          "x": 1396.3508694763984,
+          "y": 797.4643666713766
+        },
+        "config": {
+          "op": "falsy",
+          "left": "{{tmUser.email}}"
+        }
+      },
+      {
+        "id": "n_unconf_log",
+        "kind": "log",
+        "position": {
+          "x": 1396.3508694763984,
+          "y": 907.4643666713766
+        },
+        "config": {
+          "level": "warn",
+          "message": "Could not read the signed-in account ({{tmUser.error}}). The email and SMS codes were accepted, so the account is saved anyway; check it signs in."
         }
       }
     ],
@@ -706,12 +1522,96 @@
         "id": "e_2",
         "from": "n_2",
         "fromPort": "next",
+        "to": "n_anti_check"
+      },
+      {
+        "id": "e_anti_check_next",
+        "from": "n_anti_check",
+        "fromPort": "next",
+        "to": "n_anti_branch"
+      },
+      {
+        "id": "e_anti_paused",
+        "from": "n_anti_branch",
+        "fromPort": "true",
+        "to": "n_anti_evidence"
+      },
+      {
+        "id": "e_anti_evidence_fail",
+        "from": "n_anti_evidence",
+        "fromPort": "next",
+        "to": "n_anti_fail"
+      },
+      {
+        "id": "e_anti_ok",
+        "from": "n_anti_branch",
+        "fromPort": "false",
+        "to": "n_signin_tc"
+      },
+      {
+        "id": "e_signin_loop",
+        "from": "n_signin_tc",
+        "fromPort": "loop",
         "to": "n_3"
       },
       {
-        "id": "e_ddgvdthk",
+        "id": "e_signin_back",
         "from": "n_3",
         "fromPort": "next",
+        "to": "n_signin_tc"
+      },
+      {
+        "id": "e_signin_catch",
+        "from": "n_signin_tc",
+        "fromPort": "catch",
+        "to": "n_anti3_check"
+      },
+      {
+        "id": "e_anti3_next",
+        "from": "n_anti3_check",
+        "fromPort": "next",
+        "to": "n_anti3_branch"
+      },
+      {
+        "id": "e_anti3_paused",
+        "from": "n_anti3_branch",
+        "fromPort": "true",
+        "to": "n_anti_fail"
+      },
+      {
+        "id": "e_anti3_nosignin",
+        "from": "n_anti3_branch",
+        "fromPort": "false",
+        "to": "n_signin_fail"
+      },
+      {
+        "id": "e_ddgvdthk",
+        "from": "n_signin_tc",
+        "fromPort": "exit",
+        "to": "n_anti2_check"
+      },
+      {
+        "id": "e_anti2_next",
+        "from": "n_anti2_check",
+        "fromPort": "next",
+        "to": "n_anti2_branch"
+      },
+      {
+        "id": "e_anti2_paused",
+        "from": "n_anti2_branch",
+        "fromPort": "true",
+        "to": "n_anti2_evidence"
+      },
+      {
+        "id": "e_anti2_evidence_fail",
+        "from": "n_anti2_evidence",
+        "fromPort": "next",
+        "to": "n_anti_fail"
+      },
+      {
+        "id": "e_anti2_ok",
+        "from": "n_anti2_branch",
+        "fromPort": "false",
         "to": "n_4ztsjjj0"
       },
       {
@@ -754,12 +1654,60 @@
         "id": "e_ufbcjohn",
         "from": "n_c0qokk55",
         "fromPort": "next",
+        "to": "n_ve_tc"
+      },
+      {
+        "id": "e_ve_loop",
+        "from": "n_ve_tc",
+        "fromPort": "loop",
         "to": "n_2xvujiga"
       },
       {
-        "id": "e_5hf4yscv",
+        "id": "e_ve_back",
         "from": "n_2xvujiga",
         "fromPort": "next",
+        "to": "n_ve_ready1"
+      },
+      {
+        "id": "e_ve_ready1_back",
+        "from": "n_ve_ready1",
+        "fromPort": "next",
+        "to": "n_ve_tc"
+      },
+      {
+        "id": "e_ve_catch",
+        "from": "n_ve_tc",
+        "fromPort": "catch",
+        "to": "n_ve_url"
+      },
+      {
+        "id": "e_ve_url_next",
+        "from": "n_ve_url",
+        "fromPort": "next",
+        "to": "n_ve_reload"
+      },
+      {
+        "id": "e_ve_reload_next",
+        "from": "n_ve_reload",
+        "fromPort": "next",
+        "to": "n_ve_wait"
+      },
+      {
+        "id": "e_ve_wait_next",
+        "from": "n_ve_wait",
+        "fromPort": "next",
+        "to": "n_ve_click2"
+      },
+      {
+        "id": "e_ve_click2_ready",
+        "from": "n_ve_click2",
+        "fromPort": "next",
+        "to": "n_ve_ready2"
+      },
+      {
+        "id": "e_5hf4yscv",
+        "from": "n_ve_tc",
+        "fromPort": "exit",
         "to": "n_hsne8h0q"
       },
       {
@@ -772,7 +1720,31 @@
         "id": "e_gbfgw9t9",
         "from": "n_hf5v63vt",
         "fromPort": "next",
+        "to": "n_otp_dwell"
+      },
+      {
+        "id": "e_otp_dwell_next",
+        "from": "n_otp_dwell",
+        "fromPort": "next",
+        "to": "n_otp_read"
+      },
+      {
+        "id": "e_otp_read_next",
+        "from": "n_otp_read",
+        "fromPort": "next",
+        "to": "n_otp_branch"
+      },
+      {
+        "id": "e_otp_ok",
+        "from": "n_otp_branch",
+        "fromPort": "true",
         "to": "n_o5xqn2dg"
+      },
+      {
+        "id": "e_otp_bad",
+        "from": "n_otp_branch",
+        "fromPort": "false",
+        "to": "n_otp_fail"
       },
       {
         "id": "e_4n4qrvms",
@@ -783,6 +1755,102 @@
       {
         "id": "e_cmiykjxg",
         "from": "n_1m6xjm70",
+        "fromPort": "next",
+        "to": "n_phone_cc_us_ca"
+      },
+      {
+        "id": "e_pc_us_ca",
+        "from": "n_phone_cc_us_ca",
+        "fromPort": "true",
+        "to": "n_phone_cc_ca_branch"
+      },
+      {
+        "id": "e_pc_other",
+        "from": "n_phone_cc_us_ca",
+        "fromPort": "false",
+        "to": "n_phone_other_open"
+      },
+      {
+        "id": "e_phone_cc_ca",
+        "from": "n_phone_cc_ca_branch",
+        "fromPort": "true",
+        "to": "n_phone_cc_open"
+      },
+      {
+        "id": "e_phone_cc_us",
+        "from": "n_phone_cc_ca_branch",
+        "fromPort": "false",
+        "to": "n_t44xz7he"
+      },
+      {
+        "id": "e_pc_other_open",
+        "from": "n_phone_other_open",
+        "fromPort": "next",
+        "to": "n_phone_other_options_wait"
+      },
+      {
+        "id": "e_pc_other_options_wait",
+        "from": "n_phone_other_options_wait",
+        "fromPort": "next",
+        "to": "n_phone_other_options_read"
+      },
+      {
+        "id": "e_pc_other_options_read",
+        "from": "n_phone_other_options_read",
+        "fromPort": "next",
+        "to": "n_phone_other_options_log"
+      },
+      {
+        "id": "e_pc_other_options_log",
+        "from": "n_phone_other_options_log",
+        "fromPort": "next",
+        "to": "n_phone_other_pick"
+      },
+      {
+        "id": "e_pc_other_pick",
+        "from": "n_phone_other_pick",
+        "fromPort": "next",
+        "to": "n_phone_other_selected"
+      },
+      {
+        "id": "e_pc_other_selected",
+        "from": "n_phone_other_selected",
+        "fromPort": "next",
+        "to": "n_t44xz7he"
+      },
+      {
+        "id": "e_phone_cc_open_next",
+        "from": "n_phone_cc_open",
+        "fromPort": "next",
+        "to": "n_phone_ca_options_wait"
+      },
+      {
+        "id": "e_phone_ca_options_wait",
+        "from": "n_phone_ca_options_wait",
+        "fromPort": "next",
+        "to": "n_phone_ca_options_read"
+      },
+      {
+        "id": "e_phone_ca_options_read",
+        "from": "n_phone_ca_options_read",
+        "fromPort": "next",
+        "to": "n_phone_ca_options_log"
+      },
+      {
+        "id": "e_phone_ca_options_log",
+        "from": "n_phone_ca_options_log",
+        "fromPort": "next",
+        "to": "n_phone_cc_pick"
+      },
+      {
+        "id": "e_phone_cc_pick_next",
+        "from": "n_phone_cc_pick",
+        "fromPort": "next",
+        "to": "n_phone_ca_selected"
+      },
+      {
+        "id": "e_phone_ca_selected",
+        "from": "n_phone_ca_selected",
         "fromPort": "next",
         "to": "n_t44xz7he"
       },
@@ -802,19 +1870,121 @@
         "id": "e_a5muczvy",
         "from": "n_clec4rid",
         "fromPort": "next",
+        "to": "n_smsdeliv_check"
+      },
+      {
+        "id": "e_smsdeliv_next",
+        "from": "n_smsdeliv_check",
+        "fromPort": "next",
+        "to": "n_smsdeliv_branch"
+      },
+      {
+        "id": "e_smsdeliv_yes",
+        "from": "n_smsdeliv_branch",
+        "fromPort": "true",
+        "to": "n_smsdeliv_click"
+      },
+      {
+        "id": "e_smsdeliv_radio",
+        "from": "n_smsdeliv_click",
+        "fromPort": "next",
+        "to": "n_smsdeliv_send"
+      },
+      {
+        "id": "e_smsdeliv_click",
+        "from": "n_smsdeliv_send",
+        "fromPort": "next",
+        "to": "n_sms_otp_ready"
+      },
+      {
+        "id": "e_smsdeliv_no",
+        "from": "n_smsdeliv_branch",
+        "fromPort": "false",
+        "to": "n_sms_otp_ready"
+      },
+      {
+        "id": "e_sms_otp_ready",
+        "from": "n_sms_otp_ready",
+        "fromPort": "next",
+        "to": "n_sms_wait_tc"
+      },
+      {
+        "id": "e_sms_wait_loop",
+        "from": "n_sms_wait_tc",
+        "fromPort": "loop",
         "to": "n_npssvess"
       },
       {
         "id": "e_ukk5nagt",
         "from": "n_npssvess",
         "fromPort": "next",
+        "to": "n_sms_wait_tc"
+      },
+      {
+        "id": "e_sms_wait_exit",
+        "from": "n_sms_wait_tc",
+        "fromPort": "exit",
         "to": "n_7gln5co0"
+      },
+      {
+        "id": "e_sms_wait_catch",
+        "from": "n_sms_wait_tc",
+        "fromPort": "catch",
+        "to": "n_sms_resend_branch"
+      },
+      {
+        "id": "e_sms_resend_yes",
+        "from": "n_sms_resend_branch",
+        "fromPort": "true",
+        "to": "n_sms_resend_log"
+      },
+      {
+        "id": "e_sms_resend_no",
+        "from": "n_sms_resend_branch",
+        "fromPort": "false",
+        "to": "n_sms_wait_error"
+      },
+      {
+        "id": "e_sms_resend_log",
+        "from": "n_sms_resend_log",
+        "fromPort": "next",
+        "to": "n_sms_resend"
+      },
+      {
+        "id": "e_sms_resend_wait",
+        "from": "n_sms_resend",
+        "fromPort": "next",
+        "to": "n_sms_wait_retry"
       },
       {
         "id": "e_dv1tzl7o",
         "from": "n_7gln5co0",
         "fromPort": "next",
+        "to": "n_sms_dwell"
+      },
+      {
+        "id": "e_sms_dwell_next",
+        "from": "n_sms_dwell",
+        "fromPort": "next",
+        "to": "n_sms_read"
+      },
+      {
+        "id": "e_sms_read_next",
+        "from": "n_sms_read",
+        "fromPort": "next",
+        "to": "n_sms_branch"
+      },
+      {
+        "id": "e_sms_ok",
+        "from": "n_sms_branch",
+        "fromPort": "true",
         "to": "n_as796xbk"
+      },
+      {
+        "id": "e_sms_bad",
+        "from": "n_sms_branch",
+        "fromPort": "false",
+        "to": "n_sms_fail"
       },
       {
         "id": "e_cu7ucgjz",
@@ -826,23 +1996,35 @@
         "id": "e_p45ohrla",
         "from": "n_p39zycof",
         "fromPort": "next",
+        "to": "n_pk_tc"
+      },
+      {
+        "id": "e_pk_loop",
+        "from": "n_pk_tc",
+        "fromPort": "loop",
         "to": "n_n5bxd4po"
       },
       {
         "id": "e_6ypth15e",
         "from": "n_n5bxd4po",
         "fromPort": "next",
-        "to": "n_oxam0g94"
+        "to": "n_pk_tc"
       },
       {
         "id": "e_c7zwxa3q",
-        "from": "n_oxam0g94",
+        "from": "n_pk_tc",
+        "fromPort": "exit",
+        "to": "n_home_tc"
+      },
+      {
+        "id": "e_pk_settings",
+        "from": "n_glvj5zbl",
         "fromPort": "next",
-        "to": "n_glvj5zbl"
+        "to": "n_oxam0g94"
       },
       {
         "id": "e_ico8yo8z",
-        "from": "n_glvj5zbl",
+        "from": "n_oxam0g94",
         "fromPort": "next",
         "to": "n_xqa6szaz"
       },
@@ -862,7 +2044,7 @@
         "id": "e_cbjne2xh",
         "from": "n_3p7ytqzv",
         "fromPort": "false",
-        "to": "n_dw22rs3k"
+        "to": "n_unconf_branch"
       },
       {
         "id": "e_smswrap_loop",
@@ -892,7 +2074,7 @@
         "id": "e_smscancel_next",
         "from": "n_smscancel",
         "fromPort": "next",
-        "to": "n_smsfailcatch"
+        "to": "n_sms_evidence"
       },
       {
         "id": "e_up1",
@@ -997,23 +2179,53 @@
         "to": "n_ar_fail"
       },
       {
-        "id": "e_n_gpectape_next",
-        "from": "n_gpectape",
+        "id": "e_sms_evidence_next",
+        "from": "n_sms_evidence",
         "fromPort": "next",
-        "to": "n_entry_webhook"
+        "to": "n_smsfailcatch"
       },
       {
-        "id": "e_n_entry_webhook_next",
-        "from": "n_entry_webhook",
+        "id": "e_saved_log",
+        "from": "n_gpectape",
         "fromPort": "next",
-        "to": "n_entry_result"
+        "to": "n_saved_log"
+      },
+      {
+        "id": "e_home_loop",
+        "from": "n_home_tc",
+        "fromPort": "loop",
+        "to": "n_home_wait"
+      },
+      {
+        "id": "e_home_exit",
+        "from": "n_home_tc",
+        "fromPort": "exit",
+        "to": "n_glvj5zbl"
+      },
+      {
+        "id": "e_unconf_true",
+        "from": "n_unconf_branch",
+        "fromPort": "true",
+        "to": "n_unconf_log"
+      },
+      {
+        "id": "e_unconf_false",
+        "from": "n_unconf_branch",
+        "fromPort": "false",
+        "to": "n_dw22rs3k"
+      },
+      {
+        "id": "e_unconf_save",
+        "from": "n_unconf_log",
+        "fromPort": "next",
+        "to": "n_gpectape"
       }
     ],
     "start": "n_1",
     "author": {
       "name": "Sete_",
-      "publicKey": "4ltw2LkHbMaYDjfkzo/3tj1n7Z+Vdash/uG8AyhdUwM=",
-      "signature": "92GfjcYYCPlWPm4eTPneLfprxBKxAkgWuwsirfIaWjz6qxlZApkbMQT4upn5JrxrusmF5bC+REQWwwnN566QBw=="
+      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
+      "signature": "3o6UCu6yIAjjft+X2GEMf2098Brvn6VAmR5XgDMLY3bgZARE/13qSmH0QaC0M6QmZYSWy3QXgrbo3YwMVAzmDg=="
     }
   }
 }
