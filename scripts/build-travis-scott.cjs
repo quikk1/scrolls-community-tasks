@@ -49,7 +49,7 @@ do {
 node('n_start', 'noop', {});
 node('n_settings', 'setVar', { name: 'travisSettings', value: {
   url: '{{inputs.url}}', product: '{{inputs.product}}', size: '{{inputs.size}}',
-  sizeMode: '{{inputs.sizeMode}}', sizeMinimum: '{{inputs.sizeMinimum}}', sizeMaximum: '{{inputs.sizeMaximum}}', cardDraws: '{{inputs.cardDraws}}',
+  sizeMode: '{{inputs.sizeMode}}', sizeMinimum: '{{inputs.sizeMinimum}}', sizeMaximum: '{{inputs.sizeMaximum}}', cardDraws: '{{inputs.cardDraws}}', cardSource: '{{inputs.cardSource}}',
   identity: { firstName: '{{profile.identity.firstName}}', lastName: '{{profile.identity.lastName}}', email: '{{profile.identity.email}}', phone: '{{profile.identity.phone}}' }, addresses: '{{addresses}}',
 } });
 evaluate('n_preflight', `
@@ -355,13 +355,17 @@ node('n_result', 'setResult', { value: '{{vars.travisOutcome}}' });
 // Selectors follow Shopify's one-page checkout (captured live 22 Oct 2026).
 const CO_FIELD = name => `input[name="${name}"]:not([id^="autofill_"])`;
 const CARD_FRAME = (frame, input) => `iframe[name^="card-fields-${frame}-"] >> internal:control=enter-frame >> input[name="${input}"]`;
-node('n_co_card', 'vault.pick', { cardId: '{{inputs.cardId}}', into: 'travisCard' }, { linked: false });
+// Scrolls 1.10.53+: source "address" reads the card saved on the run's address record.
+node('n_co_card', 'vault.pick', { source: '{{inputs.cardSource}}', cardId: '{{inputs.cardId}}', into: 'travisCard' }, { linked: false });
 edge('n_entry_route', 'false', 'n_co_card');
 // Only non-secret card details go into a script; the number and CVV are typed by fill nodes.
-node('n_co_card_meta', 'setVar', { name: 'travisCardMeta', value: { name: '{{vars.travisCard.cardholderName}}', expMonth: '{{vars.travisCard.expMonth}}', expYear: '{{vars.travisCard.expYear}}' } });
+node('n_co_card_meta', 'setVar', { name: 'travisCardMeta', value: { name: '{{vars.travisCard.cardholderName}}', expMonth: '{{vars.travisCard.expMonth}}', expYear: '{{vars.travisCard.expYear}}', source: '{{vars.travisCard.source}}' } });
 evaluate('n_co_card_fields', `
 const meta = {{vars.travisCardMeta}};
 const fields = {{vars.travisFields}};
+const settings = {{vars.travisSettings}};
+// An app older than 1.10.53 ignores source "address" and returns the Key Vault card instead.
+if ((settings.cardSource || 'address') === 'address' && meta.source !== 'address') throw new Error('Address-record cards need Scrolls 1.10.53 or newer. Update Scrolls, or choose Key Vault card.');
 const month = String(meta.expMonth ?? '').padStart(2, '0'), year = String(meta.expYear ?? '').slice(-2);
 if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\\d{2}$/.test(year)) throw new Error('The Key Vault card has no valid expiry date.');
 const name = String(meta.name || '').trim() || (fields.first_name + ' ' + fields.last_name).trim();
@@ -486,15 +490,17 @@ return { email: fields.email, status: 'entered', site: product.site, releaseId: 
 `, 'travisOutcome');
 node('n_co_save_entry', 'inventory.record', { site: '{{vars.travisProduct.site}}', productLabel: '{{vars.travisProduct.title}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
 node('n_co_result', 'setResult', { value: '{{vars.travisOutcome}}' });
-const DESCRIPTION = 'Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.1: steadier Continue step with a clear message when the draw dialog changes; card draws use the Key Vault default card.';
+const DESCRIPTION = 'Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.6.0: card draws use each run\'s address-record card (Scrolls 1.10.53+) or a Key Vault card; steadier Continue step.';
 const URL_HINT = 'shop.travisscott.com or victorvictor.com. A password-protected store fails until the draw is live.';
 const PRODUCT_HINT = 'Leave blank when the page has a single draw. With several draws, enter the title exactly as shown.';
 const CARD_HINT = 'Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today.';
-const CARD_ID_HINT = 'Used only for card draws. Leave blank for the default Key Vault card.';
+const CARD_SOURCE_HINT = 'Address record card uses the card saved on each run\'s address (run from the Database; Scrolls 1.10.53+). Key Vault card uses one card for every run.';
+const CARD_ID_HINT = 'Only for Key Vault card. Leave blank for the default Key Vault card.';
+const CARD_SOURCES = [{ value: 'address', label: 'Address record card' }, { value: 'vault', label: 'Key Vault card' }];
 const sizeInput = (id, label, defaultValue, equals) => ({ id, type: 'select', label, default: defaultValue, options: SIZES,
   visibleWhen: { input: 'sizeMode', equals }, requiredWhen: { input: 'sizeMode', equals } });
 const graph = {
-  schemaVersion: 1, version: '0.5.1', metadata: {
+  schemaVersion: 1, version: '0.6.0', metadata: {
     id: 'travis-scott-browser', name: 'SuperSwipe — Browser Entry', class: 'raffle', description: DESCRIPTION,
     tags: ['travis-scott', 'victor-victor', 'superswipe', 'browser', 'raffle'], inputs: [
       { id: 'url', label: 'Store / product URL', type: 'url', required: true, defaultValue: 'https://shop.travisscott.com/', hint: URL_HINT },
@@ -504,6 +510,7 @@ const graph = {
       { id: 'sizeMinimum', label: 'Minimum size', type: 'select', required: true, defaultValue: '8', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
       { id: 'sizeMaximum', label: 'Maximum size', type: 'select', required: true, defaultValue: '12', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
       { id: 'cardDraws', label: 'Card draws', type: 'boolean', defaultValue: false, hint: CARD_HINT },
+      { id: 'cardSource', label: 'Card source', type: 'select', defaultValue: 'address', options: CARD_SOURCES.map(o => o.value), hint: CARD_SOURCE_HINT },
       { id: 'cardId', label: 'Key Vault card ID', type: 'string', required: false, defaultValue: '', hint: CARD_ID_HINT },
     ],
   }, permissions: ['browser', 'evaluate', 'captcha', 'inventory', 'vault'], variables: [], start: 'n_start', nodes, edges,
@@ -524,7 +531,8 @@ const graph = {
       sizeInput('sizeMinimum', 'Minimum size', '8', 'Size range'),
       sizeInput('sizeMaximum', 'Maximum size', '12', 'Size range'),
       { id: 'cardDraws', type: 'boolean', label: 'Card draws', default: false, hint: CARD_HINT },
-      { id: 'cardId', type: 'text', label: 'Key Vault card ID', default: '', placeholder: 'Blank: default card', hint: CARD_ID_HINT },
+      { id: 'cardSource', type: 'segmented', label: 'Card source', default: 'address', options: CARD_SOURCES.map(o => ({ ...o, hint: o.value === 'address' ? 'Each run uses its address record\'s saved card.' : 'Every run uses one Key Vault card.' })), hint: CARD_SOURCE_HINT },
+      { id: 'cardId', type: 'text', label: 'Key Vault card ID', default: '', placeholder: 'Blank: default card', hint: CARD_ID_HINT, visibleWhen: { input: 'cardSource', equals: 'vault' } },
     ],
   },
 };

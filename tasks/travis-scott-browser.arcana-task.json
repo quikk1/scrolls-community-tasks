@@ -3,12 +3,12 @@
   "exportedAt": "2026-10-22T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.5.1",
+    "version": "0.6.0",
     "metadata": {
       "id": "travis-scott-browser",
       "name": "SuperSwipe — Browser Entry",
       "class": "raffle",
-      "description": "Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.5.1: steadier Continue step with a clear message when the draw dialog changes; card draws use the Key Vault default card.",
+      "description": "Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.6.0: card draws use each run's address-record card (Scrolls 1.10.53+) or a Key Vault card; steadier Continue step.",
       "tags": [
         "travis-scott",
         "victor-victor",
@@ -179,12 +179,23 @@
           "hint": "Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today."
         },
         {
+          "id": "cardSource",
+          "label": "Card source",
+          "type": "select",
+          "defaultValue": "address",
+          "options": [
+            "address",
+            "vault"
+          ],
+          "hint": "Address record card uses the card saved on each run's address (run from the Database; Scrolls 1.10.53+). Key Vault card uses one card for every run."
+        },
+        {
           "id": "cardId",
           "label": "Key Vault card ID",
           "type": "string",
           "required": false,
           "defaultValue": "",
-          "hint": "Used only for card draws. Leave blank for the default Key Vault card."
+          "hint": "Only for Key Vault card. Leave blank for the default Key Vault card."
         }
       ]
     },
@@ -224,6 +235,7 @@
             "sizeMinimum": "{{inputs.sizeMinimum}}",
             "sizeMaximum": "{{inputs.sizeMaximum}}",
             "cardDraws": "{{inputs.cardDraws}}",
+            "cardSource": "{{inputs.cardSource}}",
             "identity": {
               "firstName": "{{profile.identity.firstName}}",
               "lastName": "{{profile.identity.lastName}}",
@@ -1018,6 +1030,7 @@
           "y": 8960
         },
         "config": {
+          "source": "{{inputs.cardSource}}",
           "cardId": "{{inputs.cardId}}",
           "into": "travisCard"
         }
@@ -1034,7 +1047,8 @@
           "value": {
             "name": "{{vars.travisCard.cardholderName}}",
             "expMonth": "{{vars.travisCard.expMonth}}",
-            "expYear": "{{vars.travisCard.expYear}}"
+            "expYear": "{{vars.travisCard.expYear}}",
+            "source": "{{vars.travisCard.source}}"
           }
         }
       },
@@ -1046,7 +1060,7 @@
           "y": 9240
         },
         "config": {
-          "script": "\nconst meta = {{vars.travisCardMeta}};\nconst fields = {{vars.travisFields}};\nconst month = String(meta.expMonth ?? '').padStart(2, '0'), year = String(meta.expYear ?? '').slice(-2);\nif (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\\d{2}$/.test(year)) throw new Error('The Key Vault card has no valid expiry date.');\nconst name = String(meta.name || '').trim() || (fields.first_name + ' ' + fields.last_name).trim();\n// Shopify's national phone field: drop the +1 prefix for US and Canada.\nlet phone = String(fields.phone).trim();\nconst digits = phone.replace(/\\D/g, '');\nif (['US', 'CA'].includes(fields.country) && /^1\\d{10}$/.test(digits)) phone = digits.slice(1);\nelse if (['US', 'CA'].includes(fields.country) && /^\\d{10}$/.test(digits)) phone = digits;\nreturn { expiry: month + ' / ' + year, name, phone };\n",
+          "script": "\nconst meta = {{vars.travisCardMeta}};\nconst fields = {{vars.travisFields}};\nconst settings = {{vars.travisSettings}};\n// An app older than 1.10.53 ignores source \"address\" and returns the Key Vault card instead.\nif ((settings.cardSource || 'address') === 'address' && meta.source !== 'address') throw new Error('Address-record cards need Scrolls 1.10.53 or newer. Update Scrolls, or choose Key Vault card.');\nconst month = String(meta.expMonth ?? '').padStart(2, '0'), year = String(meta.expYear ?? '').slice(-2);\nif (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\\d{2}$/.test(year)) throw new Error('The Key Vault card has no valid expiry date.');\nconst name = String(meta.name || '').trim() || (fields.first_name + ' ' + fields.last_name).trim();\n// Shopify's national phone field: drop the +1 prefix for US and Canada.\nlet phone = String(fields.phone).trim();\nconst digits = phone.replace(/\\D/g, '');\nif (['US', 'CA'].includes(fields.country) && /^1\\d{10}$/.test(digits)) phone = digits.slice(1);\nelse if (['US', 'CA'].includes(fields.country) && /^\\d{10}$/.test(digits)) phone = digits;\nreturn { expiry: month + ' / ' + year, name, phone };\n",
           "into": "travisCardFields"
         }
       },
@@ -2259,19 +2273,37 @@
           "hint": "Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today."
         },
         {
+          "id": "cardSource",
+          "type": "segmented",
+          "label": "Card source",
+          "default": "address",
+          "options": [
+            {
+              "value": "address",
+              "label": "Address record card",
+              "hint": "Each run uses its address record's saved card."
+            },
+            {
+              "value": "vault",
+              "label": "Key Vault card",
+              "hint": "Every run uses one Key Vault card."
+            }
+          ],
+          "hint": "Address record card uses the card saved on each run's address (run from the Database; Scrolls 1.10.53+). Key Vault card uses one card for every run."
+        },
+        {
           "id": "cardId",
           "type": "text",
           "label": "Key Vault card ID",
           "default": "",
           "placeholder": "Blank: default card",
-          "hint": "Used only for card draws. Leave blank for the default Key Vault card."
+          "hint": "Only for Key Vault card. Leave blank for the default Key Vault card.",
+          "visibleWhen": {
+            "input": "cardSource",
+            "equals": "vault"
+          }
         }
       ]
-    },
-    "author": {
-      "name": "Scrolls",
-      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "60uC7e1WvEKbt43HjMe/RU44ttALEZxBcxftANwfQ0rVMbodYCJsFGr9LyRVyb4q3LTWnTbebUwR7sp6BU87CQ=="
     }
   }
 }

@@ -32,8 +32,10 @@ registerNode({ kind: 'captcha.solveTurnstile', permissions: ['captcha', 'browser
 } });
 registerNode({ kind: 'vault.pick', permissions: ['vault'], execute: async ({ config, resolve }) => {
   const c = resolve(config);
-  if (currentOptions.noCard) throw new Error('vault.pick: no card found');
-  return { setVars: { [c.into]: { id: 'card-1', number: '4242424242424242', cvv: '123', cardholderName: currentOptions.cardName ?? "Jane O'Neil", expMonth: 3, expYear: 2030 } } };
+  if (currentOptions.noCard) throw new Error(c.source === 'address' ? "vault.pick: the run's address record has no saved card" : 'vault.pick: no card found');
+  // currentOptions.oldApp: an app before 1.10.53 ignores source and returns the vault card (no source marker).
+  const source = c.source === 'address' && !currentOptions.oldApp ? { source: 'address' } : {};
+  return { setVars: { [c.into]: { id: 'card-1', number: '4242424242424242', cvv: '123', cardholderName: currentOptions.cardName ?? "Jane O'Neil", expMonth: 3, expYear: 2030, ...source } } };
 } });
 registerNode({ kind: 'inventory.record', permissions: ['inventory'], execute: async ({ config, resolve }) => {
   recorded.push(resolve(config)); return {};
@@ -222,7 +224,7 @@ async function main() {
       const ctx = { page, context, profile: { id: 'offline-profile', name: 'Offline', persona: {
         identity: { email: 'jane@example.com', firstName: 'Jane', lastName: "O'Neil", phone: address.phone },
         addresses: options.noAddress ? [] : [address],
-      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12', cardDraws: options.cardDraws ?? false, cardId: '' }, vars, signal: currentController.signal,
+      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12', cardDraws: options.cardDraws ?? false, cardSource: options.cardSource ?? 'address', cardId: '' }, vars, signal: currentController.signal,
         log: () => {}, onNodeEnter: (id) => {
           const active = '[data-scrolls-travis-dialog="active"]';
           // Simulates SuperSwipe re-rendering its dialog just before Continue (seen live).
@@ -349,7 +351,10 @@ async function main() {
     await scenario('No shipping option stops before payment', { ...card, noShipping: true, error: /no shipping option/ });
     await scenario('Dialog re-rendered after acknowledgments still continues', { ...card, rebind: true });
     await scenario('No-payment draw continues after a dialog re-render', { rebind: true });
-    await scenario('Missing Key Vault card fails before checkout', { ...card, noCard: true, error: /no card found/ });
+    await scenario('Missing Key Vault card fails before checkout', { ...card, cardSource: 'vault', noCard: true, error: /no card found/ });
+    await scenario('Address record without a card fails before checkout', { ...card, noCard: true, error: /no saved card/ });
+    await scenario('Key Vault card source still enters', { ...card, cardSource: 'vault' });
+    await scenario('Older app ignoring the address source stops before checkout', { ...card, oldApp: true, error: /need Scrolls 1\.10\.53/ });
   } finally { await browser.close(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
