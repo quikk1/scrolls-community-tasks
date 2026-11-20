@@ -3,7 +3,7 @@
   "exportedAt": "2026-11-19T23:47:10.519Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "1.0.3",
+    "version": "1.0.4",
     "metadata": {
       "browser": {
         "readbackNoise": false
@@ -363,8 +363,8 @@
           "email": "{{identity.email}}",
           "password": "{{identity.password}}",
           "site": "target.com",
-          "label": "Target",
-          "status": "existing"
+          "label": "Target (existing)",
+          "status": "active"
         },
         "position": {
           "x": 380,
