@@ -4,7 +4,7 @@ Available in **Library → SuperSwipe — Browser Entry (formerly Travis Scott �
 
 ## Travis Scott Shopify signup
 
-Version 0.7.0 is available as an unsigned development bundle. Import `travis-scott-browser.arcana-task.json` through **My Modules** to try it in a compatible Scrolls build. Importing the same module updates its local copy.
+Install or update **SuperSwipe — Browser Entry** to version 0.7.0 in the **Library**.
 
 1. Use a single eligible U.S. profile with its own name, email and saved U.S. phone number. Turn off **Run off-screen** and keep **Retries per profile** at 0. The storefront states a limit of one entry per person.
 2. Use `https://shop.travisscott.com/`. For the captured draw, enter **GRADIENT CAMO**, **WHITE**, or **BLACK** in **Exact product title**. Each colorway uses the same product title. You can also enter the full title followed by an em dash and the colorway.

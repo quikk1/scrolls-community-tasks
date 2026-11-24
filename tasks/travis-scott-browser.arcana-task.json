@@ -2681,6 +2681,11 @@
           }
         }
       ]
+    },
+    "author": {
+      "name": "Scrolls",
+      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
+      "signature": "Dy96NiCNA4ep+Jxy/wl6co3QmF8y5nN3LrbDaNM1R19FK0v/LTbhpNME0cF+qkrxSYfRpG0Wt7JBhhtVS0//DA=="
     }
   }
 }

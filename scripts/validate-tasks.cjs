@@ -21,6 +21,9 @@ const path = require("node:path");
 const root = path.join(__dirname, "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
 const entries = manifest.tasks || manifest.modules || [];
+// Match Scrolls graph-runtime's template tokens. The runtime substitutes
+// them before compiling the script, so use a placeholder for the syntax check.
+const TEMPLATE_RE = /\{\{\s*([a-zA-Z0-9_.[\]]+)\s*\}\}/g;
 
 let failed = 0;
 let warned = 0;
@@ -74,8 +77,8 @@ for (const entry of entries) {
 
   for (const n of (graph.nodes || []).filter((n) => n.kind === "evaluate")) {
     try {
-      // evaluate scripts run as async function bodies
-      new Function(`return (async () => {${n.config.script}})`);
+      const script = n.config.script.replace(TEMPLATE_RE, "null");
+      new Function(`return (async () => {${script}})`);
     } catch (e) {
       problems.push(`evaluate ${n.id} does not parse: ${e.message}`);
     }
