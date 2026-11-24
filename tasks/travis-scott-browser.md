@@ -2,6 +2,19 @@
 
 Available in **Library → SuperSwipe — Browser Entry (formerly Travis Scott — Browser Entry)**. Requires **Scrolls 1.6.0 or newer**.
 
+## Travis Scott Shopify signup
+
+Version 0.7.0 is available as an unsigned development bundle. Import `travis-scott-browser.arcana-task.json` through **My Modules** to try it in a compatible Scrolls build. Importing the same module updates its local copy.
+
+1. Use a single eligible U.S. profile with its own name, email and saved U.S. phone number. Turn off **Run off-screen** and keep **Retries per profile** at 0. The storefront states a limit of one entry per person.
+2. Use `https://shop.travisscott.com/`. For the captured draw, enter **GRADIENT CAMO**, **WHITE**, or **BLACK** in **Exact product title**. Each colorway uses the same product title. You can also enter the full title followed by an em dash and the colorway.
+3. Choose a size, range, or random selection. The module uses the sizes offered in the open signup form. This storefront's size list goes through 18.
+4. Complete the storefront's on-screen challenge. The module then fills the contact fields and size. Review the entry, complete any remaining verification, and accept the terms and click **Sign up** if you want to enter. Leave the option to enter other draws unchecked to limit the entry to the selected colorway.
+
+This signup uses contact details only. The module records an entry when the selected colorway shows its confirmation. The storefront sends a checkout link by email to selected entrants.
+
+## SuperSwipe draws
+
 1. Set up a Turnstile-capable service key in **Key Vault** and put it in the Turnstile solver order. Existing adapters include CapSolver, 2Captcha, Anti-Captcha, CapMonster and others.
 2. On **Addresses**, choose **Profiles** (records with email) or **Generated addresses** (street-address records without email), then choose a group or individual address. On **Email**, use the selected records' own emails, an email list, or catch-all aliases. Generated addresses require a list or catch-all. Records and emails pair one-to-one; extra emails/addresses are not run or recycled.
 3. Enter the store/product URL on `shop.travisscott.com` or `victorvictor.com` (with or without `www.`). Leave the product title blank when the page has a single draw; with several draws, enter the title exactly as shown (curly and straight apostrophes are equivalent). A wrong or missing title fails and lists the draws found on the page. Choose **Single size**, **Size range**, or **Random**. A range randomly selects an available size within inclusive bounds. Supported sizes are shoe sizes 3.5 through 13 in half sizes, 14 and 15, and apparel sizes XS through XXXL; store labels such as `Medium`, `X-Large` or `US 10.5` are recognized. A range uses two shoe sizes or two apparel sizes. Sizes missing or unavailable on the selected product are excluded; an empty selection fails without choosing outside it and lists the available sizes.
@@ -41,6 +54,6 @@ node scrolls-community-tasks/scripts/test-travis-scott-browser.cjs
 node scrolls-app/app/dist-electron/__tests__/captcha-turnstile.smoke.js
 ```
 
-The browser test accepts `SCROLLS_APP_DIR` and `CHROME_PATH` overrides. Otherwise it uses the sibling Scrolls source build and the standard Windows Chrome installation.
+The browser test accepts `SCROLLS_APP_DIR` and `CHROME_PATH` overrides. Otherwise it uses the sibling Scrolls source build and the standard Windows Chrome installation. The Shopify signup fixtures cover repeated titles, the challenge gate, confirmation, and missing or disabled sizes using synthetic records.
 
 Provider references: [CapSolver Turnstile API](https://docs.capsolver.com/en/guide/captcha/cloudflare_turnstile/) and [2Captcha Turnstile API](https://2captcha.com/api-docs/cloudflare-turnstile). The module reuses Scrolls' existing provider adapters.

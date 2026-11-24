@@ -6,6 +6,8 @@ const SHOE_SIZES = ['3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', 
 const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 // Ordered: a range compares positions, and shoe and apparel bounds may not mix.
 const SIZES = [...SHOE_SIZES, ...APPAREL_SIZES];
+const SHOPIFY_SIZES = [...SHOE_SIZES, '16', '17', '18'];
+const INPUT_SIZES = [...SHOPIFY_SIZES, ...APPAREL_SIZES];
 // SuperSwipe storefronts this module may enter. Keys are hostnames without "www.".
 const STORES = { 'shop.travisscott.com': 'Travis Scott', 'victorvictor.com': 'Victor Victor' };
 const nodes = [];
@@ -58,8 +60,8 @@ const stores = ${JSON.stringify(STORES)};
 const url = new URL(settings.url);
 if (url.protocol !== 'https:' || !stores[url.hostname.replace(/^www\\./, '')] || url.username || url.password)
   throw new Error('Use an HTTPS URL on ' + Object.keys(stores).join(' or ') + '.');
-const allowedSizes = ${JSON.stringify(SIZES)};
-const shoeSizes = ${JSON.stringify(SHOE_SIZES)};
+const allowedSizes = ${JSON.stringify(INPUT_SIZES)};
+const shoeSizes = ${JSON.stringify(SHOPIFY_SIZES)};
 const mode = settings.sizeMode || 'Single size';
 if (!['Single size', 'Size range', 'Random'].includes(mode)) throw new Error('Choose Single size, Size range or Random.');
 if (mode === 'Single size' && !allowedSizes.includes(String(settings.size))) throw new Error('Choose a size from the supported size list.');
@@ -68,6 +70,34 @@ if (mode === 'Size range' && (minimum < 0 || maximum < 0 || minimum > maximum))
   throw new Error('Choose a valid size range with minimum no greater than maximum.');
 if (mode === 'Size range' && shoeSizes.includes(String(settings.sizeMinimum)) !== shoeSizes.includes(String(settings.sizeMaximum)))
   throw new Error('Choose a valid size range: use two shoe sizes or two apparel sizes.');
+return true;
+`, 'travisPreflight');
+node('n_goto', 'goto', { url: '{{inputs.url}}', waitUntil: 'domcontentloaded', timeoutMs: 60000 });
+evaluate('n_store_open', `
+const stores = ${JSON.stringify(STORES)};
+if (location.protocol !== 'https:' || !stores[location.hostname.replace(/^www\\./, '')])
+  throw new Error('The page left the supported store: ' + location.hostname);
+if (/^\\/password(\\/|$)/.test(location.pathname)) throw new Error('The store is password-protected; run again once the draw page is live.');
+return true;
+`, 'travisStoreOpen');
+const SHOPIFY_CARD = '.RaffleMulti__item.js-raffle[data-raffle-id]';
+const SHOPIFY_DRAW = '[data-scrolls-shopify-draw="active"]';
+const SHOPIFY_FORM = 'dialog.modal-wrapper[data-state="open"] form';
+const SHOPIFY_STATUS = SHOPIFY_DRAW + ' [data-signup-status]';
+const SHOPIFY_ERROR = 'dialog.modal-wrapper[data-state="open"] .signup-form__invalid-entry';
+node('n_wait_products', 'waitFor', { selector: '.superswipe-block .superswipe-button, ' + SHOPIFY_CARD + ' [data-raffle-data]', state: 'attached', timeoutMs: 60000 });
+evaluate('n_detect_layout', `
+return location.hostname.replace(/^www\\./, '') === 'shop.travisscott.com' &&
+  !!document.querySelector(${JSON.stringify(SHOPIFY_CARD + ' [data-raffle-data]')});
+`, 'travisShopifyLayout');
+node('n_layout', 'branch', { left: '{{vars.travisShopifyLayout}}', op: 'truthy' });
+evaluate('n_shipping_fields', `
+const settings = {{vars.travisSettings}};
+const allowedSizes = ${JSON.stringify(SIZES)};
+if (settings.sizeMode === 'Size range' && ![settings.sizeMinimum, settings.sizeMaximum].every(size => allowedSizes.includes(String(size))))
+  throw new Error('Choose a valid size range for this SuperSwipe draw.');
+if ((!settings.sizeMode || settings.sizeMode === 'Single size') && !allowedSizes.includes(String(settings.size)))
+  throw new Error('Choose a size from the supported size list for this SuperSwipe draw.');
 const addresses = Array.isArray(settings.addresses) ? settings.addresses : [];
 const address = addresses.find(a => a.isDefault) || addresses[0];
 if (!address) throw new Error('Add a shipping address to this profile before running.');
@@ -83,14 +113,8 @@ for (const key of ['first_name', 'last_name', 'email', 'phone', 'address1', 'cit
 }
 if (!/^[A-Z]{2}$/.test(fields.country)) throw new Error('Shipping country must be a two-letter country code.');
 return fields;
-`, 'travisFields');
-node('n_goto', 'goto', { url: '{{inputs.url}}', waitUntil: 'domcontentloaded', timeoutMs: 60000 });
-// A locked Shopify store redirects every page to /password before a drop.
-evaluate('n_store_open', `
-if (/^\\/password(\\/|$)/.test(location.pathname)) throw new Error('The store is password-protected; run again once the draw page is live.');
-return true;
-`, 'travisStoreOpen');
-node('n_wait_products', 'waitFor', { selector: '.superswipe-block .superswipe-button', state: 'attached', timeoutMs: 60000 });
+`, 'travisFields', { linked: false });
+edge('n_layout', 'false', 'n_shipping_fields');
 evaluate('n_find_product', helpers + `
 const settings = {{vars.travisSettings}};
 const stores = ${JSON.stringify(STORES)};
@@ -490,25 +514,134 @@ return { email: fields.email, status: 'entered', site: product.site, releaseId: 
 `, 'travisOutcome');
 node('n_co_save_entry', 'inventory.record', { site: '{{vars.travisProduct.site}}', productLabel: '{{vars.travisProduct.title}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
 node('n_co_result', 'setResult', { value: '{{vars.travisOutcome}}' });
-const DESCRIPTION = 'Browser flow for SuperSwipe no-payment draws on shop.travisscott.com and victorvictor.com. Selects your size (shoe or apparel; one-size drops need none), dismisses the cookie banner, checks the five draw acknowledgments individually with randomized pauses, fills and verifies shipping details, solves Turnstile through Key Vault and submits. Acknowledgments include terms, privacy and Email/SMS communications. Saves only a visible entry confirmation. Requires Scrolls 1.6.0 or newer. Card draws (off by default): enters SuperSwipe card-on-file draws through Shopify checkout with a Key Vault card, only when $0.00 is due today; the store charges the card later only if you are selected. 0.6.0: card draws use each run\'s address-record card (Scrolls 1.10.53+) or a Key Vault card; steadier Continue step.';
+
+// The Travis Scott theme also has a contact-only draw form of its own.
+evaluate('n_shopify_draw', helpers + `
+const settings = {{vars.travisSettings}};
+const cards = [...document.querySelectorAll(${JSON.stringify(SHOPIFY_CARD)})].filter(visible);
+const draws = cards.map(card => {
+  const title = card.querySelector('.js-product-title')?.textContent.trim() || '';
+  const colorway = card.querySelector('.js-add-description p')?.textContent.trim() || '';
+  return { card, title, colorway, label: colorway ? title + ' — ' + colorway : title };
+}).filter(draw => draw.title);
+const wanted = norm(settings.product);
+const matches = wanted ? draws.filter(draw => [draw.title, draw.colorway, draw.label].some(label => norm(label) === wanted)) : draws;
+if (matches.length !== 1)
+  throw new Error('Choose one Travis Scott draw by its exact title and colorway. Draws on this page: ' + (draws.map(draw => draw.label).join(', ') || 'none'));
+const { card, label } = matches[0];
+const config = JSON.parse(card.querySelector('[data-raffle-data]')?.textContent || '{}');
+const releaseId = card.dataset.raffleId;
+if (config.rafId !== releaseId || config.raffleStatus !== 'open')
+  throw new Error('The selected Travis Scott draw is closed or unavailable.');
+if (config.raffleHideExtraFields !== true || config.raffleUsOnly !== true)
+  throw new Error('This Travis Scott draw does not use the supported U.S. contact form.');
+const status = card.querySelector('[data-signup-status]');
+const confirmation = norm(new DOMParser().parseFromString(config.raffleEntrySubmittedText || '', 'text/html').body.textContent);
+if (!status || !confirmation) throw new Error('This draw is missing a recognizable confirmation.');
+if (norm(status.textContent)) throw new Error('This draw already shows a signup status.');
+const addresses = Array.isArray(settings.addresses) ? settings.addresses : [];
+const address = addresses.find(item => item.isDefault) || addresses[0] || {};
+const identity = settings.identity || {};
+const phone = String(address.phone || identity.phone || '').replace(/\\D/g, '').replace(/^1(?=\\d{10}$)/, '');
+const fields = {
+  email: String(identity.email || '').trim(),
+  firstName: String(address.firstName || identity.firstName || '').trim(),
+  lastName: String(address.lastName || identity.lastName || '').trim(),
+  tel: phone,
+};
+if (!fields.email || !fields.firstName || !fields.lastName || !/^\\d{10}$/.test(phone))
+  throw new Error('The draw requires a name, email and 10-digit U.S. phone number.');
+for (const draw of cards) draw.removeAttribute('data-scrolls-shopify-draw');
+card.setAttribute('data-scrolls-shopify-draw', 'active');
+return { label, releaseId, confirmation, fields };
+`, 'travisShopifyDraw', { linked: false });
+edge('n_layout', 'true', 'n_shopify_draw');
+node('n_shopify_open_notice', 'log', { level: 'info', message: 'Opening {{vars.travisShopifyDraw.label}}. Complete the storefront challenge in the browser to unlock the signup fields.' });
+node('n_shopify_open', 'click', { selector: SHOPIFY_DRAW + ' [data-raffle-signup="signup"]', instant: true, timeoutMs: 60000 });
+node('n_shopify_wait_form', 'waitFor', { selector: SHOPIFY_FORM + ' .signup-form__fields:not([inert]) input[name="email"]', state: 'visible', timeoutMs: 300000 });
+evaluate('n_shopify_size', helpers + `
+const settings = {{vars.travisSettings}};
+const sizes = ${JSON.stringify(SHOPIFY_SIZES)};
+const form = document.querySelector(${JSON.stringify(SHOPIFY_FORM)});
+if (form?.querySelector('input[name="countryCode"]')?.value !== 'US' || form.querySelector('[name^="address."]'))
+  throw new Error('The storefront opened an unexpected signup form.');
+const picker = form.querySelector('select[name="size"]');
+if (!visible(picker)) throw new Error('The storefront did not show a size picker.');
+// The Shopify products are placeholders. The open form's options determine what can be entered.
+const options = [...picker.options].filter(option => !option.matches(':disabled') && !option.hidden && sizes.includes(option.value));
+const mode = settings.sizeMode || 'Single size';
+const lower = sizes.indexOf(String(settings.sizeMinimum));
+const upper = sizes.indexOf(String(settings.sizeMaximum));
+const matches = options.filter(({ value }) => {
+  if (mode === 'Random') return true;
+  if (mode === 'Single size') return value === String(settings.size);
+  const index = sizes.indexOf(value);
+  return index >= lower && index <= upper;
+});
+if (!matches.length) throw new Error('No sizes match the selection. Available: ' + (options.map(option => option.value).join(', ') || 'none'));
+return { value: matches[Math.floor(Math.random() * matches.length)].value };
+`, 'travisShopifySize');
+node('n_shopify_select_size', 'select', { selector: SHOPIFY_FORM + ' select[name="size"]', value: '{{vars.travisShopifySize.value}}' });
+for (const field of ['email', 'firstName', 'lastName', 'tel']) {
+  node('n_shopify_fill_' + field, 'fill', { selector: SHOPIFY_FORM + ' input[name="' + field + '"]', value: '{{vars.travisShopifyDraw.fields.' + field + '}}', instant: true, timeoutMs: 30000 });
+}
+evaluate('n_shopify_review', helpers + `
+const draw = {{vars.travisShopifyDraw}};
+const size = {{vars.travisShopifySize}};
+const form = document.querySelector(${JSON.stringify(SHOPIFY_FORM)});
+const card = document.querySelector(${JSON.stringify(SHOPIFY_DRAW)});
+for (const [name, expected] of Object.entries({ ...draw.fields, size: size.value })) {
+  const input = form?.elements.namedItem(name);
+  const value = name === 'tel' ? input?.value.replace(/\\D/g, '').replace(/^1(?=\\d{10}$)/, '') : input?.value;
+  if (!visible(input) || value !== expected || !input.validity.valid)
+    throw new Error('The storefront rejected the prefilled ' + name + ' field.');
+}
+// Record the values actually submitted if the user edits them during review.
+form.addEventListener('submit', event => {
+  if (!event.isTrusted) return;
+  card.dataset.scrollsShopifySubmitted = JSON.stringify({
+    email: form.elements.namedItem('email').value.trim(),
+    size: form.elements.namedItem('size').value,
+  });
+}, { capture: true });
+return true;
+`, 'travisShopifyReady');
+node('n_shopify_review_notice', 'log', { level: 'info', message: 'Review the contact details and size in the browser, complete any remaining verification, and choose whether to accept the terms and click Sign up. This run tracks the selected colorway.' });
+node('n_shopify_wait_result', 'waitFor', { selector: SHOPIFY_STATUS + ':not(:empty), ' + SHOPIFY_ERROR, state: 'visible', timeoutMs: 300000 });
+evaluate('n_shopify_confirm', helpers + `
+const draw = {{vars.travisShopifyDraw}};
+const card = document.querySelector(${JSON.stringify(SHOPIFY_DRAW)});
+const status = document.querySelector(${JSON.stringify(SHOPIFY_STATUS)});
+const submitted = JSON.parse(card?.dataset.scrollsShopifySubmitted || 'null');
+if (card) delete card.dataset.scrollsShopifySubmitted;
+if (visible(document.querySelector(${JSON.stringify(SHOPIFY_ERROR)})))
+  throw new Error('The storefront rejected the signup.');
+if (!submitted?.email || !submitted.size || card?.dataset.raffleId !== draw.releaseId || !visible(status) || norm(status.textContent) !== draw.confirmation)
+  throw new Error('No new signup confirmation for the selected Travis Scott draw.');
+return { email: submitted.email, status: 'entered', site: 'shop.travisscott.com', releaseId: draw.releaseId, size: submitted.size, entry: 'signup' };
+`, 'travisOutcome');
+node('n_shopify_save_entry', 'inventory.record', { site: '{{vars.travisOutcome.site}}', productLabel: '{{vars.travisShopifyDraw.label}}', status: 'entered', email: '{{vars.travisOutcome.email}}', productUrl: '{{inputs.url}}', cost: 0, currency: 'USD', metadata: '{{vars.travisOutcome}}', into: 'travisEntry' });
+node('n_shopify_result', 'setResult', { value: '{{vars.travisOutcome}}' });
+
+const DESCRIPTION = 'Browser entry for SuperSwipe draws on shop.travisscott.com and victorvictor.com, and the Travis Scott U.S. Shopify signup. The Shopify route pre-fills size and contact details. Complete verification, review the terms and submit in the browser. Saves only a visible confirmation. SuperSwipe shipping and optional card-on-file checkout use the existing flow.';
 const URL_HINT = 'shop.travisscott.com or victorvictor.com. A password-protected store fails until the draw is live.';
-const PRODUCT_HINT = 'Leave blank when the page has a single draw. With several draws, enter the title exactly as shown.';
+const PRODUCT_HINT = 'Leave blank for a single draw. For Travis Scott Shopify draws with the same title, enter the exact colorway or Title — Colorway.';
 const CARD_HINT = 'Enter draws that keep a card on file through Shopify checkout. Nothing is due today; the store charges the card later only if you are selected. Stops if checkout shows any amount due today.';
 const CARD_SOURCE_HINT = 'Address record card uses the card saved on each run\'s address (run from the Database; Scrolls 1.10.53+). Key Vault card uses one card for every run.';
 const CARD_ID_HINT = 'Only for Key Vault card. Leave blank for the default Key Vault card.';
 const CARD_SOURCES = [{ value: 'address', label: 'Address record card' }, { value: 'vault', label: 'Key Vault card' }];
-const sizeInput = (id, label, defaultValue, equals) => ({ id, type: 'select', label, default: defaultValue, options: SIZES,
+const sizeInput = (id, label, defaultValue, equals) => ({ id, type: 'select', label, default: defaultValue, options: INPUT_SIZES,
   visibleWhen: { input: 'sizeMode', equals }, requiredWhen: { input: 'sizeMode', equals } });
 const graph = {
-  schemaVersion: 1, version: '0.6.0', metadata: {
+  schemaVersion: 1, version: '0.7.0', metadata: {
     id: 'travis-scott-browser', name: 'SuperSwipe — Browser Entry', class: 'raffle', description: DESCRIPTION,
     tags: ['travis-scott', 'victor-victor', 'superswipe', 'browser', 'raffle'], inputs: [
       { id: 'url', label: 'Store / product URL', type: 'url', required: true, defaultValue: 'https://shop.travisscott.com/', hint: URL_HINT },
       { id: 'product', label: 'Exact product title', type: 'string', required: false, defaultValue: '', hint: PRODUCT_HINT },
       { id: 'sizeMode', label: 'Size selection', type: 'select', defaultValue: 'Single size', options: ['Single size', 'Size range', 'Random'], hint: 'Random chooses from available supported sizes. Size range chooses randomly within your inclusive bounds.' },
-      { id: 'size', label: 'Size', type: 'select', required: true, defaultValue: '10.5', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Single size' } },
-      { id: 'sizeMinimum', label: 'Minimum size', type: 'select', required: true, defaultValue: '8', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
-      { id: 'sizeMaximum', label: 'Maximum size', type: 'select', required: true, defaultValue: '12', options: SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
+      { id: 'size', label: 'Size', type: 'select', required: true, defaultValue: '10.5', options: INPUT_SIZES, visibleWhen: { input: 'sizeMode', equals: 'Single size' } },
+      { id: 'sizeMinimum', label: 'Minimum size', type: 'select', required: true, defaultValue: '8', options: INPUT_SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
+      { id: 'sizeMaximum', label: 'Maximum size', type: 'select', required: true, defaultValue: '12', options: INPUT_SIZES, visibleWhen: { input: 'sizeMode', equals: 'Size range' } },
       { id: 'cardDraws', label: 'Card draws', type: 'boolean', defaultValue: false, hint: CARD_HINT },
       { id: 'cardSource', label: 'Card source', type: 'select', defaultValue: 'address', options: CARD_SOURCES.map(o => o.value), hint: CARD_SOURCE_HINT },
       { id: 'cardId', label: 'Key Vault card ID', type: 'string', required: false, defaultValue: '', hint: CARD_ID_HINT },
@@ -537,5 +670,5 @@ const graph = {
   },
 };
 const target = path.resolve(__dirname, '../tasks/travis-scott-browser.arcana-task.json');
-fs.writeFileSync(target, JSON.stringify({ format: 'arcana-task/v1', exportedAt: '2026-10-22T00:00:00.000Z', graph }, null, 2) + '\n');
+fs.writeFileSync(target, JSON.stringify({ format: 'arcana-task/v1', exportedAt: '2026-11-24T00:00:00.000Z', graph }, null, 2) + '\n');
 console.log(`Built ${nodes.length} browser flow nodes: ${target}`);
