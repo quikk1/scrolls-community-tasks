@@ -2,16 +2,18 @@
 
 Available in **Library → SuperSwipe — Browser Entry (formerly Travis Scott — Browser Entry)**. Requires **Scrolls 1.6.0 or newer**.
 
-## Travis Scott Shopify signup
+## Travis Scott Shopify draws
 
-Install or update **SuperSwipe — Browser Entry** to version 0.7.0 in the **Library**.
+Install or update **SuperSwipe — Browser Entry** to version 0.8.0 in the **Library**.
 
-1. Use a single eligible U.S. profile with its own name, email and saved U.S. phone number. Turn off **Run off-screen** and keep **Retries per profile** at 0. The storefront states a limit of one entry per person.
-2. Use `https://shop.travisscott.com/`. For the captured draw, enter **GRADIENT CAMO**, **WHITE**, or **BLACK** in **Exact product title**. Each colorway uses the same product title. You can also enter the full title followed by an em dash and the colorway.
-3. Choose a size, range, or random selection. The module uses the sizes offered in the open signup form. This storefront's size list goes through 18.
-4. Complete the storefront's on-screen challenge. The module then fills the contact fields and size. Review the entry, complete any remaining verification, and accept the terms and click **Sign up** if you want to enter. Leave the option to enter other draws unchecked to limit the entry to the selected colorway.
+1. Use eligible U.S. profiles, each with its own first and last name, email and a valid U.S. phone number (address phone, else identity phone). Keep **Retries per profile** at 0: the storefront allows one entry per person.
+2. Use `https://shop.travisscott.com/`. When draws share a title, enter the colorway (for example **GRADIENT CAMO**, **WHITE** or **BLACK**) in **Exact product title**, or the full title followed by an em dash and the colorway.
+3. Choose a size, range or random selection. Sizes come from the selected draw's own size list (this storefront's goes through 18).
+4. Optional: **Enter all draws** uses the storefront's own "Sign up for all three raffles in the same size" option. One request then enters every open draw in that size. Off by default.
 
-This signup uses contact details only. The module records an entry when the selected colorway shows its confirmation. The storefront sends a checkout link by email to selected entrants.
+The run is automatic. The storefront's driving game only unlocks its form in the browser and is not part of the entry. The module renders the storefront's Cloudflare Turnstile widget on the page and waits for it to pass. If Cloudflare asks for a check, it clicks the box once and waits up to 90 seconds. You can also complete the check in the browser during that time. It then sends the same JSON request the storefront sends (`POST` to the draw's `raffleSubmitUrl`: draw id, name, email, `US`, phone as `+1 XXX-XXX-XXXX`, size, terms accepted, the enter-all choice, the Turnstile token and the storefront's time reference). It records an entry only for an HTTP 200 `{"message":"success"}` reply. A rejection (for example an invalid token) is reported with its HTTP status and is not recorded or resubmitted.
+
+The module refuses a draw whose submit address is not an AWS API Gateway host, so contact details never go to an unexpected endpoint. The Turnstile token stays in the page; it is not stored in graph variables or inventory. Selected entrants receive a checkout link by email from the storefront.
 
 ## SuperSwipe draws
 
@@ -54,6 +56,6 @@ node scrolls-community-tasks/scripts/test-travis-scott-browser.cjs
 node scrolls-app/app/dist-electron/__tests__/captcha-turnstile.smoke.js
 ```
 
-The browser test accepts `SCROLLS_APP_DIR` and `CHROME_PATH` overrides. Otherwise it uses the sibling Scrolls source build and the standard Windows Chrome installation. The Shopify signup fixtures cover repeated titles, the challenge gate, confirmation, and missing or disabled sizes using synthetic records.
+The browser test accepts `SCROLLS_APP_DIR` and `CHROME_PATH` overrides. Otherwise it uses the sibling Scrolls source build and the standard Windows Chrome installation. The Shopify draw fixtures replace Cloudflare's api.js and the entry endpoint. They check the exact request body (field order, phone format and time reference), automatic and interactive verification, enter-all, unknown endpoints, rejections and unconfirmed replies, using synthetic records. The request format was taken from a HAR of a manual entry on 24 November 2026. No live entry was made with the module.
 
 Provider references: [CapSolver Turnstile API](https://docs.capsolver.com/en/guide/captcha/cloudflare_turnstile/) and [2Captcha Turnstile API](https://2captcha.com/api-docs/cloudflare-turnstile). The module reuses Scrolls' existing provider adapters.

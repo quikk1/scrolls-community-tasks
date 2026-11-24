@@ -81,8 +81,8 @@
         "email",
         "turnstile"
       ],
-      "version": "0.7.0",
-      "description": "Browser entry for SuperSwipe draws on shop.travisscott.com and victorvictor.com, and the Travis Scott U.S. Shopify signup. The Shopify route pre-fills size and contact details. Complete verification, review the terms and submit in the browser. Saves only a visible confirmation. SuperSwipe shipping and optional card-on-file checkout use the existing flow.",
+      "version": "0.8.0",
+      "description": "Browser entry for SuperSwipe draws on shop.travisscott.com and victorvictor.com, and the Travis Scott U.S. Shopify draws. Shopify draws: picks the colorway and size, passes Cloudflare verification on the storefront and submits the entry automatically with the profile name, email and U.S. phone; records it only when the store confirms. SuperSwipe draws: fills shipping, solves Turnstile through Key Vault and submits; optional card-on-file checkout.",
       "author": {
         "name": "Scrolls",
         "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E="
@@ -91,7 +91,7 @@
       "minAppVersion": "1.6.0",
       "addressMode": "database",
       "publishedAt": "2026-11-24",
-      "devNotes": "For the Travis Scott Shopify signup, use one U.S. profile with its saved phone number. Turn off Run off-screen. Use the exact colorway in Exact product title when draws share a title. Complete the storefront challenge, review the prefilled form, and submit in the browser. The Turnstile solver setting applies to legacy SuperSwipe draws."
+      "devNotes": "Travis Scott Shopify draws are fully automatic from 0.8.0: the module passes Cloudflare verification on the storefront (clicking the box if asked) and sends the same entry request as the site. Use U.S. profiles with a valid U.S. phone number, the exact colorway in Exact product title when draws share a title, and Retries per profile 0 (one entry per person). Enter all draws uses the store's own option to enter every open draw in the same size. The Key Vault Turnstile solver applies only to SuperSwipe draws."
     },
     {
       "id": "outlook",

@@ -3,12 +3,12 @@
   "exportedAt": "2026-11-24T00:00:00.000Z",
   "graph": {
     "schemaVersion": 1,
-    "version": "0.7.0",
+    "version": "0.8.0",
     "metadata": {
       "id": "travis-scott-browser",
       "name": "SuperSwipe — Browser Entry",
       "class": "raffle",
-      "description": "Browser entry for SuperSwipe draws on shop.travisscott.com and victorvictor.com, and the Travis Scott U.S. Shopify signup. The Shopify route pre-fills size and contact details. Complete verification, review the terms and submit in the browser. Saves only a visible confirmation. SuperSwipe shipping and optional card-on-file checkout use the existing flow.",
+      "description": "Browser entry for SuperSwipe draws on shop.travisscott.com and victorvictor.com, and the Travis Scott U.S. Shopify draws. Shopify draws: picks the colorway and size, passes Cloudflare verification on the storefront and submits the entry automatically with the profile name, email and U.S. phone; records it only when the store confirms. SuperSwipe draws: fills shipping, solves Turnstile through Key Vault and submits; optional card-on-file checkout.",
       "tags": [
         "travis-scott",
         "victor-victor",
@@ -31,7 +31,7 @@
           "type": "string",
           "required": false,
           "defaultValue": "",
-          "hint": "Leave blank for a single draw. For Travis Scott Shopify draws with the same title, enter the exact colorway or Title — Colorway."
+          "hint": "Leave blank for a single draw. For Travis Scott Shopify draws with the same title, enter the exact colorway (for example WHITE) or Title — Colorway."
         },
         {
           "id": "sizeMode",
@@ -181,6 +181,13 @@
           }
         },
         {
+          "id": "enterAllDraws",
+          "label": "Enter all draws",
+          "type": "boolean",
+          "defaultValue": false,
+          "hint": "Travis Scott Shopify draws only: also enters the other open draws on the page in the same size (the store's own \"sign up for all\" option)."
+        },
+        {
           "id": "cardDraws",
           "label": "Card draws",
           "type": "boolean",
@@ -245,6 +252,7 @@
             "sizeMaximum": "{{inputs.sizeMaximum}}",
             "cardDraws": "{{inputs.cardDraws}}",
             "cardSource": "{{inputs.cardSource}}",
+            "enterAllDraws": "{{inputs.enterAllDraws}}",
             "identity": {
               "firstName": "{{profile.identity.firstName}}",
               "lastName": "{{profile.identity.lastName}}",
@@ -1520,12 +1528,12 @@
           "y": 14140
         },
         "config": {
-          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst settings = {{vars.travisSettings}};\nconst cards = [...document.querySelectorAll(\".RaffleMulti__item.js-raffle[data-raffle-id]\")].filter(visible);\nconst draws = cards.map(card => {\n  const title = card.querySelector('.js-product-title')?.textContent.trim() || '';\n  const colorway = card.querySelector('.js-add-description p')?.textContent.trim() || '';\n  return { card, title, colorway, label: colorway ? title + ' — ' + colorway : title };\n}).filter(draw => draw.title);\nconst wanted = norm(settings.product);\nconst matches = wanted ? draws.filter(draw => [draw.title, draw.colorway, draw.label].some(label => norm(label) === wanted)) : draws;\nif (matches.length !== 1)\n  throw new Error('Choose one Travis Scott draw by its exact title and colorway. Draws on this page: ' + (draws.map(draw => draw.label).join(', ') || 'none'));\nconst { card, label } = matches[0];\nconst config = JSON.parse(card.querySelector('[data-raffle-data]')?.textContent || '{}');\nconst releaseId = card.dataset.raffleId;\nif (config.rafId !== releaseId || config.raffleStatus !== 'open')\n  throw new Error('The selected Travis Scott draw is closed or unavailable.');\nif (config.raffleHideExtraFields !== true || config.raffleUsOnly !== true)\n  throw new Error('This Travis Scott draw does not use the supported U.S. contact form.');\nconst status = card.querySelector('[data-signup-status]');\nconst confirmation = norm(new DOMParser().parseFromString(config.raffleEntrySubmittedText || '', 'text/html').body.textContent);\nif (!status || !confirmation) throw new Error('This draw is missing a recognizable confirmation.');\nif (norm(status.textContent)) throw new Error('This draw already shows a signup status.');\nconst addresses = Array.isArray(settings.addresses) ? settings.addresses : [];\nconst address = addresses.find(item => item.isDefault) || addresses[0] || {};\nconst identity = settings.identity || {};\nconst phone = String(address.phone || identity.phone || '').replace(/\\D/g, '').replace(/^1(?=\\d{10}$)/, '');\nconst fields = {\n  email: String(identity.email || '').trim(),\n  firstName: String(address.firstName || identity.firstName || '').trim(),\n  lastName: String(address.lastName || identity.lastName || '').trim(),\n  tel: phone,\n};\nif (!fields.email || !fields.firstName || !fields.lastName || !/^\\d{10}$/.test(phone))\n  throw new Error('The draw requires a name, email and 10-digit U.S. phone number.');\nfor (const draw of cards) draw.removeAttribute('data-scrolls-shopify-draw');\ncard.setAttribute('data-scrolls-shopify-draw', 'active');\nreturn { label, releaseId, confirmation, fields };\n",
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst settings = {{vars.travisSettings}};\nconst sizes = [\"3.5\",\"4\",\"4.5\",\"5\",\"5.5\",\"6\",\"6.5\",\"7\",\"7.5\",\"8\",\"8.5\",\"9\",\"9.5\",\"10\",\"10.5\",\"11\",\"11.5\",\"12\",\"12.5\",\"13\",\"14\",\"15\",\"16\",\"17\",\"18\"];\nconst cards = [...document.querySelectorAll(\".RaffleMulti__item.js-raffle[data-raffle-id]\")].filter(visible);\nconst draws = cards.map(card => {\n  const title = card.querySelector('.js-product-title')?.textContent.trim() || '';\n  const colorway = card.querySelector('.js-add-description p')?.textContent.trim() || '';\n  return { card, title, colorway, label: colorway ? title + ' — ' + colorway : title };\n}).filter(draw => draw.title);\nconst wanted = norm(settings.product);\nconst matches = wanted ? draws.filter(draw => [draw.title, draw.colorway, draw.label].some(label => norm(label) === wanted)) : draws;\nif (matches.length !== 1)\n  throw new Error('Choose one Travis Scott draw by its exact title and colorway. Draws on this page: ' + (draws.map(draw => draw.label).join(', ') || 'none'));\nconst { card, label } = matches[0];\nlet config;\ntry { config = JSON.parse(card.querySelector('[data-raffle-data]')?.textContent || '{}'); }\ncatch { throw new Error('The selected Travis Scott draw has unreadable draw data.'); }\nconst releaseId = card.dataset.raffleId;\nif (config.rafId !== releaseId || config.raffleStatus !== 'open')\n  throw new Error('The selected Travis Scott draw is closed or unavailable.');\nif (config.raffleHideExtraFields !== true || config.raffleUsOnly !== true)\n  throw new Error('This Travis Scott draw does not use the supported U.S. contact form.');\nlet submitUrl;\ntry { submitUrl = new URL(config.raffleSubmitUrl); } catch {}\nif (submitUrl?.protocol !== 'https:' || !/^[a-z0-9]+\\.execute-api\\.[a-z0-9-]+\\.amazonaws\\.com$/.test(submitUrl.hostname) || submitUrl.username || submitUrl.password)\n  throw new Error('The selected Travis Scott draw submits to an unrecognized address; not entering.');\nconst siteKey = String(config.raffleCaptchaTurnstileKey || '0x4AAAAAAABM6dKVzpGE1ibP');\nif (!/^0x[A-Za-z0-9_-]+$/.test(siteKey)) throw new Error('The selected Travis Scott draw has no valid verification key.');\nconst status = card.querySelector('[data-signup-status]');\nif (!status) throw new Error('This draw is missing its signup status.');\nif (norm(status.textContent)) throw new Error('This draw already shows a signup status.');\n// The site's form offers every variant title as a size; the products are placeholders.\nconst offered = (config.product?.variants || []).map(variant => String(variant.public_title || 'One Size'));\nconst available = offered.filter(size => sizes.includes(size));\nconst mode = settings.sizeMode || 'Single size';\nconst lower = sizes.indexOf(String(settings.sizeMinimum));\nconst upper = sizes.indexOf(String(settings.sizeMaximum));\nconst eligible = available.filter(size => {\n  if (mode === 'Random') return true;\n  if (mode === 'Single size') return size === String(settings.size);\n  const index = sizes.indexOf(size);\n  return index >= lower && index <= upper;\n});\nif (!eligible.length) throw new Error('No sizes match the selection. Available: ' + (offered.join(', ') || 'none'));\nconst size = eligible[Math.floor(Math.random() * eligible.length)];\nconst addresses = Array.isArray(settings.addresses) ? settings.addresses : [];\nconst address = addresses.find(item => item.isDefault) || addresses[0] || {};\nconst identity = settings.identity || {};\nconst phone = String(address.phone || identity.phone || '').replace(/\\D/g, '').replace(/^1(?=\\d{10}$)/, '');\nconst fields = {\n  email: String(identity.email || '').trim(),\n  firstName: String(address.firstName || identity.firstName || '').trim(),\n  lastName: String(address.lastName || identity.lastName || '').trim(),\n};\n// Same checks as the storefront form: names of at least two characters, an email and a 10-digit U.S. number.\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(fields.email) || fields.firstName.length < 2 || fields.lastName.length < 2 || !/^[2-9]\\d{2}[2-9]\\d{6}$/.test(phone))\n  throw new Error('The draw requires a first and last name (2+ characters), a valid email and a valid 10-digit U.S. phone number.');\nconst enterAll = settings.enterAllDraws === true || settings.enterAllDraws === 'true';\nif (enterAll && config.raffleShowEnterNextRaffle !== true)\n  throw new Error('This draw does not offer entering the other draws; turn off Enter all draws.');\nfor (const draw of cards) draw.removeAttribute('data-scrolls-shopify-draw');\ncard.setAttribute('data-scrolls-shopify-draw', 'active');\nreturn {\n  label: enterAll ? label + ' (+ other open draws)' : label, releaseId, submitUrl: submitUrl.href, siteKey, size, enterNextRaffle: enterAll,\n  // The storefront sends the number in international format, e.g. +1 602-555-0123.\n  fields: { ...fields, tel: '+1 ' + phone.slice(0, 3) + '-' + phone.slice(3, 6) + '-' + phone.slice(6) },\n};\n",
           "into": "travisShopifyDraw"
         }
       },
       {
-        "id": "n_shopify_open_notice",
+        "id": "n_shopify_notice",
         "kind": "log",
         "position": {
           "x": 160,
@@ -1533,161 +1541,104 @@
         },
         "config": {
           "level": "info",
-          "message": "Opening {{vars.travisShopifyDraw.label}}. Complete the storefront challenge in the browser to unlock the signup fields."
+          "message": "Entering {{vars.travisShopifyDraw.label}} in size {{vars.travisShopifyDraw.size}}. Waiting for Cloudflare verification on the storefront."
         }
       },
       {
-        "id": "n_shopify_open",
-        "kind": "click",
+        "id": "n_shopify_turnstile",
+        "kind": "evaluate",
         "position": {
           "x": 160,
           "y": 14420
         },
         "config": {
-          "selector": "[data-scrolls-shopify-draw=\"active\"] [data-raffle-signup=\"signup\"]",
-          "instant": true,
-          "timeoutMs": 60000
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst draw = {{vars.travisShopifyDraw}};\ndocument.querySelector(\"#scrolls-shopify-turnstile\")?.remove();\nconst box = document.createElement('div');\nbox.id = \"scrolls-shopify-turnstile\";\nbox.style.cssText = 'position:fixed;top:16px;left:16px;z-index:2147483647;padding:8px;background:#fff;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.4)';\nconst widget = document.createElement('div');\nwidget.className = 'cf-turnstile';\nwidget.dataset.sitekey = draw.siteKey;\nwidget.dataset.theme = 'light';\nbox.append(widget);\ndocument.body.append(box);\nif (document.querySelector('script[src*=\"challenges.cloudflare.com/turnstile/\"]'))\n  throw new Error('The storefront already loaded its own verification; reload the page and run again.');\nconst script = document.createElement('script');\nscript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';\nscript.async = true;\ndocument.head.append(script);\nreturn true;\n",
+          "into": "travisShopifyTurnstile"
         }
       },
       {
-        "id": "n_shopify_wait_form",
-        "kind": "waitFor",
+        "id": "n_shopify_token_auto",
+        "kind": "elementExists",
         "position": {
           "x": 160,
           "y": 14560
         },
         "config": {
-          "selector": "dialog.modal-wrapper[data-state=\"open\"] form .signup-form__fields:not([inert]) input[name=\"email\"]",
-          "state": "visible",
-          "timeoutMs": 300000
+          "selector": "#scrolls-shopify-turnstile input[name=\"cf-turnstile-response\"][value]:not([value=\"\"])",
+          "timeoutMs": 20000,
+          "into": "travisShopifyAutoPassed"
         }
       },
       {
-        "id": "n_shopify_size",
-        "kind": "evaluate",
+        "id": "n_shopify_token_branch",
+        "kind": "branch",
         "position": {
           "x": 160,
           "y": 14700
         },
         "config": {
-          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst settings = {{vars.travisSettings}};\nconst sizes = [\"3.5\",\"4\",\"4.5\",\"5\",\"5.5\",\"6\",\"6.5\",\"7\",\"7.5\",\"8\",\"8.5\",\"9\",\"9.5\",\"10\",\"10.5\",\"11\",\"11.5\",\"12\",\"12.5\",\"13\",\"14\",\"15\",\"16\",\"17\",\"18\"];\nconst form = document.querySelector(\"dialog.modal-wrapper[data-state=\\\"open\\\"] form\");\nif (form?.querySelector('input[name=\"countryCode\"]')?.value !== 'US' || form.querySelector('[name^=\"address.\"]'))\n  throw new Error('The storefront opened an unexpected signup form.');\nconst picker = form.querySelector('select[name=\"size\"]');\nif (!visible(picker)) throw new Error('The storefront did not show a size picker.');\n// The Shopify products are placeholders. The open form's options determine what can be entered.\nconst options = [...picker.options].filter(option => !option.matches(':disabled') && !option.hidden && sizes.includes(option.value));\nconst mode = settings.sizeMode || 'Single size';\nconst lower = sizes.indexOf(String(settings.sizeMinimum));\nconst upper = sizes.indexOf(String(settings.sizeMaximum));\nconst matches = options.filter(({ value }) => {\n  if (mode === 'Random') return true;\n  if (mode === 'Single size') return value === String(settings.size);\n  const index = sizes.indexOf(value);\n  return index >= lower && index <= upper;\n});\nif (!matches.length) throw new Error('No sizes match the selection. Available: ' + (options.map(option => option.value).join(', ') || 'none'));\nreturn { value: matches[Math.floor(Math.random() * matches.length)].value };\n",
-          "into": "travisShopifySize"
+          "left": "{{vars.travisShopifyAutoPassed}}",
+          "op": "truthy"
         }
       },
       {
-        "id": "n_shopify_select_size",
-        "kind": "select",
+        "id": "n_shopify_checkbox",
+        "kind": "evaluate",
         "position": {
           "x": 160,
           "y": 14840
         },
         "config": {
-          "selector": "dialog.modal-wrapper[data-state=\"open\"] form select[name=\"size\"]",
-          "value": "{{vars.travisShopifySize.value}}"
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst widget = document.querySelector(\"#scrolls-shopify-turnstile .cf-turnstile\");\nconst rect = widget?.getBoundingClientRect();\nif (!rect || rect.width < 40 || rect.height < 20) throw new Error('Cloudflare verification did not load on the storefront. Check the proxy and run again.');\nreturn { x: Math.round(rect.left + 28 + Math.random() * 6), y: Math.round(rect.top + rect.height / 2 + (Math.random() * 6 - 3)) };\n",
+          "into": "travisShopifyCheckbox"
         }
       },
       {
-        "id": "n_shopify_fill_email",
-        "kind": "fill",
+        "id": "n_shopify_checkbox_notice",
+        "kind": "log",
         "position": {
           "x": 160,
           "y": 14980
         },
         "config": {
-          "selector": "dialog.modal-wrapper[data-state=\"open\"] form input[name=\"email\"]",
-          "value": "{{vars.travisShopifyDraw.fields.email}}",
-          "instant": true,
-          "timeoutMs": 30000
+          "level": "info",
+          "message": "Cloudflare asked for a check; clicking the verification box."
         }
       },
       {
-        "id": "n_shopify_fill_firstName",
-        "kind": "fill",
+        "id": "n_shopify_checkbox_click",
+        "kind": "mouse.click",
         "position": {
           "x": 160,
           "y": 15120
         },
         "config": {
-          "selector": "dialog.modal-wrapper[data-state=\"open\"] form input[name=\"firstName\"]",
-          "value": "{{vars.travisShopifyDraw.fields.firstName}}",
-          "instant": true,
-          "timeoutMs": 30000
+          "x": "{{vars.travisShopifyCheckbox.x}}",
+          "y": "{{vars.travisShopifyCheckbox.y}}"
         }
       },
       {
-        "id": "n_shopify_fill_lastName",
-        "kind": "fill",
+        "id": "n_shopify_token_wait",
+        "kind": "waitFor",
         "position": {
           "x": 160,
           "y": 15260
         },
         "config": {
-          "selector": "dialog.modal-wrapper[data-state=\"open\"] form input[name=\"lastName\"]",
-          "value": "{{vars.travisShopifyDraw.fields.lastName}}",
-          "instant": true,
-          "timeoutMs": 30000
+          "selector": "#scrolls-shopify-turnstile input[name=\"cf-turnstile-response\"][value]:not([value=\"\"])",
+          "state": "attached",
+          "timeoutMs": 90000
         }
       },
       {
-        "id": "n_shopify_fill_tel",
-        "kind": "fill",
+        "id": "n_shopify_submit",
+        "kind": "evaluate",
         "position": {
           "x": 160,
           "y": 15400
         },
         "config": {
-          "selector": "dialog.modal-wrapper[data-state=\"open\"] form input[name=\"tel\"]",
-          "value": "{{vars.travisShopifyDraw.fields.tel}}",
-          "instant": true,
-          "timeoutMs": 30000
-        }
-      },
-      {
-        "id": "n_shopify_review",
-        "kind": "evaluate",
-        "position": {
-          "x": 160,
-          "y": 15540
-        },
-        "config": {
-          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst draw = {{vars.travisShopifyDraw}};\nconst size = {{vars.travisShopifySize}};\nconst form = document.querySelector(\"dialog.modal-wrapper[data-state=\\\"open\\\"] form\");\nconst card = document.querySelector(\"[data-scrolls-shopify-draw=\\\"active\\\"]\");\nfor (const [name, expected] of Object.entries({ ...draw.fields, size: size.value })) {\n  const input = form?.elements.namedItem(name);\n  const value = name === 'tel' ? input?.value.replace(/\\D/g, '').replace(/^1(?=\\d{10}$)/, '') : input?.value;\n  if (!visible(input) || value !== expected || !input.validity.valid)\n    throw new Error('The storefront rejected the prefilled ' + name + ' field.');\n}\n// Record the values actually submitted if the user edits them during review.\nform.addEventListener('submit', event => {\n  if (!event.isTrusted) return;\n  card.dataset.scrollsShopifySubmitted = JSON.stringify({\n    email: form.elements.namedItem('email').value.trim(),\n    size: form.elements.namedItem('size').value,\n  });\n}, { capture: true });\nreturn true;\n",
-          "into": "travisShopifyReady"
-        }
-      },
-      {
-        "id": "n_shopify_review_notice",
-        "kind": "log",
-        "position": {
-          "x": 160,
-          "y": 15680
-        },
-        "config": {
-          "level": "info",
-          "message": "Review the contact details and size in the browser, complete any remaining verification, and choose whether to accept the terms and click Sign up. This run tracks the selected colorway."
-        }
-      },
-      {
-        "id": "n_shopify_wait_result",
-        "kind": "waitFor",
-        "position": {
-          "x": 160,
-          "y": 15820
-        },
-        "config": {
-          "selector": "[data-scrolls-shopify-draw=\"active\"] [data-signup-status]:not(:empty), dialog.modal-wrapper[data-state=\"open\"] .signup-form__invalid-entry",
-          "state": "visible",
-          "timeoutMs": 300000
-        }
-      },
-      {
-        "id": "n_shopify_confirm",
-        "kind": "evaluate",
-        "position": {
-          "x": 160,
-          "y": 15960
-        },
-        "config": {
-          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst draw = {{vars.travisShopifyDraw}};\nconst card = document.querySelector(\"[data-scrolls-shopify-draw=\\\"active\\\"]\");\nconst status = document.querySelector(\"[data-scrolls-shopify-draw=\\\"active\\\"] [data-signup-status]\");\nconst submitted = JSON.parse(card?.dataset.scrollsShopifySubmitted || 'null');\nif (card) delete card.dataset.scrollsShopifySubmitted;\nif (visible(document.querySelector(\"dialog.modal-wrapper[data-state=\\\"open\\\"] .signup-form__invalid-entry\")))\n  throw new Error('The storefront rejected the signup.');\nif (!submitted?.email || !submitted.size || card?.dataset.raffleId !== draw.releaseId || !visible(status) || norm(status.textContent) !== draw.confirmation)\n  throw new Error('No new signup confirmation for the selected Travis Scott draw.');\nreturn { email: submitted.email, status: 'entered', site: 'shop.travisscott.com', releaseId: draw.releaseId, size: submitted.size, entry: 'signup' };\n",
+          "script": "\nconst visible = el => !!el && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';\nconst norm = value => String(value || '').trim().replace(/[\\u2018\\u2019\\u0060\\u00b4]/g, \"'\").replace(/[\\u201c\\u201d]/g, '\"').replace(/\\s+/g, ' ').toLowerCase();\nconst dialog = () => document.querySelector('[data-scrolls-travis-dialog=\"active\"]');\n\nconst draw = {{vars.travisShopifyDraw}};\nconst box = document.querySelector(\"#scrolls-shopify-turnstile\");\nconst card = document.querySelector(\"[data-scrolls-shopify-draw=\\\"active\\\"]\");\nif (!box || card?.dataset.raffleId !== draw.releaseId) throw new Error('The storefront page changed before submitting; run again.');\nconst settle = async () => {\n  for (let i = 0; i < 300 && box.dataset.scrollsState === 'sending'; i++) await new Promise(resolve => setTimeout(resolve, 100));\n  if (box.dataset.scrollsState !== 'done') throw new Error('The entry request did not finish; check the inbox before running this profile again.');\n  return JSON.parse(box.dataset.scrollsResult);\n};\nlet result;\nif (box.dataset.scrollsState) result = await settle();\nelse {\n  const token = box.querySelector('input[name=\"cf-turnstile-response\"]')?.value || '';\n  if (token.length < 10) throw new Error('Cloudflare verification returned no token.');\n  box.dataset.scrollsState = 'sending';\n  try {\n    // Matches the storefront: SHA-256 of the reversed UTC minute (YYYY-MM-DDTHH:MM).\n    const minute = new Date().toISOString().substring(0, 16).split('').reverse().join('');\n    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(minute));\n    const ref = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');\n    const body = { id: draw.releaseId, firstName: draw.fields.firstName, lastName: draw.fields.lastName, email: draw.fields.email, countryCode: 'US',\n      tel: draw.fields.tel, size: draw.size, agreeTerms: true, enterNextRaffle: draw.enterNextRaffle, captcha: token, ref };\n    const response = await fetch(draw.submitUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });\n    const text = await response.text();\n    let message = '';\n    try { message = String(JSON.parse(text)?.message || ''); } catch {}\n    result = { status: response.status, ok: response.ok, message: message.slice(0, 200) };\n  } catch (error) {\n    result = { status: 0, ok: false, message: String(error?.message || error).slice(0, 200) };\n  }\n  box.dataset.scrollsResult = JSON.stringify(result);\n  box.dataset.scrollsState = 'done';\n}\n// Turnstile tokens are single-use. Keep the marker (hidden) so a retried call reads the result.\nbox.querySelector('.cf-turnstile')?.remove();\nbox.style.display = 'none';\nif (!result.ok) throw new Error('The storefront rejected the entry (' + (result.status ? 'HTTP ' + result.status : 'network error') + (result.message ? ': ' + result.message : '') + ').');\nif (result.message.toLowerCase() !== 'success') throw new Error('The storefront did not confirm the entry' + (result.message ? ': ' + result.message : '.'));\nreturn { email: draw.fields.email, status: 'entered', site: 'shop.travisscott.com', releaseId: draw.releaseId, size: draw.size, entry: 'signup', enterNextRaffle: draw.enterNextRaffle };\n",
           "into": "travisOutcome"
         }
       },
@@ -1696,7 +1647,7 @@
         "kind": "inventory.record",
         "position": {
           "x": 160,
-          "y": 16100
+          "y": 15540
         },
         "config": {
           "site": "{{vars.travisOutcome.site}}",
@@ -1715,7 +1666,7 @@
         "kind": "setResult",
         "position": {
           "x": 160,
-          "y": 16240
+          "y": 15680
         },
         "config": {
           "value": "{{vars.travisOutcome}}"
@@ -2339,88 +2290,70 @@
         "id": "e_102",
         "from": "n_shopify_draw",
         "fromPort": "next",
-        "to": "n_shopify_open_notice"
+        "to": "n_shopify_notice"
       },
       {
         "id": "e_103",
-        "from": "n_shopify_open_notice",
+        "from": "n_shopify_notice",
         "fromPort": "next",
-        "to": "n_shopify_open"
+        "to": "n_shopify_turnstile"
       },
       {
         "id": "e_104",
-        "from": "n_shopify_open",
+        "from": "n_shopify_turnstile",
         "fromPort": "next",
-        "to": "n_shopify_wait_form"
+        "to": "n_shopify_token_auto"
       },
       {
         "id": "e_105",
-        "from": "n_shopify_wait_form",
+        "from": "n_shopify_token_auto",
         "fromPort": "next",
-        "to": "n_shopify_size"
+        "to": "n_shopify_token_branch"
       },
       {
         "id": "e_106",
-        "from": "n_shopify_size",
-        "fromPort": "next",
-        "to": "n_shopify_select_size"
+        "from": "n_shopify_token_branch",
+        "fromPort": "false",
+        "to": "n_shopify_checkbox"
       },
       {
         "id": "e_107",
-        "from": "n_shopify_select_size",
+        "from": "n_shopify_checkbox",
         "fromPort": "next",
-        "to": "n_shopify_fill_email"
+        "to": "n_shopify_checkbox_notice"
       },
       {
         "id": "e_108",
-        "from": "n_shopify_fill_email",
+        "from": "n_shopify_checkbox_notice",
         "fromPort": "next",
-        "to": "n_shopify_fill_firstName"
+        "to": "n_shopify_checkbox_click"
       },
       {
         "id": "e_109",
-        "from": "n_shopify_fill_firstName",
+        "from": "n_shopify_checkbox_click",
         "fromPort": "next",
-        "to": "n_shopify_fill_lastName"
+        "to": "n_shopify_token_wait"
       },
       {
         "id": "e_110",
-        "from": "n_shopify_fill_lastName",
-        "fromPort": "next",
-        "to": "n_shopify_fill_tel"
+        "from": "n_shopify_token_branch",
+        "fromPort": "true",
+        "to": "n_shopify_submit"
       },
       {
         "id": "e_111",
-        "from": "n_shopify_fill_tel",
+        "from": "n_shopify_token_wait",
         "fromPort": "next",
-        "to": "n_shopify_review"
+        "to": "n_shopify_submit"
       },
       {
         "id": "e_112",
-        "from": "n_shopify_review",
-        "fromPort": "next",
-        "to": "n_shopify_review_notice"
-      },
-      {
-        "id": "e_113",
-        "from": "n_shopify_review_notice",
-        "fromPort": "next",
-        "to": "n_shopify_wait_result"
-      },
-      {
-        "id": "e_114",
-        "from": "n_shopify_wait_result",
-        "fromPort": "next",
-        "to": "n_shopify_confirm"
-      },
-      {
-        "id": "e_115",
-        "from": "n_shopify_confirm",
+        "from": "n_shopify_submit",
         "fromPort": "next",
         "to": "n_shopify_save_entry"
       },
       {
-        "id": "e_116",
+        "id": "e_113",
         "from": "n_shopify_save_entry",
         "fromPort": "next",
         "to": "n_shopify_result"
@@ -2476,7 +2409,7 @@
           "label": "Exact product title",
           "default": "",
           "placeholder": "Blank: the only draw on the page",
-          "hint": "Leave blank for a single draw. For Travis Scott Shopify draws with the same title, enter the exact colorway or Title — Colorway."
+          "hint": "Leave blank for a single draw. For Travis Scott Shopify draws with the same title, enter the exact colorway (for example WHITE) or Title — Colorway."
         },
         {
           "id": "sizeMode",
@@ -2643,6 +2576,13 @@
           }
         },
         {
+          "id": "enterAllDraws",
+          "type": "boolean",
+          "label": "Enter all draws",
+          "default": false,
+          "hint": "Travis Scott Shopify draws only: also enters the other open draws on the page in the same size (the store's own \"sign up for all\" option)."
+        },
+        {
           "id": "cardDraws",
           "type": "boolean",
           "label": "Card draws",
@@ -2681,11 +2621,6 @@
           }
         }
       ]
-    },
-    "author": {
-      "name": "Scrolls",
-      "publicKey": "QaSCIhcaF+1ye4bc5CFsZ3JQLzVWmIWq0/eri7m6g4E=",
-      "signature": "Dy96NiCNA4ep+Jxy/wl6co3QmF8y5nN3LrbDaNM1R19FK0v/LTbhpNME0cF+qkrxSYfRpG0Wt7JBhhtVS0//DA=="
     }
   }
 }

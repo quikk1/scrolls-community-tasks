@@ -45,11 +45,15 @@ assert.deepEqual(validateGraph(graph), []);
 assert.deepEqual(requiredPermissions(graph), [...graph.permissions].sort());
 const product = "AIR FORCE 1 '07 LOW CACTUS JACK";
 const shopifyTitle = "AIR FORCE 1 '07 RS";
-function shopifyFixture({ shopifyClosed, shopifyStale, rejectEntry, noSuccess } = {}) {
+const SHOPIFY_SUBMIT = 'https://fixture123.execute-api.us-east-1.amazonaws.com/raffle/entry';
+const SHOPIFY_SITEKEY = '0x4AAAAAAAFIXTURE';
+let shopifySubmissions = [];
+function shopifyFixture({ shopifyClosed, shopifyStale, submitUrl = SHOPIFY_SUBMIT, noEnterAll } = {}) {
   const cards = ['GRADIENT CAMO', 'WHITE', 'BLACK'].map(colorway => {
     const id = 'fixture-' + colorway.toLowerCase().replace(' ', '-');
-    const config = { rafId: id, raffleStatus: shopifyClosed ? 'closed' : 'open',
-      raffleHideExtraFields: true, raffleUsOnly: true, raffleEntrySubmittedText: 'Thank you',
+    const config = { rafId: id, raffleStatus: shopifyClosed ? 'closed' : 'open', raffleSubmitUrl: submitUrl,
+      raffleHideExtraFields: true, raffleUsOnly: true, raffleEntrySubmittedText: 'Thank you', raffleCaptchaType: 'joyride',
+      raffleCaptchaTurnstileKey: SHOPIFY_SITEKEY, raffleShowEnterNextRaffle: !noEnterAll,
       product: { variants: ['9', '10.5', '16', '18'].map(public_title => ({ public_title, available: false })) } };
     return `<section class="RaffleMulti__item js-raffle" data-raffle-id="${id}">
       <script type="application/json" data-raffle-data>${JSON.stringify(config)}</script>
@@ -59,55 +63,24 @@ function shopifyFixture({ shopifyClosed, shopifyStale, rejectEntry, noSuccess } 
       <div data-signup-status>${shopifyStale && colorway === 'WHITE' ? 'Thank you' : ''}</div>
     </section>`;
   }).join('');
-  return `<!doctype html>${cards}
-  <dialog class="modal-wrapper" data-state="closed">
-    <button id="verify">Complete fixture challenge</button>
-    <form>
-      <div class="signup-form__fields" inert hidden>
-        <input name="countryCode" value="US" type="hidden">
-        <input name="email" type="email" required>
-        <input name="firstName" required>
-        <input name="lastName" required>
-        <input name="tel" type="tel" required>
-        <select name="size" required>
-          <option value="">Select size</option><option>9</option><option>10.5</option>
-          <option>16</option><option disabled>18</option>
-        </select>
-        <label><input name="agreeTerms" type="checkbox" required>Terms</label>
-        <label><input name="enterNextRaffle" type="checkbox">Other draws</label>
-        <button type="submit">Sign up</button>
-      </div>
-    </form>
-  </dialog>
-  <script>
-    const dialog = document.querySelector('dialog');
-    let selected;
-    for (const button of document.querySelectorAll('[data-raffle-signup]')) {
-      button.onclick = () => {
-        selected = button.closest('.js-raffle');
-        dialog.dataset.state = 'open';
-        dialog.showModal();
-      };
+  return `<!doctype html><style>body{min-height:900px}</style>${cards}`;
+}
+// Stand-in for Cloudflare's api.js: implicit rendering into .cf-turnstile with a hidden response input.
+function turnstileScript(mode) {
+  return `(() => {
+    for (const el of document.querySelectorAll('.cf-turnstile')) {
+      document.body.dataset.turnstileSitekey = el.dataset.sitekey;
+      el.style.cssText = 'display:block;width:300px;height:65px;background:#eee';
+      const input = document.createElement('input');
+      input.type = 'hidden'; input.name = 'cf-turnstile-response'; el.append(input);
+      const solve = () => { input.value = 'fixture-turnstile-token'; };
+      if (${JSON.stringify(mode)} === 'auto') setTimeout(solve, 100);
+      if (${JSON.stringify(mode)} === 'interactive') el.addEventListener('click', e => {
+        document.body.dataset.turnstileClicked = String(e.isTrusted);
+        if (e.isTrusted && e.offsetX < 70) solve();
+      });
     }
-    document.querySelector('#verify').onclick = e => {
-      e.target.hidden = true;
-      const fields = document.querySelector('.signup-form__fields');
-      fields.inert = false;
-      fields.hidden = false;
-    };
-    dialog.querySelector('form').onsubmit = e => {
-      e.preventDefault();
-      if (${Boolean(rejectEntry)}) {
-        const error = document.createElement('p');
-        error.className = 'signup-form__invalid-entry';
-        error.textContent = 'Invalid entry, please try again';
-        dialog.append(error);
-      } else if (!${Boolean(noSuccess)}) {
-        selected.querySelector('[data-signup-status]').textContent = 'Thank you';
-        dialog.close();
-      }
-    };
-  </script>`;
+  })();`;
 }
 const VARIANT_SETS = {
   shoe: i => [{ id: 101 + i * 100, title: '9' }, { id: 102 + i * 100, title: '10.5' }, { id: 103 + i * 100, title: '13.5' }],
@@ -255,6 +228,7 @@ async function main() {
       if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
       recorded.length = 0;
       solverCalls = [];
+      shopifySubmissions = [];
       currentOptions = options;
       currentController = new AbortController();
       const context = await browser.newContext();
@@ -269,6 +243,15 @@ async function main() {
         if (url.endsWith('/en-us')) return route.fulfill({ contentType: 'text/html', body: '<script>location.replace("/checkouts/cn/TEST/en-us/throttle")</script>' });
         return route.fulfill({ contentType: 'text/html', body: checkoutPage(options) });
       });
+      await context.route('https://challenges.cloudflare.com/turnstile/v0/api.js', route =>
+        route.fulfill({ contentType: 'text/javascript', body: turnstileScript(options.turnstile || 'auto') }));
+      await context.route(SHOPIFY_SUBMIT, route => {
+        const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'Content-Type', 'access-control-allow-methods': 'OPTIONS,POST' };
+        if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 200, headers: cors, body: '' });
+        shopifySubmissions.push({ body: route.request().postDataJSON(), origin: route.request().headers().origin, at: Date.now() });
+        const [status, message] = options.entryResponse || [200, 'success'];
+        return route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify({ message }) });
+      });
       await context.route(PCI + '/**', route => route.fulfill({ contentType: 'text/html', body: cardFrame(route.request().url().split('/').pop().replace('.html', '')) }));
       await context.route('**/*', route => route.request().url() === storeUrl
         ? route.fulfill({ contentType: 'text/html', body: options.shopify ? shopifyFixture(options) : fixture(options) })
@@ -278,18 +261,18 @@ async function main() {
       const page = await context.newPage();
       const g = structuredClone(graph);
       for (const n of g.nodes) {
-        if (['click', 'fill'].includes(n.kind) && !options.naturalInput) n.config.instant = true;
+        if (['click', 'fill', 'mouse.click'].includes(n.kind) && !options.naturalInput) n.config.instant = true;
         if (n.kind === 'dwell' && !options.naturalInput) n.config = { ms: 1 };
         if (n.id === 'n_cookies_before_draw' && !options.naturalInput) n.config.script = n.config.script.replace('const timeoutMs = 4500;', 'const timeoutMs = 20;');
         if (n.config.timeoutMs) n.config.timeoutMs = 1500;
       }
-      const address = { isDefault: true, firstName: 'Jane', lastName: "O'Neil", country: options.hiddenRegion ? 'HK' : 'US', street1: '123 Example St', street2: '', city: 'Test City', state: options.hiddenRegion ? '' : options.stateName || 'AZ', postalCode: options.hiddenRegion ? '' : '85001', phone: '+16025550123' };
+      const address = { isDefault: true, firstName: 'Jane', lastName: "O'Neil", country: options.hiddenRegion ? 'HK' : 'US', street1: '123 Example St', street2: '', city: 'Test City', state: options.hiddenRegion ? '' : options.stateName || 'AZ', postalCode: options.hiddenRegion ? '' : '85001', phone: options.phone || '+16025550123' };
       const vars = new Map();
       const actions = [];
       const ctx = { page, context, profile: { id: 'offline-profile', name: 'Offline', persona: {
         identity: { email: 'jane@example.com', firstName: 'Jane', lastName: "O'Neil", phone: address.phone },
         addresses: options.noAddress ? [] : [address],
-      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12', cardDraws: options.cardDraws ?? false, cardSource: options.cardSource ?? 'address', cardId: '' }, vars, signal: currentController.signal,
+      } }, inputs: { url: storeUrl, product: options.product ?? product, size: options.size || '10.5', sizeMode: options.sizeMode || 'Single size', sizeMinimum: options.sizeMinimum || '8', sizeMaximum: options.sizeMaximum || '12', cardDraws: options.cardDraws ?? false, enterAllDraws: options.enterAllDraws ?? false, cardSource: options.cardSource ?? 'address', cardId: '' }, vars, signal: currentController.signal,
         log: () => {}, onNodeEnter: (id) => {
           const active = '[data-scrolls-travis-dialog="active"]';
           // Simulates SuperSwipe re-rendering its dialog just before Continue (seen live).
@@ -313,26 +296,6 @@ async function main() {
             if (options.klaviyo) assert.equal(await page.locator('body').getAttribute('data-popup-closed'), 'true');
             if (!options.oneDraw) assert.equal(await page.locator('.superswipe-modal').first().getAttribute('aria-hidden'), 'true');
           })());
-          if (id === 'n_shopify_wait_form' && !options.noVerification) {
-            actions.push(page.getByRole('button', { name: 'Complete fixture challenge' }).click({ timeout: 1500 }));
-          }
-          if (id === 'n_shopify_review_notice') actions.push((async () => {
-            const form = page.locator('dialog form');
-            assert.equal(await form.locator('[name="email"]').inputValue(), 'jane@example.com');
-            assert.equal(await form.locator('[name="firstName"]').inputValue(), 'Jane');
-            assert.equal(await form.locator('[name="lastName"]').inputValue(), "O'Neil");
-            assert.equal(await form.locator('[name="tel"]').inputValue(), '6025550123');
-            assert.ok((options.expectedSizes || ['10.5']).includes(await form.locator('[name="size"]').inputValue()));
-            assert.equal(await form.locator('[name="agreeTerms"]').isChecked(), false);
-            assert.equal(await form.locator('[name="enterNextRaffle"]').isChecked(), false);
-            if (options.noManualSubmit) return;
-            if (options.editedEmail) {
-              await form.locator('[name="email"]').fill(options.editedEmail);
-              await form.locator('[name="size"]').selectOption('9');
-            }
-            await form.locator('[name="agreeTerms"]').check();
-            await form.getByRole('button', { name: 'Sign up' }).click();
-          })());
         },
       };
       try {
@@ -344,12 +307,25 @@ async function main() {
         } else if (options.shopify) {
           if (error) throw error;
           assert.equal(recorded.length, 1);
-          assert.equal(recorded[0].productLabel, shopifyTitle + ' — WHITE');
+          assert.equal(recorded[0].productLabel, shopifyTitle + ' — WHITE' + (options.enterAllDraws ? ' (+ other open draws)' : ''));
           assert.equal(recorded[0].site, 'shop.travisscott.com');
-          assert.equal(recorded[0].email, options.editedEmail || 'jane@example.com');
+          assert.equal(recorded[0].email, 'jane@example.com');
           assert.equal(recorded[0].metadata.releaseId, 'fixture-white');
-          assert.ok((options.editedEmail ? ['9'] : options.expectedSizes || ['10.5']).includes(recorded[0].metadata.size));
+          assert.ok((options.expectedSizes || ['10.5']).includes(recorded[0].metadata.size));
           assert.equal(vars.get('_result').status, 'entered');
+          assert.ok(!JSON.stringify([...vars.values(), recorded]).includes('fixture-turnstile-token'), 'the token must not reach graph variables or inventory');
+          // One request, shaped exactly like the storefront's own (key order included).
+          assert.equal(shopifySubmissions.length, 1);
+          const { body, origin, at } = shopifySubmissions[0];
+          assert.equal(origin, 'https://shop.travisscott.com');
+          assert.deepEqual(Object.keys(body), ['id', 'firstName', 'lastName', 'email', 'countryCode', 'tel', 'size', 'agreeTerms', 'enterNextRaffle', 'captcha', 'ref']);
+          assert.deepEqual({ ...body, ref: undefined }, { id: 'fixture-white', firstName: 'Jane', lastName: "O'Neil", email: 'jane@example.com', countryCode: 'US',
+            tel: '+1 602-555-0123', size: recorded[0].metadata.size, agreeTerms: true, enterNextRaffle: !!options.enterAllDraws, captcha: 'fixture-turnstile-token', ref: undefined });
+          const refFor = ms => require('node:crypto').createHash('sha256').update(new Date(ms).toISOString().substring(0, 16).split('').reverse().join('')).digest('hex');
+          assert.ok([refFor(at), refFor(at - 60000)].includes(body.ref), 'ref must be SHA-256 of the reversed UTC minute');
+          assert.equal(await page.locator('body').getAttribute('data-turnstile-sitekey'), SHOPIFY_SITEKEY);
+          if (options.turnstile === 'interactive') assert.equal(await page.locator('body').getAttribute('data-turnstile-clicked'), 'true');
+          assert.equal(await page.locator('#scrolls-shopify-turnstile').isVisible(), false);
         } else {
           if (error) throw error;
           assert.equal(recorded.length, 1); assert.equal(recorded[0].productLabel, product);
@@ -369,22 +345,27 @@ async function main() {
           }
         }
         if (options.shopify) assert.equal(solverCalls.length, 0);
+        if (options.shopify && options.error) assert.equal(shopifySubmissions.length, options.submits ?? 0);
         console.log('PASS ' + name);
       } finally { await context.close(); }
     }
     const shopify = { shopify: true, noAddress: true, product: 'WHITE' };
-    await scenario('Shopify signup selects a colorway and records manual completion', shopify);
-    await scenario('Shopify signup matches exact title and colorway and offers size 16', { ...shopify, product: shopifyTitle + ' — WHITE', size: '16', expectedSizes: ['16'] });
-    await scenario('Shopify signup records contact and size edits actually submitted', { ...shopify, editedEmail: 'jane.updated@example.com' });
-    await scenario('Shopify signup uses the open form for size ranges', { ...shopify, sizeMode: 'Size range', sizeMinimum: '10.5', sizeMaximum: '18', expectedSizes: ['10.5', '16'] });
-    await scenario('Shopify signup rejects an ambiguous title', { ...shopify, product: shopifyTitle, error: /exact title and colorway/ });
-    await scenario('Shopify signup refuses a disabled size', { ...shopify, size: '18', error: /No sizes match/ });
-    await scenario('Shopify signup refuses a closed draw', { ...shopify, shopifyClosed: true, error: /closed or unavailable/ });
-    await scenario('Shopify signup ignores a prior confirmation', { ...shopify, shopifyStale: true, error: /already shows a signup status/ });
-    await scenario('Shopify signup waits for native verification', { ...shopify, noVerification: true, error: /Timeout/ });
-    await scenario('Shopify signup never submits for the user', { ...shopify, noManualSubmit: true, error: /Timeout/ });
-    await scenario('Shopify signup records nothing without confirmation', { ...shopify, noSuccess: true, error: /Timeout/ });
-    await scenario('Shopify signup reports a site rejection', { ...shopify, rejectEntry: true, error: /storefront rejected the signup/ });
+    await scenario('Shopify draw passes verification and submits the storefront request', shopify);
+    await scenario('Shopify draw matches exact title and colorway and offers size 16', { ...shopify, product: shopifyTitle + ' — WHITE', size: '16', expectedSizes: ['16'] });
+    await scenario('Shopify draw uses the draw sizes for ranges', { ...shopify, sizeMode: 'Size range', sizeMinimum: '10.5', sizeMaximum: '18', expectedSizes: ['10.5', '16', '18'] });
+    await scenario('Shopify draw random size', { ...shopify, sizeMode: 'Random', expectedSizes: ['9', '10.5', '16', '18'] });
+    await scenario('Shopify draw clicks an interactive verification box', { ...shopify, turnstile: 'interactive' });
+    await scenario('Shopify draw can enter all open draws', { ...shopify, enterAllDraws: true });
+    await scenario('Shopify draw refuses enter-all when the draw does not offer it', { ...shopify, enterAllDraws: true, noEnterAll: true, error: /does not offer entering the other draws/ });
+    await scenario('Shopify draw rejects an ambiguous title', { ...shopify, product: shopifyTitle, error: /exact title and colorway/ });
+    await scenario('Shopify draw refuses a size it does not offer', { ...shopify, size: '12', error: /No sizes match the selection\. Available: 9, 10\.5, 16, 18/ });
+    await scenario('Shopify draw refuses a closed draw', { ...shopify, shopifyClosed: true, error: /closed or unavailable/ });
+    await scenario('Shopify draw ignores a prior confirmation', { ...shopify, shopifyStale: true, error: /already shows a signup status/ });
+    await scenario('Shopify draw refuses an invalid phone number', { ...shopify, phone: '+11235550123', error: /valid 10-digit U\.S\. phone/ });
+    await scenario('Shopify draw never sends contact details to an unknown endpoint', { ...shopify, submitUrl: 'https://collector.example.com/raffle/entry', error: /unrecognized address/ });
+    await scenario('Shopify draw stops when verification never completes', { ...shopify, turnstile: 'never', error: /Timeout/ });
+    await scenario('Shopify draw reports a store rejection and records nothing', { ...shopify, entryResponse: [400, 'Invalid captcha'], submits: 1, error: /rejected the entry \(HTTP 400: Invalid captcha\)/ });
+    await scenario('Shopify draw needs the store confirmation', { ...shopify, entryResponse: [200, 'pending'], submits: 1, error: /did not confirm the entry: pending/ });
     await scenario('Correct detached dialog, exact size, quoted name, blank optional address and confirmed inventory');
     await scenario('State dropdown and separate phone prefix', { stateSelect: true, phonePrefix: true });
     await scenario('State dropdown matches full state name', { stateSelect: true, stateName: 'Arizona' });
